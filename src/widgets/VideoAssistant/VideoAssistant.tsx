@@ -105,7 +105,16 @@ const VideoAssistant: React.FC = () => {
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
         <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
           <LogoIcon />
-      </div>
+          <div className={'flex flex-row gap-8'}>
+            <button>
+              <p className={'font-aeonikBold text-sm'}>Chat</p>
+            </button>
+            <button>
+              <p className={'font-aeonikBold text-sm'}>Index</p>
+            </button>
+          </div>
+          <div></div>
+        </div>
       <div className={'flex'}>
         <VideoSelect
           chatDispatch={chatDispatch}
