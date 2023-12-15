@@ -107,10 +107,10 @@ const VideoAssistant: React.FC = () => {
           <LogoIcon />
           <div className={'flex flex-row gap-8'}>
             <button>
-              <p className={'font-aeonikBold text-sm'}>Chat</p>
+              <p className={'font-aeonikBold text-sm hover:text-[#006F33]'}>Chat</p>
             </button>
             <button>
-              <p className={'font-aeonikBold text-sm'}>Index</p>
+              <p className={'font-aeonikBold text-sm hover:text-[#006F33]'}>Index</p>
             </button>
           </div>
           <div></div>
