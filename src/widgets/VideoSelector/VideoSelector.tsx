@@ -7,6 +7,7 @@ import SelectVideoClip from '../../components/Select/SelectVideoClip'
 import VideoBox from '../../components/VideoBox/VideoBox'
 import { ActionType } from '../VideoAssistant/hooks/useChat'
 import { type ActionMeta } from 'react-select'
+import UploadVideoButton from './UploadVideoButton'
 
 interface VideoSelectProps {
   chatDispatch: React.Dispatch<any>
@@ -57,19 +58,22 @@ const VideoSelect: React.FC<VideoSelectProps> = ({ chatDispatch, setCurrentVideo
   return (
     <>
     <div className={'p-6 max-h-[464px] flex-col flex'}>
-          <div className={'h-5 font-bold text-[16px] font-aeonikBold'}>{VideoSelectState.CHOOSE_VIDEO}</div>
-            <div className={'relative inline-flex items-center'}>
-              <SelectVideoClip
-                data={videoFiles}
-                className={'w-[324px] h-[48px] pt-2 pb-2 mt-2 mb-4 text-[16px]'}
-                selectedOption={selectedOption as string}
-                handleChange={handleVideoChange}
-                renderOption={renderVideoOption}
-                />
-              {/* <div className={'relative right-6 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none border border-solid border-gray-300'}>
-                <ArrowIcon/>
-              </div> */}
-            </div>
+          <div className={'flex flex-row justify-between'}>
+            <div className={'h-5 font-bold text-[16px] font-aeonikBold'}>{VideoSelectState.CHOOSE_VIDEO}</div>
+            <UploadVideoButton/>
+          </div>
+          <div className={'relative inline-flex items-center'}>
+            <SelectVideoClip
+              data={videoFiles}
+              className={'w-[324px] h-[48px] pt-2 pb-2 mt-2 mb-4 text-[16px]'}
+              selectedOption={selectedOption as string}
+              handleChange={handleVideoChange}
+              renderOption={renderVideoOption}
+            />
+            {/* <div className={'relative right-6 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none border border-solid border-gray-300'}>
+              <ArrowIcon/>
+            </div> */}
+           </div>
          <VideoBox videoRef={videoRef} data={currentVideoFile}/>
         </div>
         </>
