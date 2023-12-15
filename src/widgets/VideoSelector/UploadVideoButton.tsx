@@ -1,14 +1,26 @@
-import React from 'react'
-import { ReactComponent as UploadIcon } from '../../icons/upload.svg'
+import React, { useState } from 'react'
+import CustomUpload from '../../icons/CustomUpload'
 import { ButtonTexts } from '../../../src/constants'
 
 const UploadVideoButton: React.FC = () => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  const handleMouseEnter = (): void => {
+    setIsHovered(true)
+  }
+
+  const handleMouseLeave = (): void => {
+    setIsHovered(false)
+  }
   return (
-      <button className={'text-center justify-between flex bg-[#E5E6E4] pt-2 pr-1 pb-2 pl-1 hover:text-[#006F33] transition-all duration-300 group'}>
+      <button
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={'text-center justify-between flex bg-[#E5E6E4] pt-2 pr-1 pb-2 pl-1 hover:text-[#006F33] group'}>
           <div className={'flex-row gap-[4px] justify-center items-center flex cursor-pointer'}
            >
             <div className={'justify-center items-center w-[16px] h-[16px] flex'}>
-              <UploadIcon/>
+                <CustomUpload color={isHovered ? '#006F33' : '#222222'} />
             </div>
             <div
                 className={''}>
