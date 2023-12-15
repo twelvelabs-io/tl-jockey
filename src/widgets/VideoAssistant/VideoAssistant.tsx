@@ -1,13 +1,10 @@
 import React, { useEffect } from 'react'
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg'
-import { ReactComponent as LinesIcon } from '../../icons/Lines.svg'
-
 import { initializeApp } from 'firebase/app'
 import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage'
 import ModalCentral from '../../components/Modal/ModalCentral'
 import VideoSelect from '../VideoSelector/VideoSelector'
 import ChatSelector, { type ChatSelectProps } from '../ChatSelector/ChatSelector'
-import { HeaderTexts } from '../../constants'
 
 import { useChat, ActionType } from './hooks/useChat'
 import useAutofillQuestions from './hooks/useAutofillQuestions'
@@ -68,15 +65,6 @@ const VideoAssistant: React.FC = () => {
 
   const handleClose = (): void => { chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
 
-  const clearChat = (): void => {
-    chatDispatch({ type: ActionType.SET_LOADING, payload: false })
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
-    chatDispatch({
-      type: ActionType.SET_ARRAY_MESSAGES_CLEAN,
-      payload: []
-    })
-  }
-
   useEffect(() => {
     listAll(listRef)
       .then((res) => {
@@ -115,20 +103,9 @@ const VideoAssistant: React.FC = () => {
 
   return (
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
-      <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
+        <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
           <LogoIcon />
-          <div className={'flex-row gap-[4px] justify-center items-center flex cursor-pointer'}
-            onClick={clearChat}>
-            <div className={'justify-center items-center w-[16px] h-[16px] flex'}>
-              <LinesIcon />
-            </div>
-            <div
-                className={'btn-primary-new'}>
-                {HeaderTexts.START_NEW_CHAT}
-            </div>
-          </div>
-        </div>
-
+      </div>
       <div className={'flex'}>
         <VideoSelect
           chatDispatch={chatDispatch}

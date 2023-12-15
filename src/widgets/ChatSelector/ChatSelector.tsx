@@ -9,6 +9,7 @@ import AutofillQuestions from '../../components/AutofillQuestions/AutofillQuesti
 import ChatMessagesList from '../../components/ChatMessagesList/ChatMessagesList'
 import ChatForm from './ChatForm'
 import { ActionType, type State } from '../VideoAssistant/hooks/useChat'
+import StartNewGroup from '../VideoAssistant/StartNewGroup'
 
 export enum DefaultVideo {
   FILE_NAME = '#4 Cooper Kupp (WR, Rams) | Top 100 Players in 2022.mp4',
@@ -150,6 +151,15 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
     }
   }, [arrayMessages, autofillQuestions, responseText, setAutofillApi])
 
+  const clearChat = (): void => {
+    chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
+    chatDispatch({
+      type: ActionType.SET_ARRAY_MESSAGES_CLEAN,
+      payload: []
+    })
+  }
+
   return (
     <div>
           <div className={'pl-[70px] pr-[70px] pt-6 flex-col border-l border-gray-300 flex w-[55vw] h-[80vh] overflow-y-auto'} ref={chatContainerRef} >
@@ -173,6 +183,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
                 </div>
               </div>
               }
+            {!loading ? <StartNewGroup clearChat={clearChat}/> : ''}
           </div>
           <ChatForm
             chatState={chatState}

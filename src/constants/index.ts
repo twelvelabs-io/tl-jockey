@@ -18,5 +18,5 @@ export enum ChatCompareResults {
 }
 
 export enum HeaderTexts {
-  START_NEW_CHAT = 'Start new chat'
+  START_NEW_CHAT = 'Start new'
 }
