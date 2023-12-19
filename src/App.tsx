@@ -4,7 +4,7 @@ import {
   createBrowserRouter,
   RouterProvider
 } from 'react-router-dom'
-import IndexVideos from './widgets/IndexVideos/IndexVideos'
+import IndexTaskSection from './widgets/IndexVideos'
 
 const router = createBrowserRouter([
   {
@@ -17,7 +17,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/Index',
-    element: <IndexVideos/>
+    element: <IndexTaskSection indexId='1' />
   }
 ])
 
