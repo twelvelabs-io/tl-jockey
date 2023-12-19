@@ -5,6 +5,7 @@ import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage'
 import ModalCentral from '../../components/Modal/ModalCentral'
 import VideoSelect from '../VideoSelector/VideoSelector'
 import ChatSelector, { type ChatSelectProps } from '../ChatSelector/ChatSelector'
+import { Link } from 'react-router-dom'
 
 import { useChat, ActionType } from './hooks/useChat'
 import useAutofillQuestions from './hooks/useAutofillQuestions'
@@ -106,12 +107,16 @@ const VideoAssistant: React.FC = () => {
         <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
           <LogoIcon />
           <div className={'flex flex-row gap-8'}>
-            <button>
-              <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Chat</p>
-            </button>
-            <button>
-              <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Index</p>
-            </button>
+          <Link to="/Chat">
+              <button>
+                <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Chat</p>
+              </button>
+            </Link>
+            <Link to="/Index">
+              <button>
+                <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Index</p>
+              </button>
+            </Link>
           </div>
           <div></div>
         </div>
