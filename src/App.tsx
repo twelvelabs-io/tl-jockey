@@ -1,11 +1,13 @@
-import React from 'react'
-import VideoAssistant from './widgets/VideoAssistant/VideoAssistant'
+import React from 'react';
+import VideoAssistant from './widgets/VideoAssistant/VideoAssistant';
 import {
   createBrowserRouter,
   RouterProvider
-} from 'react-router-dom'
-import IndexTaskSection from './widgets/IndexVideos'
-
+} from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import IndexVideo from './widgets/IndexVideo/IndexVideo';
+import { CommonProvider } from './widgets/IndexVideo/WrapperPage';
+const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
     path: '/',
@@ -17,12 +19,16 @@ const router = createBrowserRouter([
   },
   {
     path: '/Index',
-    element: <IndexTaskSection indexId='1' />
+    element: <IndexVideo />
   }
-])
+]);
 
 const App = (): JSX.Element => (
-  <RouterProvider router={router} />
-)
+    <QueryClientProvider client={queryClient}>
+      <CommonProvider>
+        <RouterProvider router={router} />
+      </CommonProvider>
+    </QueryClientProvider>
+);
 
-export default App
+export default App;

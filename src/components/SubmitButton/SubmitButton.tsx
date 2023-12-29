@@ -9,8 +9,9 @@ interface SubmitButtonProps {
   handleChatApi: () => void
 }
 
-enum Button {
-  BUTTON_TEXT = 'Submit'
+export enum Button {
+  BUTTON_TEXT = 'Submit',
+  BUTTON_UPLOAD = "Upload"
 }
 
 const SubmitButton: React.FC<SubmitButtonProps> = ({

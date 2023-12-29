@@ -18,9 +18,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react"
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src", "src/utils/network.ts"],
+  "exclude": [".eslintrc.js"] // Exclude ESLint config file
 }
