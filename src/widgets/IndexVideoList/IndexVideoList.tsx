@@ -6,6 +6,7 @@ import { useArrayHook } from './hooks/useArrayHook'
 import ChooseVideo from '../../components/ChooseVideo/ChooseVideo'
 import EmptyVideoState from '../../components/EmptyVideoState/EmptyVideoState'
 import { Alert } from '@mui/material'
+import VideoCard from './VideoCard'
 interface IndexVideoList {
 }
 
@@ -96,24 +97,13 @@ const IndexVideoList: React.FC<IndexVideoList> = () => {
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mx-auto sm:ml-0">
         {currentVideoList.map((video) => (
-          <div key={video.id} className="video-card">
-            <div className={'w-[332px] h-[208px] relative'}>
-              <EmptyVideoState/>
-              {showDelete && 
-              <div onClick={() => handleVideoClick(video.id, video.title)} className={'absolute top-3 right-3'}>
-                    <ChooseVideo initialStateActive={activeVideo === video.id} />
-              </div> 
-              }
-            </div>
-            {/* <video controls className={'w-[40vw] h-[45vh]'}>
-                <div onClick={() => handleVideoClick(video.id)} className={'absolute top-0 right-0'}>
-                    <ChooseVideo initialStateActive={activeVideo === video.id} />
-                </div>
-              <source src={video.url} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video> */}
-            <h3 className="mt-2 text-[#6F706D] font-aeonik text-sm">{video.title}</h3>
-          </div>
+                    <VideoCard
+                    key={video.id}
+                    video={video}
+                    active={activeVideo === video.id}
+                    onClick={handleVideoClick}
+                    showDelete={showDelete}
+                  />
         ))}
       </div>
 
