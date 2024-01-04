@@ -62,7 +62,7 @@ const onRemove = (id: string): void => {
               } }/>
         <VideoDropZone className="flex-1 md:basis-[290px] mt-4" videos={videos} onDrop={onDrop} onRemove={onRemove} />
         <div className={'mt-4 flex flex-row justify-between items-center'}>
-            <Button onClick={onClose}>
+            <Button onClick={onClose} className={'hover:bg-[#E5E6E4] py-3'}>
                 <p className={'font-aeonik text-sm text-[#6F706D]'}>Cancel</p>
             </Button>
             <Button onClick={onClose} className={'flex flex-row justify-center items-center '}>

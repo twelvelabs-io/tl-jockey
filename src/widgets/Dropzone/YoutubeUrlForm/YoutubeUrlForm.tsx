@@ -91,9 +91,9 @@ const YoutubeUrlForm = ({ className, onAddClick }: Props): JSX.Element => {
 				Youtube URL
 			</div>
 			<div className={clsx('flex gap-2')}>
-				<div className={clsx('relative', 'flex-1', 'w-[600px]')}>
+				<div className={'relative flex-1 w-[600px]'}>
 					<Input
-						className="h-9 w-full"
+						className="h-9 w-full hover:bg-[#E5E6E4] hover:border hover:border-black"
 						value={url}
 						onChange={(e): void => setUrl(e.target.value)}
 						onClear={(): void => setUrl('')}

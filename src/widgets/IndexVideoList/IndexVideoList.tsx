@@ -95,15 +95,15 @@ const IndexVideoList: React.FC<IndexVideoList> = () => {
           </p>
         </Alert>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mx-auto sm:ml-0">
+      <div className="flex flex-row flex-wrap gap-4 justify-center items-center sm:justife-start sm:items-start md:justify-start">
         {currentVideoList.map((video) => (
-                    <VideoCard
-                    key={video.id}
-                    video={video}
-                    active={activeVideo === video.id}
-                    onClick={handleVideoClick}
-                    showDelete={showDelete}
-                  />
+          <VideoCard
+            key={video.id}
+            video={video}
+            active={activeVideo === video.id}
+            onClick={handleVideoClick}
+            showDelete={showDelete}
+          />
         ))}
       </div>
 
