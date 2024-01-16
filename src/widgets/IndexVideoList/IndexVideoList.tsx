@@ -3,8 +3,6 @@ import IndexVideoListHeader from './IndexVideoListHeader'
 import { ReactComponent as ArrowIconLeft } from '../../icons/ChevronLeft.svg'
 import { ReactComponent as ArrowIconRight } from '../../icons/ChevronRight.svg'
 import { useArrayHook } from './hooks/useArrayHook'
-import ChooseVideo from '../../components/ChooseVideo/ChooseVideo'
-import EmptyVideoState from '../../components/EmptyVideoState/EmptyVideoState'
 import { Alert } from '@mui/material'
 import VideoCard from './VideoCard'
 interface IndexVideoList {
@@ -41,6 +39,7 @@ const IndexVideoList: React.FC<IndexVideoList> = () => {
   const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
   const [showAlert, setShowAlert] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1);
   // Function to handle video click
   const handleVideoClick = (videoId: number, videoName: string) => {
     setActiveVideo(videoId);
@@ -51,9 +50,7 @@ const IndexVideoList: React.FC<IndexVideoList> = () => {
     setActiveVideoName(videoName)
   };
   // Pagination
-  const itemsPerRow = 3; // Adjust this based on the number of videos per row you want
   const itemsPerPage = 12;
-  const [currentPage, setCurrentPage] = useState(1);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -84,6 +81,7 @@ const IndexVideoList: React.FC<IndexVideoList> = () => {
   return (
     <div className={'p-6 border-b-[1px] border-[#E5E6E4] flex flex-col gap-4'}>
       <IndexVideoListHeader 
+        countOfVideo={videoList?.length}
         cancelVideo={handleCancelVideo} 
         videoNameMap={videoNameMap} 
         activeVideoName={activeVideoName}

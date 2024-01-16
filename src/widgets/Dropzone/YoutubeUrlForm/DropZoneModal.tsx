@@ -1,12 +1,17 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 // VideoListModal.tsx
 import React, { useState } from 'react';
 import { Box, Button, Modal, Typography } from '@mui/material';
 import YoutubeUrlForm from './YoutubeUrlForm';
 import VideoDropZone from './VideoDropZone';
-import { VideoType } from './types';
+import { VideoType, isFileType, isUrlType } from './types';
 import { nanoid } from 'nanoid'
 import Dialog from './Dialog';
 import SupportedVideoInfo from './SupportedVideoInfo';
+import { useQueryClient } from 'react-query';
+import { FileId, useSetIndexTaskUpload } from './indexTaskUploadState';
+import axios from 'axios';
+import useVideoUpload from '../../../apis/useVideoUpload';
 
 interface DropZoneModalProps {
   open: boolean;
@@ -14,8 +19,11 @@ interface DropZoneModalProps {
 }
 
 const DropZoneModal: React.FC<DropZoneModalProps> = ({ open, onClose }) => {
+  const setUploadTask = useSetIndexTaskUpload()
+  const { uploadVideos } = useVideoUpload()
   const [videos, setVideos] = useState<Array<VideoType>>([])
-  const style = {
+  console.log(videos)
+  const styleForModal = {
     position: 'absolute' as const,
     top: '50%',
     left: '50%',
@@ -23,8 +31,7 @@ const DropZoneModal: React.FC<DropZoneModalProps> = ({ open, onClose }) => {
     width: 'w-[1000px]',
     height: 'h-[800px]',
     bgcolor: 'background.paper',
-    border: '2px solid #000',
-    boxShadow: 24,
+    boxShadow: 10,
     p: 4,
   };
 
@@ -40,10 +47,14 @@ const DropZoneModal: React.FC<DropZoneModalProps> = ({ open, onClose }) => {
     }
 const onRemove = (id: string): void => {
     setVideos((prev) => prev.filter((video) => video.id !== id))
-    }
+}
 
-
-
+const upload = () => {
+    uploadVideos(videos).then((indexes) => {
+        console.log(indexes)
+    })
+}
+	
   return (
     <Modal
       open={open}
@@ -52,7 +63,7 @@ const onRemove = (id: string): void => {
       aria-describedby="modal-modal-description"
     >
 
-      <Box sx={style}>
+      <Box sx={styleForModal}>
         <Typography className={'mb-4'}>
             <p className={'font-aeonikBold text-xl'}>Upload videos</p>
         </Typography>
@@ -65,7 +76,7 @@ const onRemove = (id: string): void => {
             <Button onClick={onClose} className={'hover:bg-[#E5E6E4] py-3'}>
                 <p className={'font-aeonik text-sm text-[#6F706D]'}>Cancel</p>
             </Button>
-            <Button onClick={onClose} className={'flex flex-row justify-center items-center '}>
+            <Button onClick={upload } className={'flex flex-row justify-center items-center '}>
                 <p className={'p-[10px] bg-[#E5E6E4] font-aeonik text-sm text-[#6F706D]'}>Upload</p>
             </Button>
         </div>

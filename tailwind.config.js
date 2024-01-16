@@ -6,7 +6,9 @@ module.exports = {
   theme: {
     fontFamily: {
       'aeonik': ['Aeonik', 'sans-serif'],
-      'aeonikBold': ['AeonikBold', 'sans-serif']
+      'aeonikBold': ['AeonikBold', 'sans-serif'],
+      'dentonBold': ['DentonBold', 'sans-serif'],
+      'dentonLight': ['DentonLight', 'sans-serif']
     },
     extend: {},
   },

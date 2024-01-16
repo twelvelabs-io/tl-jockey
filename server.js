@@ -4,14 +4,14 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const app = express();
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
 const cors = require('cors');
 
 // Middleware for parsing JSON data
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(cors());
 
-// Serve the React app (build) if in production
+
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'build')));
   app.get('*', (req, res) => {
@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Handle the first POST request from your React app
+
 app.post('/worker_generate_stream', async (req, res) => {
   try {
     const requestData = {
@@ -31,16 +31,15 @@ app.post('/worker_generate_stream', async (req, res) => {
       description: req.body.description,
     };
 
-    // Make a POST request to the external service
     const response = await axios.post(
-      'http://172.16.6.55:40073/worker_generate_stream', // Update this URL as needed
+      'https://api.twelvelabs.io/p/v1.2/indexes', // Update this URL as needed
       requestData
     );
 
-    // Handle the response from the external service
+
     const responseData = response.data;
 
-    // Send the response back to your React app
+
     res.json(responseData);
   } catch (error) {
     console.error('Error sending POST request:', error);
@@ -48,23 +47,39 @@ app.post('/worker_generate_stream', async (req, res) => {
   }
 });
 
-// Handle the second POST request from your React app with the same parameters
+
 app.post('/worker_generate_stream2', async (req, res) => {
   try {
-    const requestData = {
-      videos: req.body.videos,
-      prompt: req.body.prompt,
-      agent_history: req.body.agent_history,
-      duration: req.body.duration,
-      asr: req.body.asr,
-      description: req.body.description,
+
+    const apiKey = 'tlk_1V6J4TC3646GX92VGH837303P6AX';
+    const apiUrl = 'https://api.twelvelabs.space.io/p/v1.2/indexes';
+
+    const engines = [ { engine_name: 'pegasus1', engine_options: ["visual", "conversation"] }]; // Assuming you are using the Marengo video understanding engine
+    const addons = ['thumbnail']; // Enable thumbnail generation addon
+
+    const url = 'https://api.twelvelabs.io/p/v1.2/indexes'
+    const headers = {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
     };
 
-    // Make a POST request to the same external service with a different URL
-    const response = await axios.post(
-      'http://172.16.6.55:40093/worker_generate_stream', // Update this URL as needed
-      requestData
-    );
+    const requestData = req.body.options
+  
+  
+    const options = {
+      method: 'POST',
+      headers: headers,
+      data: JSON.stringify({
+        index_name: "somethigs",
+        engines: engines,
+        addons: addons,
+      }),
+      url: url ,
+    }; 
+
+
+
+    const response = await axios(requestData);
 
     // Handle the response from the external service
     const responseData = response.data;

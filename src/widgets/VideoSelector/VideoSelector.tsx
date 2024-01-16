@@ -8,6 +8,7 @@ import VideoBox from '../../components/VideoBox/VideoBox'
 import { ActionType } from '../VideoAssistant/hooks/useChat'
 import { type ActionMeta } from 'react-select'
 import UploadVideoButton from './UploadVideoButton'
+import { Link } from 'react-router-dom'
 
 interface VideoSelectProps {
   chatDispatch: React.Dispatch<any>
@@ -60,7 +61,9 @@ const VideoSelect: React.FC<VideoSelectProps> = ({ chatDispatch, setCurrentVideo
     <div className={'p-6 max-h-[464px] flex-col flex'}>
           <div className={'flex flex-row justify-between'}>
             <div className={'h-5 font-bold text-[16px] font-aeonikBold'}>{VideoSelectState.CHOOSE_VIDEO}</div>
-            <UploadVideoButton/>
+            <Link to="/Index">
+              <UploadVideoButton/>
+            </Link>
           </div>
           <div className={'relative inline-flex items-center'}>
             <SelectVideoClip

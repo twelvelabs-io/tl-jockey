@@ -30,7 +30,7 @@ const SupportedVideoInfoList = ({
 
 	return (
 		<Collapse open={open}>
-            <div className={clsx('grid grid-cols-[78px_1fr] gap-y-1 gap-x-4', 'md:grid-cols-[80px_1fr_80px_1fr]', 'mt-2')}>
+            <div className={clsx('grid grid-cols-[78px_1fr] gap-y-1 gap-x-4', 'md:grid-cols-[80px_1fr_80px_1fr]', 'mt-2', 'mb-3')}>
 			{fileLimits.map(([label, value]) => (
 				<Fragment key={label}>
 					<div className={'mr-3 text-subtitle3 font-medium text-black md:text-gray-900'}>{label}</div>

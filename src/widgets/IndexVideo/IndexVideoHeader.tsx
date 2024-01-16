@@ -18,7 +18,10 @@ const IndexVideoHeader: React.FC<IndexVideoHeader> = () => {
 
   return (
     <div className={'p-6 border-b-[1px] border-[#E5E6E4]'}>
-      <div className={'flex flex-row justify-end items-end'}>
+      <div className={'flex flex-row justify-between center'}>
+        <div className={'flex items-center justify-center'}>
+          <p className={'text-2xl text-[#222222] font-dentonBold'}>Upload Videos</p>
+        </div>
         <button
             onClick={handleOpenUploadForm}
             className={'btn-primary-submit flex flex-row justify-center gap-2 items-center'}

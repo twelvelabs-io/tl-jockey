@@ -2,6 +2,7 @@
 import React from 'react';
 import { Box, Button, Modal, Typography } from '@mui/material';
 import { ReactComponent as DeleteIcon } from '../../icons/delete.svg'
+import ErrorIcon from '@mui/icons-material/Error';
 
 interface VideoListModalProps {
   open: boolean;
@@ -32,8 +33,6 @@ const VideoListModal: React.FC<VideoListModalProps> = ({ open, onClose, cancelVi
   const handleCloseModal = () => {
     onClose()
   }
-
-  console.log(videoNameMap)
 
   return (
     <Modal

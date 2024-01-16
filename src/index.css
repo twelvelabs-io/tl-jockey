@@ -36,6 +36,16 @@ code {
   src: url('./fonts/AeonikTRIAL-Bold.otf') format('opentype');
 }
 
+@font-face {
+  font-family: 'DentonBold'; /* Choose a name for your font family */
+  src: url('./fonts/Denton-Bold.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'DentonLight'; /* Choose a name for your font family */
+  src: url('./fonts/Denton-Light.otf') format('opentype');
+}
+
 .aeonik-font {
   font-family: 'Aeonik', sans-serif; /* Use your custom font or a fallback font */
 }

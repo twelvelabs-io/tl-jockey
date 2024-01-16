@@ -7,6 +7,7 @@ import {
 import { QueryClient, QueryClientProvider } from 'react-query';
 import IndexVideo from './widgets/IndexVideo/IndexVideo';
 import { CommonProvider } from './widgets/IndexVideo/WrapperPage';
+
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {

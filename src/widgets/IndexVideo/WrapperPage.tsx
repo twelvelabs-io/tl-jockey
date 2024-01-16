@@ -11,7 +11,9 @@ type CommonProviderProps = {
 export const CommonProvider: FC<CommonProviderProps> = ({ children }) => {
   const commonElement = (
     <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
-      <LogoIcon />
+      <Link to="/Chat">
+        <LogoIcon />
+      </Link>
       <div className={'flex flex-row gap-8'}>
         <Link to="/Chat">
           <button>

@@ -40,23 +40,39 @@ function SelectVideoClip<T extends string | number> ({
         defaultValue={selectedOption}
         onChange={handleChange}
         options={options}
+        menuIsOpen={true} 
         theme={(theme) => ({
           ...theme,
           borderRadius: 0,
           borderColor: '#D4D5D2',
           colors: {
             ...theme.colors,
-            primary25: '#F7FEF2'
+            text: 'black',
+            primary25: '#E5E6E4',
+            primary: '#F7FEF2',
+            neutral80: 'black',
           }
         })}
+        // styles={{
+        //   control: (baseStyles, state) => ({
+        //     ...baseStyles,
+        //     cursor: state.menuIsOpen ? 'pointer' : ''
+        //   }),
+        //   option: (provided, state) => ({
+        //     ...provided,
+        //     cursor: 'pointer'
+        //   })
+        // }}
         styles={{
-          control: (baseStyles, state) => ({
-            ...baseStyles,
-            cursor: state.menuIsOpen ? 'pointer' : ''
+          control: () => ({
+            display: 'none',  // Hide the control
           }),
-          option: (provided, state) => ({
+          option: (provided) => ({
             ...provided,
-            cursor: 'pointer'
+            color: 'black',
+            cursor: 'pointer',
+            fontSize: "14px",
+            
           })
         }}
       />
