@@ -1,0 +1,7 @@
+venv/*
+.viscode/*
+*.mp4
+.env
+.vscode
+.DS_Store
+__pycache__
