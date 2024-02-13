@@ -8,6 +8,11 @@ type CommonProviderProps = {
     children?: React.ReactNode
 }
 
+export enum WrapperPage {
+  CHAT = "Chat",
+  INDEX = "Index"
+}
+
 export const CommonProvider: FC<CommonProviderProps> = ({ children }) => {
   const commonElement = (
     <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
@@ -18,14 +23,14 @@ export const CommonProvider: FC<CommonProviderProps> = ({ children }) => {
         <Link to="/Chat">
           <button>
             <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>
-              Chat
+              {WrapperPage.CHAT}
             </p>
           </button>
         </Link>
         <Link to="/Index">
           <button>
             <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>
-              Index
+              {WrapperPage.INDEX}
             </p>
           </button>
         </Link>

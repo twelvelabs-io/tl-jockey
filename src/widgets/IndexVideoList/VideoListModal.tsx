@@ -1,18 +1,20 @@
 // VideoListModal.tsx
 import React from 'react';
 import { Box, Button, Modal, Typography } from '@mui/material';
-import { ReactComponent as DeleteIcon } from '../../icons/delete.svg'
-import ErrorIcon from '@mui/icons-material/Error';
+import { VideoChooseType } from './IndexVideoList';
+import ModalText from './ModalText';
+import useDeleteFromList from './hooks/useDeleteFromList';
 
 interface VideoListModalProps {
   open: boolean;
   onClose: () => void;
   cancelVideo: () => void;
-  videoNameMap: Record<string, number>
+  videoNameChoose?: VideoChooseType
   activeVideoName: string | null
 }
 
-const VideoListModal: React.FC<VideoListModalProps> = ({ open, onClose, cancelVideo, videoNameMap, activeVideoName }) => {
+const VideoListModal: React.FC<VideoListModalProps> = ({ open, onClose, cancelVideo, videoNameChoose, activeVideoName }) => {
+  const { deleteVideo, loading, error } = useDeleteFromList()
   const style = {
     position: 'absolute' as const,
     top: '50%',
@@ -25,10 +27,19 @@ const VideoListModal: React.FC<VideoListModalProps> = ({ open, onClose, cancelVi
     p: 4,
   };
 
-  const handleDeleteChosedVideo = () => {
-    cancelVideo()
-    onClose()
-  }
+  const handleDeleteChosedVideo = async () => {
+    if (videoNameChoose) {
+      const response = await deleteVideo(String(videoNameChoose.index), videoNameChoose.videoId);
+      if (response.success) {
+        cancelVideo();
+        onClose();
+      } else {
+        console.error('Failed to delete video:', response.error);
+      }
+    } else {
+      console.error('No video chosen for deletion');
+    }
+  };
 
   const handleCloseModal = () => {
     onClose()
@@ -44,20 +55,19 @@ const VideoListModal: React.FC<VideoListModalProps> = ({ open, onClose, cancelVi
       <Box sx={style}>
         <Typography id="modal-modal-title" variant="h6" component="h2">
 
-          <p className={'text-xl text-[#222222] font-aeonikBold'}>Delete {activeVideoName}</p>
+          <p className={'text-xl text-[#222222] font-aeonikBold'}>{ModalText.DELETE_MODAL_TITLE} {activeVideoName}</p>
         </Typography>
         <Typography id="modal-modal-description" sx={{ mt: 2 }}>
           <p className={'font-aeonik text-[16px] text-[#6F706D] mb-4'}>
-            Video data will be removed from the database permanently. To make the video searchable again, you
-            will have to re-upload the video to the playground.
+            {ModalText.DELETE_MODAL_CONTENT}
           </p>
         </Typography>
         <div className={'flex flex-row justify-between'}>
           <Button className={'cursor-pointer'} onClick={handleCloseModal}>
-            <p className={'font-aeonik text-[16px] text-[#6F706D]'}>Cancel</p>
+            <p className={'font-aeonik text-[16px] text-[#6F706D]'}>{ModalText.CANCEL_BUTTON}</p>
           </Button>
           <div onClick={handleDeleteChosedVideo} className={'bg-red-500 flex flex-row justify-center items-center gap-2 p-2 cursor-pointer'}>
-                <p className={'font-aeonik text-[16px] text-white'}>Delete permanently</p>
+                <p className={'font-aeonik text-[16px] text-white'}>{ModalText.DELETE_BUTTON}</p>
             </div>
         </div>
       </Box>

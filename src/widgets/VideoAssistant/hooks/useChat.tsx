@@ -9,11 +9,13 @@ enum ActionType {
   SET_LOADING = 'SET_LOADING',
   SET_ARRAY_MESSAGES = 'SET_ARRAY_MESSAGES',
   SET_SHOW_MODAL = 'SET_SHOW_MODAL',
-  SET_ARRAY_MESSAGES_CLEAN = 'SET_ARRAY_MESSAGES_CLEAN'
+  SET_ARRAY_MESSAGES_CLEAN = 'SET_ARRAY_MESSAGES_CLEAN',
+  SET_SELECTED_FILE_DATA = 'SET_SELECTED_FILE_DATA'
 }
 
 export interface State {
   selectedFile: File | null | string | any
+  selectedFileData: Object | null | any
   responseText: string | any
   inputBox: string
   linkUrl: string
@@ -27,6 +29,7 @@ type Action =
 
 const initialState: State = {
   selectedFile: null,
+  selectedFileData: null,
   responseText: '',
   inputBox: '',
   linkUrl: '',
@@ -39,6 +42,8 @@ function reducer (state: State, action: Action): State {
   switch (action.type) {
     case ActionType.SET_SELECTED_FILE:
       return { ...state, selectedFile: action.payload }
+    case ActionType.SET_SELECTED_FILE_DATA:
+        return { ...state, selectedFileData: action.payload }
     case ActionType.SET_RESPONSE_TEXT:
       return { ...state, responseText: action.payload }
     case ActionType.SET_INPUT_BOX:

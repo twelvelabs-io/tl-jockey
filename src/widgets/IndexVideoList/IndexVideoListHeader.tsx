@@ -7,13 +7,17 @@ import VideoListModal from './VideoListModal'
 import { Alert } from '@mui/material'
 import Warnings from '../../components/Warnings/Warnings'
 import SelectVideoClip from '../../components/Select/SelectVideoClip'
+import { VideoChooseType } from './IndexVideoList'
+import IndexVideoListHeaderLeft from './IndexVideoListHeaderLeft'
 
 interface IndexVideoListHeader {
     cancelVideo: () => void
-    videoNameMap: Record<string, number>
+    videoNameChoose?: VideoChooseType
+    videoTotalHoursformatted: string
     activeVideoName: string | null
     onShowDeleteChange: (showDelete: boolean) => void
     countOfVideo: number
+    onFilterChange: (newFilterStatus: string) => void
 }
 
 export enum VideoListHeaderTexts {
@@ -21,10 +25,12 @@ export enum VideoListHeaderTexts {
     VIDEOS_COUNT = "videos",
     TOTAL_VIDEOS = "Total",
     VIDEOS_SORTING = "Sort by :",
-    VIDEOS_RECENT_UPLOAD = "Recent upload"
+    VIDEOS_RECENT_UPLOAD = "Recent upload",
+    CLEAR = "Clear",
+    DELETE = "Delete"
   }
 
-const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({ cancelVideo, videoNameMap, activeVideoName, onShowDeleteChange, countOfVideo }) => {
+const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({  onFilterChange, cancelVideo, videoTotalHoursformatted, videoNameChoose, activeVideoName, onShowDeleteChange, countOfVideo }) => {
     const [open, setOpen] = useState(false);
     const [showDelete, setShowDelete] = useState(false);
     const [showWarning, setShowWarning] = useState(false)
@@ -48,16 +54,20 @@ const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({ cancelVideo, vid
   
     const handleClose = () => {
       setOpen(false);
+      setShowDelete(false)
     };
 
     const filterStates = [
-        'Recent upload', 'Video duration', 'Video name', 'Video resolution'
+        'Recent upload', 'Video duration', 'Video name'
     ]
 
     const handleFilterStatusChange = (option: Option) => {
-        console.log(option?.value)
         setCurrentFilterStatus(option?.value)
     }
+
+    useEffect(() => {
+        onFilterChange(currentFilterStatus)
+    }, [currentFilterStatus])
 
     const renderVideoOption = (videoFileName: string, index: number): JSX.Element => (
         <span className={'font-aeonik'} key={index}>{videoFileName}</span>
@@ -67,29 +77,14 @@ const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({ cancelVideo, vid
     selector === false ?  setSelector(true) :  setSelector(false)
   }
 
-
   return (
     <div>
         <div className='flex flex-col sm:flex-row  justify-between items-center'>
-            <div className={'flex flex-col sm:flex-row gap-4'}>
-                <div className={'font-aeonikBold text-[16px] text-center'}>
-                    {VideoListHeaderTexts.UPLOADED_VIDEOS}
-                </div>
-                <div className={'flex flex-row gap-1 justify-center items-center'}>
-                    <YoutubeIcon/>
-                    <div className={'flex flex-row gap-1'}>
-                        <p className={'font-aeonik text-sm text-[#6F706D]'}>{countOfVideo}</p>
-                        <div className={'font-aeonik text-sm text-[#6F706D]'}>
-                            {VideoListHeaderTexts.VIDEOS_COUNT}
-                        </div>
-                        <div className={'font-aeonik text-sm text-[#6F706D]'}>
-                            ({VideoListHeaderTexts.TOTAL_VIDEOS}
-                        </div>
-                        <p className={'font-aeonik text-sm text-[#6F706D]'}>1h 28min )</p>
-                    </div>
-                </div>
-                </div>
-            <div>
+            <IndexVideoListHeaderLeft 
+                countOfVideo={countOfVideo} 
+                videoTotalHoursformatted={videoTotalHoursformatted}
+            />
+        <div>
         </div>
         <div className='flex flex-row gap-2 justify-center items-center cursor-pointer' >
             <p className={'font-aeonik text-sm text-[#6F706D]'}>{VideoListHeaderTexts.VIDEOS_SORTING}</p>
@@ -104,7 +99,7 @@ const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({ cancelVideo, vid
             :<ArrowIconDown/> }
             {showDelete ?         
             <div onClick={handleClose} className={'cursor-pointer'}>
-                <p className={'font-aeonik text-sm text-[#6F706D]'}>Clear</p>
+                <p className={'font-aeonik text-sm text-[#6F706D]'}>{VideoListHeaderTexts.CLEAR}</p>
             </div> : ''
             }
             <div className={'cursor-pointer'} onClick={handleShowDelete}>
@@ -112,11 +107,11 @@ const IndexVideoListHeader: React.FC<IndexVideoListHeader> = ({ cancelVideo, vid
             </div>
             {showDelete ?         
             <div onClick={handleOpen} className={'cursor-pointer'}>
-                <p className={'font-aeonik text-sm text-[#6F706D]'}>Delete</p>
+                <p className={'font-aeonik text-sm text-[#6F706D]'}>{VideoListHeaderTexts.DELETE}</p>
             </div> : ''
             }
         </div>
-        <VideoListModal open={open} onClose={handleClose} cancelVideo ={cancelVideo} videoNameMap={videoNameMap} activeVideoName={activeVideoName} />
+        <VideoListModal open={open} onClose={handleClose} cancelVideo ={cancelVideo} videoNameChoose={videoNameChoose} activeVideoName={activeVideoName} />
         </div>
         <div className={'flex justify-end items-center flex-row '}>
         {selector ?             

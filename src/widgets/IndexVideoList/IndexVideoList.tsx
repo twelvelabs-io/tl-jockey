@@ -1,142 +1,135 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import IndexVideoListHeader from './IndexVideoListHeader'
-import { ReactComponent as ArrowIconLeft } from '../../icons/ChevronLeft.svg'
-import { ReactComponent as ArrowIconRight } from '../../icons/ChevronRight.svg'
-import { useArrayHook } from './hooks/useArrayHook'
+import { useVideoList } from './hooks/useVideoList'
 import { Alert } from '@mui/material'
 import VideoCard from './VideoCard'
+import useRetrieveVideoList from './hooks/useRetriveVideoList'
+import Pagination from '../../components/Pagination/Pagination'
 interface IndexVideoList {
 }
 
-const dummyVideoList = [
-    { id: 1, title: 'Video 1', url: 'https://example.com/video1.mp4' },
-    { id: 2, title: 'Video 2', url: 'https://example.com/video2.mp4' },
-    { id: 3, title: 'Video 3', url: 'https://example.com/video1.mp4' },
-    { id: 4, title: 'Video 4', url: 'https://example.com/video2.mp4' },
-    { id: 5, title: 'Video 5', url: 'https://example.com/video1.mp4' },
-    { id: 6, title: 'Video 6', url: 'https://example.com/video2.mp4' },
-    { id: 7, title: 'Video 7', url: 'https://example.com/video1.mp4' },
-    { id: 8, title: 'Video 8', url: 'https://example.com/video2.mp4' },
-    { id: 9, title: 'Video 9', url: 'https://example.com/video1.mp4' },
-    { id: 10, title: 'Video 10', url: 'https://example.com/video2.mp4' },
-    { id: 11, title: 'Video 11', url: 'https://example.com/video1.mp4' },
-    { id: 12, title: 'Video 12', url: 'https://example.com/video2.mp4' },
-    { id: 13, title: 'Video 13', url: 'https://example.com/video2.mp4' },
-    { id: 14, title: 'Video 14', url: 'https://example.com/video1.mp4' },
-    { id: 15, title: 'Video 15', url: 'https://example.com/video2.mp4' },
-    { id: 16, title: 'Video 16', url: 'https://example.com/video2.mp4' },
-    { id: 17, title: 'Video 17', url: 'https://example.com/video1.mp4' },
-    { id: 18, title: 'Video 18', url: 'https://example.com/video2.mp4' },
-    { id: 19, title: 'Video 19', url: 'https://example.com/video2.mp4' },
-    { id: 20, title: 'Video 20', url: 'https://example.com/video1.mp4' },
-    { id: 21, title: 'Video 21', url: 'https://example.com/video2.mp4' },
-  ];
+export type VideoChooseType = {
+  index: number;
+  name: string;
+  videoId: string;
+};
+
+export enum Page {
+  ITEMS_PER_PAGE = 12,
+  SHOW_ARROWS_NUMBER = 3,
+  FIRST_PAGE = 1,
+}
+
+export enum Time {
+  SECONDS_IN_ONE_HOUR = 3600,
+  ZERO = 0,
+  MINUTES_IN_ONE_HOUR = 60,
+}
+
+export enum StatusDelete {
+  DELETE_SUCESS = 'Video deleted successfully!'
+}
 
 const IndexVideoList: React.FC<IndexVideoList> = () => {
-  const { videoList, addVideo, cancelVideo } = useArrayHook(dummyVideoList)
-  const [videoNameMap, setVideoNameMap] = useState<Record<string, number>>({})
+  const { videoList, addVideo, cancelVideo, addFullList, sortList } = useVideoList([])
+  const [videoNameChoose, setVideoChoose] = useState<VideoChooseType | undefined>()
   const [activeVideo, setActiveVideo] = useState<number | null>(null);
   const [activeVideoName, setActiveVideoName] = useState<string | null>(null);
+
+  const [currentFilterStatus, setCurrentFilterStatus] = useState<string>('')
   const [showAlert, setShowAlert] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [currentPage, setCurrentPage] = useState(1);
-  // Function to handle video click
-  const handleVideoClick = (videoId: number, videoName: string) => {
+
+  const handleVideoClick = (videoId: number, videoName: string, video: string) => {
     setActiveVideo(videoId);
-    setVideoNameMap((prevMap) => ({
-      ...prevMap,
-      [videoName]: videoId,
-    }));
+    setVideoChoose({
+      index: videoId,
+      name: videoName,
+      videoId: video,
+    });
     setActiveVideoName(videoName)
   };
-  // Pagination
-  const itemsPerPage = 12;
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const itemsPerPage = Page.ITEMS_PER_PAGE;
+
+  const startIndex = (currentPage - Page.FIRST_PAGE) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentVideoList = videoList.slice(startIndex, endIndex);
 
-  const totalPages = Math.ceil(dummyVideoList.length / itemsPerPage);
-  const showArrows = totalPages > 3;
+  const totalPages = Math.ceil(videoList.length / itemsPerPage);
+  const showArrows = totalPages > Page.SHOW_ARROWS_NUMBER;
 
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage);
-  };
+  }, []);
 
-  const handleCancelVideo = () => {
+  const handleCancelVideo = useCallback(() => {
     if (activeVideo !== null) {
-      cancelVideo(activeVideo)
-      setShowAlert(true)
+      cancelVideo(activeVideo);
+      setShowAlert(true);
       setTimeout(() => {
         setShowAlert(false);
       }, 2000);
     }
+  }, [activeVideo, cancelVideo]);
+
+  const handleShowDeleteChange = useCallback((showDelete: boolean) => {
+    setShowDelete(showDelete);
+  }, []);
+
+  useRetrieveVideoList(currentPage, addFullList, currentFilterStatus, sortList)
+
+  const handleFilterChange = useCallback((newFilterStatus: string) => {
+    setCurrentFilterStatus(newFilterStatus);
+  }, []);
+
+  function formatDuration(totalHours: number) {
+    const hours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours - hours) * Time.MINUTES_IN_ONE_HOUR);
+    return `${hours}h ${minutes}min`;
   }
+  
+  const videoTotalHours = videoList.reduce((sum, video) => sum + video.total_duration / Time.SECONDS_IN_ONE_HOUR, Time.ZERO);
 
-  const handleShowDeleteChange = (showDelete: boolean) => {
-    console.log('showDelete changed:', showDelete)
-    setShowDelete(showDelete)
-  };
-
+  const videoTotalHoursformatted = formatDuration(videoTotalHours);
+  
+  console.log(videoList)
   return (
     <div className={'p-6 border-b-[1px] border-[#E5E6E4] flex flex-col gap-4'}>
       <IndexVideoListHeader 
+        onFilterChange={handleFilterChange} 
         countOfVideo={videoList?.length}
         cancelVideo={handleCancelVideo} 
-        videoNameMap={videoNameMap} 
+        videoTotalHoursformatted={videoTotalHoursformatted}
+        videoNameChoose={videoNameChoose} 
         activeVideoName={activeVideoName}
         onShowDeleteChange={handleShowDeleteChange}/>
       {showAlert && (
         <Alert icon={false} severity="success" className={'w-full'}>
           <p className={'font-aeonik text-sm text-gray-700'}>
-            Video deleted successfully!
+            {StatusDelete.DELETE_SUCESS}
           </p>
         </Alert>
       )}
       <div className="flex flex-row flex-wrap gap-4 justify-center items-center sm:justife-start sm:items-start md:justify-start">
         {currentVideoList.map((video) => (
           <VideoCard
-            key={video.id}
             video={video}
-            active={activeVideo === video.id}
+            key={video._id}
+            active={activeVideo === video._id}
             onClick={handleVideoClick}
             showDelete={showDelete}
           />
         ))}
       </div>
 
-      {/* Pagination with Arrows */}
-      <div className="flex items-center justify-center mt-4">
-        {showArrows && currentPage > 1 && (
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="mx-2 px-4 py-2 rounded-[32px] bg-gray-300 text-gray-700"
-          >
-            <ArrowIconLeft/>
-          </button>
-        )}
-
-        {Array.from({ length: totalPages }, (_, index) => (
-          <button
-            key={index + 1}
-            onClick={() => handlePageChange(index + 1)}
-            className={`mx-2 px-4 py-2 rounded-[32px] ${
-              currentPage === index + 1 ? 'bg-[#F7F7FA] rounded-2xl' : ''
-            }`}
-          >
-            {index + 1}
-          </button>
-        ))}
-
-        {showArrows && currentPage < totalPages && (
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="mx-2 px-4 py-2 rounded-[32px] bg-gray-300 text-gray-700"
-          >
-            <ArrowIconRight/>
-          </button>
-        )}
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        showArrows={showArrows}
+        handlePageChange={handlePageChange}
+      />
     </div>
   )
 }

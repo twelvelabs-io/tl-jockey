@@ -5,7 +5,7 @@ export enum ModelNames {
 }
 
 export enum VideoSelectState {
-  NO_VIDEO_SELECTED = 'no_video_selected',
+  NO_VIDEO_SELECTED = 'No video selected',
   CHOOSE_VIDEO = 'Choose video'
 }
 

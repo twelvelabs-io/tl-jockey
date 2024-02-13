@@ -30,7 +30,6 @@ const ChatForm: React.FC<ChatFormProps> = ({
   const handleInputChange = (event: { target: { value: React.SetStateAction<string> } }): void => {
     chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: event.target.value as string })
     setShowAutofillQuestions(false)
-    console.log('calling')
   }
   const {
     link,

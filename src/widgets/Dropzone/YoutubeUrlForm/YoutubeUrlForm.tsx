@@ -5,7 +5,7 @@ import AddIcon from '@mui/icons-material/Add'
 import { Skeleton } from '@mui/material'
 import { useYoutubeMetadata } from '../../../apis/ChatApiHandler/hooks/hooks'
 import clsx from 'clsx'
-import Input from '../../../components/InputDropZone/InputDropZone'
+import Input from './Input'
 import { ReactComponent as YoutubeLogo} from '../../../icons/logo_youtube.svg'
 import { Image } from '@mui/icons-material'
 import React, { useMemo, useState } from 'react'
@@ -43,6 +43,11 @@ type Props = {
 	className?: string
 	onAddClick: (data: { url: string; title: string; thumbnailUrl: string }) => void
 }
+
+export enum YoutubeUrlFormTexts {
+    YOUTUBE_URL = "Youtube URL",
+    ADD = "Add"
+  }
 
 const YoutubeUrlForm = ({ className, onAddClick }: Props): JSX.Element => {
 	const [url, setUrl] = useState('')
@@ -88,7 +93,7 @@ const YoutubeUrlForm = ({ className, onAddClick }: Props): JSX.Element => {
 		<form className={className} onSubmit={onSubmit}>
 			<div className={clsx('text-subtitle2 font-medium text-grey-1100', 'mb-2', 'flex items-center gap-1')}>
 				<YoutubeLogo/>
-				Youtube URL
+				{YoutubeUrlFormTexts.YOUTUBE_URL}
 			</div>
 			<div className={clsx('flex gap-2')}>
 				<div className={'relative flex-1 w-[600px]'}>
@@ -133,12 +138,10 @@ const YoutubeUrlForm = ({ className, onAddClick }: Props): JSX.Element => {
 									onClick={handleAddVideo}
 								>
 									<div className={clsx('h-[32px] w-[56px]', 'relative', 'bg-grey-100', 'rounded-[4px]')}>
-										<Image
+										<img
 											className="rounded-[4px]"
-											// src={data.thumbnail_url}
-											// layout="fill"
-											// alt="youtube thumbnail image"
-											// objectFit="cover"
+											src={data.thumbnail_url}
+											alt="youtube thumbnail image"
 										/>
 									</div>
 									<span
@@ -177,7 +180,7 @@ const YoutubeUrlForm = ({ className, onAddClick }: Props): JSX.Element => {
 					type="submit"
 				>
 					<AddIcon fontSize="small" /> 
-                    <p className={'font-aeonikBold text-sm text-[#222222]'}>Add</p>
+                    <p className={'font-aeonikBold text-sm text-[#222222]'}>{YoutubeUrlFormTexts.ADD}</p>
 				</button>
 			</div>
 		</form>

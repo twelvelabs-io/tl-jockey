@@ -57,6 +57,15 @@ type Props = {
 	videos: Array<VideoType>
 }
 
+export enum VideoDropZoneTexts {
+    YOU_CAN_ONLY_UPLOAD_FILES_LESS_THAN = 'You can only upload files less than',
+    YOU_CAN_ONLY_UPLOAD_VIDEO_FILES = "You can only upload video files",
+    DROP_HERE = 'Drop here!',
+    BROWSE_FILES = 'Browse files',
+    DRAG_AND_DROP_VIDEOS_HERE = 'Drag and drop videos here'
+  }
+
+
 const VideoDropZone = ({ className, onDrop, onRemove, videos }: Props): JSX.Element => {
 	// const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
     const isMobile = false
@@ -95,31 +104,31 @@ const VideoDropZone = ({ className, onDrop, onRemove, videos }: Props): JSX.Elem
 		if (exceedMaxSize) {
 			return (
 				<div className="text-body2 font-medium text-red-500">
-					You can only upload files less than {MAX_VIDEO_SIZE_TEXT}
+					{VideoDropZoneTexts.YOU_CAN_ONLY_UPLOAD_FILES_LESS_THAN} {MAX_VIDEO_SIZE_TEXT}
 				</div>
 			)
 		}
 
 		if (isDragReject) {
-			return <div className="text-body2 font-medium text-red-500">You can only upload video files</div>
+			return <div className="text-body2 font-medium text-red-500">{VideoDropZoneTexts.YOU_CAN_ONLY_UPLOAD_VIDEO_FILES}</div>
 		}
 
 		if (isDragAccept) {
-			return <div className="text-body2 font-medium text-green-800">Drop here!</div>
+			return <div className="text-body2 font-medium text-green-800">{VideoDropZoneTexts.DROP_HERE}</div>
 		}
 
 		if (isMobile) {
-			return <TextButton className="text-subtitle3 font-medium text-green-800">Browse files</TextButton>
+			return <TextButton className="text-subtitle3 font-medium text-green-800">{VideoDropZoneTexts.BROWSE_FILES}</TextButton>
 		}
 
 		return (
 			<>
 				<div className="text-body2 text-[#929490] text-sm">
-					Drag and drop videos here <br />
+					{VideoDropZoneTexts.DRAG_AND_DROP_VIDEOS_HERE} <br />
 				</div>
 				<div className="text-body2 text-[#929490] text-sm">
 					or&nbsp;
-					<TextButton className="text-body2 font-medium text-green-800">Browse files</TextButton>
+					<TextButton className="text-body2 font-medium text-green-800">{VideoDropZoneTexts.BROWSE_FILES}</TextButton>
 				</div>
 			</>
 		)
@@ -155,7 +164,7 @@ const VideoDropZone = ({ className, onDrop, onRemove, videos }: Props): JSX.Elem
 					<div className="flex justify-between">
 						<span className="text-body2 text-[#929490] text-sm ">{pluralize(videos.length, 'video')}</span>
 						<TextButton className="text-subtitle3 font-medium text-green-800" onClick={openFileDialog}>
-							Browse files
+							{VideoDropZoneTexts.BROWSE_FILES}
 						</TextButton>
 					</div>
 					<div className={clsx('flex flex-wrap gap-2', 'py-2')}>

@@ -4,7 +4,6 @@ import CloseIcon from '@mui/icons-material/CloseRounded'
 import Tooltip from '@mui/material/Tooltip'
 import clsx from 'clsx'
 import { ReactComponent as Youtube} from '../../../icons/logo_youtube.svg'
-import { Image } from '@mui/icons-material'
 import React from 'react'
 
 import { isFileType, isUrlType } from './types'
@@ -49,8 +48,10 @@ const UploadingVideo = ({ video, onRemove }: Props): JSX.Element => {
 					/>
 				)}
 				{isVideoUrl && (
-					<Image
+					<img
 						className={clsx('relative z-20', 'rounded-[4px]')}
+                        src={video.thumbnailUrl}
+						alt="youtube thumbnail image"
 					/>
 				)}
 			</div>

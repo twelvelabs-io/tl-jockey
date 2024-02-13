@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import React, { useEffect } from 'react'
 import axios from 'axios'
@@ -15,6 +16,9 @@ export enum DefaultVideo {
   FILE_NAME = '#4 Cooper Kupp (WR, Rams) | Top 100 Players in 2022.mp4',
   FILE_PATH = 'https://firebasestorage.googleapis.com/v0/b/shark-4be33.appspot.com/o/%234%20Cooper%20Kupp%20(WR%2C%20Rams)%20%7C%20Top%20100%20Players%20in%202022.mp4?alt=media&token=53e18668-b339-4ba2-b7fc-f88fa2e033da'
 }
+const apiKey = process.env.REACT_APP_API_MAIN_KEY
+const ServerForGeneralChat = 'https://15e6-2600-8802-3911-f100-e934-c048-c6a9-2619.ngrok-free.app/worker_generate_stream3'
+const ServerForASRRequests = 'https://15e6-2600-8802-3911-f100-e934-c048-c6a9-2619.ngrok-free.app/asr'
 
 export interface ChatSelectProps {
   chatState: State
@@ -27,13 +31,19 @@ export interface ChatSelectProps {
   submitButtonRef: React.MutableRefObject<HTMLButtonElement | null>
   chatContainerRef: React.RefObject<HTMLDivElement>
   videoRef: React.RefObject<HTMLVideoElement>
-  storage: any
   videoFiles: string[]
   currentVideoFile: string
 }
 
+
+export enum FallBackVideoID {
+  ID = '65b9b9a74c7620f1c80955b1'
+}
+
+
 const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
-  const { selectedFile, inputBox, responseText, arrayMessages, loading } = chatState
+  const { selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = chatState
+  console.log(selectedFileData)
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
       const answersAsrAndTwelve = string64obj[selectedFile as keyof typeof string64obj]
@@ -55,6 +65,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
           }
         ]
       })
+
       const requestData = {
         videos: answersAsrAndTwelve !== null ? [answersAsrAndTwelve?.vid] : [],
         prompt: inputBox,
@@ -64,14 +75,24 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         description: answersAsrAndTwelve !== null ? answersAsrAndTwelve?.description : ''
       }
 
+
+      const options = {
+        video_id: selectedFileData ? selectedFileData?.id : FallBackVideoID.ID,
+        api_key: apiKey,
+        prompt: inputBox,
+        agent_history: null,
+        description: "",
+        stream: false
+      }
+
       try {
         const response = await axios.post(
-          'https://75b4-2600-8802-3911-f100-8409-7963-3410-6b4.ngrok-free.app/worker_generate_stream',
-          requestData
+          ServerForGeneralChat,
+          { options: options }
         )
 
         const responseData2 = await axios.post(
-          'https://75b4-2600-8802-3911-f100-8409-7963-3410-6b4.ngrok-free.app/worker_generate_stream2',
+          ServerForASRRequests,
           requestData
         )
 
@@ -82,7 +103,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         const endIndex2 = jsonObject2.indexOf('error_code')
         const extractedText2 = jsonObject2.slice(startIndex2 + 8, endIndex2 - 4).trim()
         console.log(extractedText2)
-        //
+        
         let jsonObject = JSON.stringify(response.data)
         jsonObject = JSON.parse(jsonObject)
         chatDispatch({ type: ActionType.SET_LOADING, payload: false })
@@ -90,6 +111,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         const startIndex = jsonObject.indexOf('text')
         const endIndex = jsonObject.indexOf('error_code')
         const extractedText = jsonObject.slice(startIndex + 8, endIndex - 4).trim()
+        
         chatDispatch({
           type: ActionType.SET_ARRAY_MESSAGES,
           payload: [
@@ -113,9 +135,9 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
     chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
   }
 
-  const answersFull = answers[selectedFile as unknown as keyof typeof answers]
-
-  const autofillQuestions = answersFull?.map((item) => item.question)
+  const answersFull = answers[selectedFileData?.filename as unknown as keyof typeof answers]
+  const autofillQuestions = answersFull !== undefined ? answersFull?.map((item) => item.question) : 
+  answers["Rabbit.mp4" as unknown as keyof typeof answers].map((item) => item.question)
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent): void => {
@@ -204,3 +226,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 }
 
 export default ChatSelector
+function useCustomErrorHook(errorMessage: any) {
+  throw new Error('Function not implemented.')
+}
+

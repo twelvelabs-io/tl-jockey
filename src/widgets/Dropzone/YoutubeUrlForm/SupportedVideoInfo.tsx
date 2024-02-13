@@ -21,7 +21,7 @@ const SupportedVideoInfoList = ({
 	const fileLimits = useMemo(
 		() => [
 			['Resolution', '360p - 4k'],
-			['Duration', '4s-2hrs'],
+			['Duration', '30s - 30m'],
 			['File size', '≤2GB per video'],
 			['Audio', 'Required for conversation index option']
 		],

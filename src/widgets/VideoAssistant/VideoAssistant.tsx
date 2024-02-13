@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg'
-import { initializeApp } from 'firebase/app'
-import { getStorage, ref, listAll, getDownloadURL } from 'firebase/storage'
+import { getDownloadURL } from 'firebase/storage'
 import ModalCentral from '../../components/Modal/ModalCentral'
 import VideoSelect from '../VideoSelector/VideoSelector'
 import ChatSelector, { type ChatSelectProps } from '../ChatSelector/ChatSelector'
@@ -21,18 +20,6 @@ export interface Message {
   lameText: string | '' | undefined
   question: string | '' | undefined
 }
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyCeRQg_RDnj9t9NjWHbxaUmTlm__NdW9EE',
-  authDomain: 'shark-6c3ab.firebaseapp.com',
-  projectId: 'shark-6c3ab',
-  storageBucket: 'shark-6c3ab.appspot.com',
-  messagingSenderId: '780237476552',
-  appId: '1:780237476552:web:10288c72abd0bcd942cbfd'
-}
-const app = initializeApp(firebaseConfig)
-const storage = getStorage(app)
-const listRef = ref(storage)
 
 const VideoAssistant: React.FC = () => {
   const [chatState, chatDispatch] = useChat()
@@ -66,26 +53,6 @@ const VideoAssistant: React.FC = () => {
 
   const handleClose = (): void => { chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
 
-  useEffect(() => {
-    listAll(listRef)
-      .then((res) => {
-        const videoUrls = res.items.map((itemRef) => {
-          return itemRef.fullPath
-        })
-
-        Promise.all(videoUrls)
-          .then((urls) => {
-            setVideoFiles(urls)
-          })
-          .catch((error) => {
-            console.error('Error fetching video URLs:', error)
-          })
-      })
-      .catch((error) => {
-        console.error('Error listing files:', error)
-      })
-  }, [])
-
   const chatSelectProps: ChatSelectProps = {
     chatState,
     chatDispatch,
@@ -96,7 +63,6 @@ const VideoAssistant: React.FC = () => {
     videoRef,
     setAutofillApi,
     setChoosedElement,
-    storage,
     videoFiles,
     currentVideoFile,
     chatContainerRef
@@ -127,7 +93,6 @@ const VideoAssistant: React.FC = () => {
           setShowAutofillQuestions={setShowAutofillQuestions}
           videoRef={videoRef}
           getDownloadURL={getDownloadURL}
-          storage={storage}
           videoFiles={videoFiles}
           currentVideoFile={currentVideoFile}/>
         <ChatSelector {...chatSelectProps}/>

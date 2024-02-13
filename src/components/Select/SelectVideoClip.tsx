@@ -29,7 +29,7 @@ function SelectVideoClip<T extends string | number> ({
       label: '', // Label for the group if needed
       options: data.map((item) => ({
         value: item.toString(),
-        label: item.toString()
+        label: item.toString(),
       }))
     }
   ]
@@ -40,7 +40,7 @@ function SelectVideoClip<T extends string | number> ({
         defaultValue={selectedOption}
         onChange={handleChange}
         options={options}
-        menuIsOpen={true} 
+        closeMenuOnSelect={true}
         theme={(theme) => ({
           ...theme,
           borderRadius: 0,
@@ -64,9 +64,6 @@ function SelectVideoClip<T extends string | number> ({
         //   })
         // }}
         styles={{
-          control: () => ({
-            display: 'none',  // Hide the control
-          }),
           option: (provided) => ({
             ...provided,
             color: 'black',

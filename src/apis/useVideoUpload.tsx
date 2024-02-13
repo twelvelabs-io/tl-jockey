@@ -4,11 +4,11 @@ import axios from 'axios';
 import { FileId } from '../widgets/Dropzone/YoutubeUrlForm/indexTaskUploadState';
 import { VideoType, isFileType, isUrlType } from '../widgets/Dropzone/YoutubeUrlForm/types';
 
+const apiKey = process.env.REACT_APP_API_MAIN_KEY;
+const localServerCreateIndex = 'https://15e6-2600-8802-3911-f100-e934-c048-c6a9-2619.ngrok-free.app/worker_generate_stream2'
+
 const useVideoUpload = () => {
   const uploadVideos = async (videos: VideoType[]) => {
-    const apiKey = 'tlk_1V6J4TC3646GX92VGH837303P6AX';
-    const apiUrl = 'https://api.twelvelabs.io/p/v1.2/indexes';
-
     // Assuming you are using the Marengo video understanding engine
     const engines = [{ engine_name: 'pegasus1', engine_options: ['visual', 'conversation'] }];
     const addons = ['thumbnail']; // Enable thumbnail generation addon
@@ -31,18 +31,13 @@ const useVideoUpload = () => {
         };
 
         const options = {
-          method: 'POST',
-          headers: headers,
-          data: JSON.stringify({
             index_name: indexName,
             engines: engines,
-            addons: addons,
-          }),
-          url: apiUrl,
+            addons: addons, 
         };
 
         const response = await axios.post(
-          'https://c748-2600-8802-3911-f100-781c-f009-472a-8814.ngrok-free.app/worker_generate_stream2',
+          localServerCreateIndex,
           { options: options }
         );
 
