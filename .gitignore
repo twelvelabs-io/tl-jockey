@@ -1,3 +1,11 @@
+venv/*
+.viscode/*
+*.mp4
+.env
+.vscode
+.DS_Store
+__pycache__
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
