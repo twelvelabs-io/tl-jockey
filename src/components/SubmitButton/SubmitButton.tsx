@@ -25,13 +25,8 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({
   return (
     <button
       onClick={() => {
-        // if (autofillQuestions.some((question) => question === responseText)) {
-        //   setAutofillApi(true)
-        //   handleChat()
-        // } else {
-          setAutofillApi(false)
-          handleChatApi()
-        // }
+        setAutofillApi(false)
+        handleChatApi()
       }}
       ref={submitButtonRef}
       className={'btn-primary-submit'}

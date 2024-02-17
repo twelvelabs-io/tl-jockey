@@ -1,14 +1,12 @@
 import React from 'react'
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg'
-import { getDownloadURL } from 'firebase/storage'
 import ModalCentral from '../../components/Modal/ModalCentral'
-import VideoSelect from '../VideoSelector/VideoSelector'
 import ChatSelector, { type ChatSelectProps } from '../ChatSelector/ChatSelector'
-import { Link } from 'react-router-dom'
 
 import { useChat, ActionType } from './hooks/useChat'
 import useAutofillQuestions from './hooks/useAutofillQuestions'
 import useVideo from './hooks/useVideo'
+import { Link } from 'react-router-dom'
 
 export interface Message {
   sender: 'user' | 'ai'
@@ -47,7 +45,6 @@ const VideoAssistant: React.FC = () => {
   } = valuesVideo
 
   const {
-    setVideoFiles,
     setCurrentVideoFile
   } = actionsVideo
 
@@ -70,31 +67,13 @@ const VideoAssistant: React.FC = () => {
 
   return (
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
-        <div className={'text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
-          <LogoIcon />
-          <div className={'flex flex-row gap-8'}>
+        <div className={'pl-[70px] pr-[70px] text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
           <Link to="/Chat">
-              <button>
-                <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Chat</p>
-              </button>
-            </Link>
-            <Link to="/Index">
-              <button>
-                <p className={'font-aeonikBold text-[16px] leading-5 hover:text-[#006F33]'}>Index</p>
-              </button>
-            </Link>
-          </div>
+            <LogoIcon />
+          </Link>
           <div></div>
         </div>
-      <div className={'flex'}>
-        <VideoSelect
-          chatDispatch={chatDispatch}
-          setCurrentVideoFile={setCurrentVideoFile}
-          setShowAutofillQuestions={setShowAutofillQuestions}
-          videoRef={videoRef}
-          getDownloadURL={getDownloadURL}
-          videoFiles={videoFiles}
-          currentVideoFile={currentVideoFile}/>
+      <div className={'w-full'}>
         <ChatSelector {...chatSelectProps}/>
       </div>
       <ModalCentral

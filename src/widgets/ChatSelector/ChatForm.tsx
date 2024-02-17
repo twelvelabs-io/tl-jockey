@@ -94,7 +94,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
 
   console.log(arrayMessages)
   return (
-    <div className={`flex flex-row justify-between gap-2 w-full border-l border-[#E5E6E4] border-solid pl-[70px] pr-[70px] ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
+    <div className={`flex flex-row justify-between gap-2 w-full  ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
       <Input
         disabled={selectedFile === undefined}
         onChange={handleInputChange}

@@ -4,7 +4,6 @@ import React, { useEffect } from 'react'
 import axios from 'axios'
 import answers from '../../info/answers.json'
 
-import string64obj from '../../info/string64obj.json'
 import Loading from '../../components/Loading/Loading'
 import AutofillQuestions from '../../components/AutofillQuestions/AutofillQuestions'
 import ChatMessagesList from '../../components/ChatMessagesList/ChatMessagesList'
@@ -46,7 +45,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   console.log(selectedFileData)
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
-      const answersAsrAndTwelve = string64obj[selectedFile as keyof typeof string64obj]
+
       chatDispatch({ type: ActionType.SET_LOADING, payload: true })
 
       chatDispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: inputBox })
@@ -67,12 +66,12 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
       })
 
       const requestData = {
-        videos: answersAsrAndTwelve !== null ? [answersAsrAndTwelve?.vid] : [],
+        videos: '',
         prompt: inputBox,
         agent_history: null,
         duration: 60.0,
-        asr: answersAsrAndTwelve !== null ? answersAsrAndTwelve?.asr : '',
-        description: answersAsrAndTwelve !== null ? answersAsrAndTwelve?.description : ''
+        asr: '',
+        description: ''
       }
 
 
@@ -184,7 +183,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 
   return (
     <div>
-          <div className={'pl-[70px] pr-[70px] pt-6 flex-col border-l border-gray-300 flex w-[55vw] h-[80vh] overflow-y-auto'} ref={chatContainerRef} >
+          <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col border-l border-gray-300 flex h-[80vh]'} ref={chatContainerRef} >
             <ChatMessagesList
                 chatState={chatState}
                 chatDispatch={chatDispatch}
@@ -207,26 +206,23 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
               }
             {!loading ? <StartNewGroup clearChat={clearChat}/> : ''}
           </div>
-          <ChatForm
-            chatState={chatState}
-            chatDispatch={chatDispatch}
-            setShowAutofillQuestions={setShowAutofillQuestions}
-            submitButtonRef={submitButtonRef}
-            autofillQuestions={autofillQuestions}
-            setAutofillApi={setAutofillApi}
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            handleChatApi={handleChatApi}
-            showAutofillQuestions={showAutofillQuestions}
-          />
-          <div className={'pl-6 pr-6 flex-col border-solid border-l border-[#E5E6E4] flex w-[50vw] h-[50vh]'}>
+          <div className={'pl-[10vw] pr-[10vw] '}>
+            <ChatForm
+              chatState={chatState}
+              chatDispatch={chatDispatch}
+              setShowAutofillQuestions={setShowAutofillQuestions}
+              submitButtonRef={submitButtonRef}
+              autofillQuestions={autofillQuestions}
+              setAutofillApi={setAutofillApi}
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              handleChatApi={handleChatApi}
+              showAutofillQuestions={showAutofillQuestions}
+            />
           </div>
         </div>
   )
 }
 
 export default ChatSelector
-function useCustomErrorHook(errorMessage: any) {
-  throw new Error('Function not implemented.')
-}
 

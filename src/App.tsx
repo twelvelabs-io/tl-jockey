@@ -1,35 +1,28 @@
 import React from 'react';
 import VideoAssistant from './widgets/VideoAssistant/VideoAssistant';
 import {
-  createBrowserRouter,
-  RouterProvider
+  BrowserRouter as Router,
+  Routes,
+  Route
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
-import IndexVideo from './widgets/IndexVideo/IndexVideo';
 import { CommonProvider } from './widgets/IndexVideo/WrapperPage';
 
 const queryClient = new QueryClient();
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <VideoAssistant/>
-  },
-  {
-    path: '/Chat',
-    element: <VideoAssistant/>
-  },
-  {
-    path: '/Index',
-    element: <IndexVideo />
-  }
-]);
 
-const App = (): JSX.Element => (
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <CommonProvider>
-        <RouterProvider router={router} />
+        <Router>
+          <Routes>
+            <Route path="/" element={<VideoAssistant />} />
+            <Route path="/Chat" element={<VideoAssistant />} />
+          </Routes>
+        </Router>
       </CommonProvider>
     </QueryClientProvider>
-);
+  );
+};
 
 export default App;
