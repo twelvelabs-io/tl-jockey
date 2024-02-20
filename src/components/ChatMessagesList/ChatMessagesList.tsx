@@ -82,8 +82,6 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ chatState, chatDisp
     chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
   }
 
-  console.log(arrayMessages)
-
   return (
     <>
     { arrayMessages?.map((message, index) => (

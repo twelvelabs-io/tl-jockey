@@ -14,8 +14,6 @@ interface ChatMessagesItemProps {
 }
 
 const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message, index, handleClick, handleShow }) => {
-  console.log(message)
-  console.log('here')
   return (
     <>
         <div className={'flex flex-column gap-1'} key={index}>
