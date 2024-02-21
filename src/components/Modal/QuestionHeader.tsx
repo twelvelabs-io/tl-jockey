@@ -1,10 +1,5 @@
 import React from 'react'
-
-interface QuestionHeaderProps {
-  logo: string
-  handleClose: () => void
-  text: string[]
-}
+import { QuestionHeaderProps } from './ModalTypes'
 
 const QuestionHeader: React.FC<QuestionHeaderProps> = ({ logo, text, handleClose }) => (
     <div className={'flex justify-between flex-row pr-6 items-center pt-[18px]'}>

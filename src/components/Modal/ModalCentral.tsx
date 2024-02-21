@@ -9,15 +9,7 @@ import union from '../../../src/icons/union.svg'
 import { ModelNames } from '../../constants'
 import QuestionHeader from './QuestionHeader'
 import ColumnGroup from './ColumnGroup'
-import { type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
-
-interface ModalCentralProps {
-  chatState: State
-  chatDispatch: React.Dispatch<any>
-  handleClose: () => void
-  choosedElement: number | undefined
-  autofillApi: boolean
-}
+import { ModalCentralProps } from './ModalTypes'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   chatState,
@@ -27,9 +19,9 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
   autofillApi
 }) => {
   const adjastableColumns: string = autofillApi ? 'col-md-4' : 'col-md-6'
-
-  const arrayMessages = chatState.arrayMessages
-  const showModal = chatState.showModal
+  const renderTextByElement = (element: any, index: number) =>
+    index === choosedElement ? element : '';
+  const { arrayMessages, showModal } = chatState
 
   const columnData = [
     {
@@ -38,8 +30,8 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
       modelName: ModelNames.MODEL_TWELVE_LABS,
       backgroundColor: 'bg-[#F7FEF2]',
       text: arrayMessages.map((element, index) =>
-        index === choosedElement ? element.twelveText as string : ''
-      )
+        renderTextByElement(element.twelveText as string, index)
+      ),
     },
     {
       className: adjastableColumns,
@@ -47,8 +39,8 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
       modelName: ModelNames.MODEL_ASR_AND_GPT,
       backgroundColor: 'bg-[#F9FAF9]',
       text: arrayMessages.map((element, index) =>
-        index === choosedElement ? element.asrTest as string : ''
-      )
+        renderTextByElement(element.asrTest as string, index)
+      ),
     },
     ...(autofillApi
       ? [
@@ -57,10 +49,9 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
             modelLogo: lama,
             modelName: ModelNames.MODEL_LAMA,
             backgroundColor: 'bg-[#F9FAF9]',
-            text: arrayMessages.map(
-              (element, index) =>
-                index === choosedElement ? element.lameText as string : ''
-            )
+            text: arrayMessages.map((element, index) =>
+              renderTextByElement(element.lameText as string, index)
+            ),
           }
         ]
       : [])
@@ -72,7 +63,9 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
         <QuestionHeader
             handleClose={handleClose}
             logo={union}
-            text={arrayMessages.map((element, index) => index === choosedElement ? element.question as string : '')}
+            text={arrayMessages.map((element, index) =>
+              renderTextByElement(element.question as string, index)
+            )}
         />
         </div>
     <Modal.Body>

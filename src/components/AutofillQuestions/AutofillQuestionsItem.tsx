@@ -1,18 +1,26 @@
 import React from 'react'
-
-interface AutofillQuestionsItemProps {
-  question: string
-  index: number
-  handleQuestionClick: (question: string) => void
-}
+import { AutofillQuestionsItemProps } from './AutofillQuestionsItemTypes'
 
 const AutofillQuestionsItem: React.FC<AutofillQuestionsItemProps> = ({ question, index, handleQuestionClick }) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.backgroundColor = '#F4F4F3';
+  }
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.backgroundColor = 'initial';
+  }
+
+  const handleClick = () => {
+    handleQuestionClick(question);
+  }
+
   return (
     <div
-        onMouseEnter={(e: any) => (e.target.style.backgroundColor = '#F4F4F3')}
-        onMouseLeave={(e: any) => (e.target.style.backgroundColor = 'initial')}
-        key={index} onClick={() => { handleQuestionClick(question) }}
-        className={'p-2 cursor-pointer w-full font-aeonik'}
+        className="p-2 cursor-pointer w-full font-aeonik"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
+        key={index}
     >
         {question}
     </div>

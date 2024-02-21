@@ -1,16 +1,8 @@
 import React from 'react'
 import HeaderModal from './HeaderModal'
-
-interface ColumnModalProps {
-  modelLogo: string
-  modelName: string
-  backgroundColor: string
-  text?: string[]
-  className: string
-}
+import { ColumnModalProps } from './ModalTypes'
 
 const ColumnModal: React.FC<ColumnModalProps> = ({ className, modelLogo, modelName, backgroundColor, text }) => {
-  console.log(text)
   return (
   <div className={`${className} ${backgroundColor} border-[0.5px] border-solid border-[#e5e5e5] `}>
     {/* Header for the Column */}

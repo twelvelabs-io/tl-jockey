@@ -1,10 +1,7 @@
 import axios, { AxiosProgressEvent } from "axios"
 import { UseMutationResult, useMutation } from "react-query"
 import API_KEYS from "./apiKeys"
-const PLAYGROUND_API_URL = 'https://api.twelvelabs.space'
-const CREATE_TASK_URL = 'https://api.twelvelabs.space/v1.2/tasks'
-const CREATE_TASK_WITH_YOUTUBE_URL = 'https://api.twelvelabs.io/v1.2/tasks/external-provider'
-const API_VERSION = 'v1.2'
+import { PLAYGROUND_API_URL, CREATE_TASK_URL, CREATE_TASK_WITH_YOUTUBE_URL, API_VERSION } from "./apiEndpoints"
 
 export const twelveLabsAPI = axios.create({
 	baseURL: `${PLAYGROUND_API_URL}/${API_VERSION}`
@@ -38,13 +35,9 @@ const headers = {
     async ({ abortSignal: signal, onUploadProgress, ...params }: Params) => {
 
         const formData = new FormData();
-
-        console.log(params.video_file)
-        console.log('paramsvideo')
         formData.append('index_id', params.index_id);
 
         if (params.video_file) {
-            console.log('true')
             formData.append('video_file', params.video_file);
           }
 
@@ -84,7 +77,6 @@ export function useCreateTaskWithUrl<
 >(): UseMutationResult<Response, unknown, Params> {
 	return useMutation(
         async ({ abortSignal: signal, ...params }: Params) => {
-            console.log(params)
             const formData = new FormData()
             formData.append('index_id', params.index_id);
             formData.append('url', params.url);

@@ -1,15 +1,6 @@
 import React from 'react'
 import ColumnModal from './ColumnModal'
-
-interface ColumnGroupProps {
-  columnData: Array<{
-    className: string
-    modelLogo: string
-    modelName: string
-    backgroundColor: string
-    text: string[]
-  }>
-}
+import { ColumnGroupProps } from './ModalTypes'
 
 const ColumnGroup: React.FC<ColumnGroupProps> = ({ columnData }) => {
   return (

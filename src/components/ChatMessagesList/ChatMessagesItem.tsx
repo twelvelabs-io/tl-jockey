@@ -1,26 +1,18 @@
 import React from 'react'
 import { ChatCompareResults } from '../../constants'
-import { type QuestionMessage } from '../../types/messageTypes'
 
 import { ReactComponent as UserIcon } from '../../icons/user.svg'
 import { ReactComponent as AIIcon } from '../../icons/ai.svg'
-
-interface ChatMessagesItemProps {
-  message: QuestionMessage
-  index: number
-  handleClick: (event: React.MouseEvent<HTMLSpanElement>) => void
-  handleShow: (index: number | undefined, question: string) => void
-  key: number
-}
+import { ChatMessagesItemProps } from './ChatMessagesItemTypes'
 
 const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message, index, handleClick, handleShow }) => {
+  const isUserMessage = message.sender === 'user'
   return (
-    <>
         <div className={'flex flex-column gap-1'} key={index}>
-          <div key={index} className={`${message.sender === 'user' ? ' mb-[5px] flex-row gap-2 justify-end items-start flex' : 'mt-[5px] flex-row gap-2 justify-start items-start flex'}`}>
-            {message.sender === 'user'
+          <div key={index} className={`${isUserMessage ? ' mb-[5px] flex-row gap-2 justify-end items-start flex' : 'mt-[5px] flex-row gap-2 justify-start items-start flex'}`}>
+            {isUserMessage 
               ? <div className={'flex flex-row'}>
-                  <div className={`whitespace-pre-line mr-[10px] ml-[5px] ${message.sender === 'user' ? 'userBubble' : 'aiBubble'}`}>
+                  <div className={`whitespace-pre-line mr-[10px] ml-[5px] ${isUserMessage ? 'userBubble' : 'aiBubble'}`}>
                     {message.text}
                   </div>
                   <div className={'mr-8 relative'}>
@@ -49,9 +41,14 @@ const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message, index, han
                 </>
             }
           </div>
-          {message.sender !== 'user' ? <div onClick={() => { handleShow(index, message.question as string) }} className={'text-[#006F33] text-sm font-medium pl-[2px] cursor-pointer font-aeonikBold'}>{ChatCompareResults.COMPARE_RESULTS}</div> : ''}
+          {!isUserMessage && (
+            <div 
+              onClick={() => handleShow(index, message.question as string)} 
+              className="text-[#006F33] text-sm font-medium pl-[2px] cursor-pointer font-aeonikBold">
+              {ChatCompareResults.COMPARE_RESULTS}
+            </div>
+          )}
         </div>
-    </>
   )
 }
 

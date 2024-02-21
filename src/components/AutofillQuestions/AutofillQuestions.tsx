@@ -2,12 +2,7 @@ import React from 'react'
 import { ChatSelectQuestions } from '../../constants'
 import AutofillQuestionsItem from './AutofillQuestionsItem'
 import { ActionType } from '../../widgets/VideoAssistant/hooks/useChat'
-
-interface AutofillQuestionsProps {
-  chatDispatch: React.Dispatch<any>
-  setShowAutofillQuestions: (show: boolean) => void
-  autofillQuestions: string[]
-}
+import { AutofillQuestionsProps } from './AutofillQuestionsTypes'
 
 const AutofillQuestions: React.FC<AutofillQuestionsProps> = ({ autofillQuestions, chatDispatch, setShowAutofillQuestions }) => {
   const handleQuestionClick = (question: string): void => {
