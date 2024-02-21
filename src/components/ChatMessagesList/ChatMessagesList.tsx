@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React from 'react'
 import ChatMessagesItem from './ChatMessagesItem'
-import { ActionType, type State } from '../../widgets/VideoAssistant/hooks/useChat'
+import { ActionType, type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 
 interface ChatMessagesListProps {
   chatState: State

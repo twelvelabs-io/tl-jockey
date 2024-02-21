@@ -1,18 +1,5 @@
 import React from 'react'
-
-interface SubmitButtonProps {
-  submitButtonRef: React.RefObject<HTMLButtonElement>
-  autofillQuestions: string[]
-  responseText: string
-  setAutofillApi: (value: boolean) => void
-  handleChat: () => void
-  handleChatApi: () => void
-}
-
-export enum Button {
-  BUTTON_TEXT = 'Submit',
-  BUTTON_UPLOAD = "Upload"
-}
+import { SubmitButtonProps, ButtonText } from './SubmitButtonTypes'
 
 const SubmitButton: React.FC<SubmitButtonProps> = ({
   submitButtonRef,
@@ -31,7 +18,7 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({
       ref={submitButtonRef}
       className={'btn-primary-submit'}
     >
-      {Button.BUTTON_TEXT}
+      {ButtonText.BUTTON_TEXT}
     </button>
   )
 }

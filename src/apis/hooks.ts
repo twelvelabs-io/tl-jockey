@@ -1,6 +1,6 @@
 import axios, { AxiosProgressEvent } from "axios"
 import { UseMutationResult, useMutation } from "react-query"
-
+import API_KEYS from "./apiKeys"
 const PLAYGROUND_API_URL = 'https://api.twelvelabs.space'
 const CREATE_TASK_URL = 'https://api.twelvelabs.space/v1.2/tasks'
 const CREATE_TASK_WITH_YOUTUBE_URL = 'https://api.twelvelabs.io/v1.2/tasks/external-provider'
@@ -10,9 +10,8 @@ export const twelveLabsAPI = axios.create({
 	baseURL: `${PLAYGROUND_API_URL}/${API_VERSION}`
 })
 
-const apiKey = process.env.REACT_APP_API_MAIN_KEY;
 const headers = {
-    'x-api-key': apiKey,
+    'x-api-key': API_KEYS.MAIN,
     'Content-Type': 'multipart/form-data',
   };
 

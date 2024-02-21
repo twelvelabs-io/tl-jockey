@@ -9,7 +9,7 @@ import union from '../../../src/icons/union.svg'
 import { ModelNames } from '../../constants'
 import QuestionHeader from './QuestionHeader'
 import ColumnGroup from './ColumnGroup'
-import { type State } from '../../widgets/VideoAssistant/hooks/useChat'
+import { type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 
 interface ModalCentralProps {
   chatState: State

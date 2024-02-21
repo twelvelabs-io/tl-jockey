@@ -2,16 +2,9 @@
 import React, { FC, createContext, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg'
+import { CommonProviderProps, WrapperPage } from './IndexVideoTypes';
 
 const CommonContext = createContext<React.ReactNode | null>(null);
-type CommonProviderProps = {
-    children?: React.ReactNode
-}
-
-export enum WrapperPage {
-  CHAT = "Chat",
-  INDEX = "Index"
-}
 
 export const CommonProvider: FC<CommonProviderProps> = ({ children }) => {
   const commonElement = (

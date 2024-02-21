@@ -3,18 +3,8 @@ import Input from '../../components/Input/Input'
 import SubmitButton from '../../components/SubmitButton/SubmitButton'
 import useMatch from './hooks/useMatch'
 import answers from '../../info/answers.json'
-import { ActionType, type State } from '../VideoAssistant/hooks/useChat'
-
-interface ChatFormProps {
-  chatState: State
-  chatDispatch: React.Dispatch<any>
-  submitButtonRef: React.MutableRefObject<HTMLButtonElement | null>
-  autofillQuestions: string[]
-  setAutofillApi: (file: boolean) => void
-  handleChatApi: () => void
-  showAutofillQuestions: boolean
-  setShowAutofillQuestions: (show: boolean) => void
-}
+import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
+import { ChatFormProps } from './ChatFormTypes'
 
 const ChatForm: React.FC<ChatFormProps> = ({
   chatState,
@@ -26,7 +16,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
   showAutofillQuestions,
   setShowAutofillQuestions
 }) => {
-  const { inputBox, responseText, selectedFile, arrayMessages } = chatState
+  const { inputBox, responseText, selectedFile } = chatState
   const handleInputChange = (event: { target: { value: React.SetStateAction<string> } }): void => {
     chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: event.target.value as string })
     setShowAutofillQuestions(false)
@@ -92,7 +82,6 @@ const ChatForm: React.FC<ChatFormProps> = ({
     setShowAutofillQuestions(true)
   }
 
-  console.log(arrayMessages)
   return (
     <div className={`flex flex-row justify-between gap-2 w-full  ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
       <Input

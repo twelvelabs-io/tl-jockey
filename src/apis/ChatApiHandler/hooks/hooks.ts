@@ -1,7 +1,6 @@
 import type { UseQueryOptions, UseQueryResult } from 'react-query'
 import { useQuery } from 'react-query'
 import { getYoutubeMetadataKey } from './keys'
-import { nextAPI } from './network'
 import axios from 'axios'
 
 interface YoutubeMetadataResponse {

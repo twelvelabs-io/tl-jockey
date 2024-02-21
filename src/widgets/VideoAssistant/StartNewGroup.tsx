@@ -1,6 +1,7 @@
 import React from 'react'
 import { ReactComponent as RefreshIcon } from '../../icons/refresh.svg'
 import { HeaderTexts } from '../../../src/constants'
+import Button from '../../components/Button/Button'
 
 interface StartNewGroupProps {
   clearChat: () => void
@@ -14,10 +15,9 @@ const StartNewGroup: React.FC<StartNewGroupProps> = ({ clearChat }) => {
             <div className={'justify-center items-center w-[16px] h-[16px] flex'}>
               <RefreshIcon />
             </div>
-            <div
-                className={'btn-primary-new'}>
-                  <p className={'text-sm font-medium leading-5 font-aeonikBold'}>{HeaderTexts.START_NEW_CHAT}</p>
-            </div>
+            <Button className="btn-primary-new">
+              <p className="start-new-group-text">{HeaderTexts.START_NEW_CHAT}</p>
+            </Button>
           </div>
       </div>
   )

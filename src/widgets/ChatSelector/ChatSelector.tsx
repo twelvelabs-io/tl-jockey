@@ -8,41 +8,15 @@ import Loading from '../../components/Loading/Loading'
 import AutofillQuestions from '../../components/AutofillQuestions/AutofillQuestions'
 import ChatMessagesList from '../../components/ChatMessagesList/ChatMessagesList'
 import ChatForm from './ChatForm'
-import { ActionType, type State } from '../VideoAssistant/hooks/useChat'
+import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
 import StartNewGroup from '../VideoAssistant/StartNewGroup'
 
-export enum DefaultVideo {
-  FILE_NAME = '#4 Cooper Kupp (WR, Rams) | Top 100 Players in 2022.mp4',
-  FILE_PATH = 'https://firebasestorage.googleapis.com/v0/b/shark-4be33.appspot.com/o/%234%20Cooper%20Kupp%20(WR%2C%20Rams)%20%7C%20Top%20100%20Players%20in%202022.mp4?alt=media&token=53e18668-b339-4ba2-b7fc-f88fa2e033da'
-}
-const apiKey = process.env.REACT_APP_API_MAIN_KEY
-const ServerForGeneralChat = 'https://15e6-2600-8802-3911-f100-e934-c048-c6a9-2619.ngrok-free.app/worker_generate_stream3'
-const ServerForASRRequests = 'https://15e6-2600-8802-3911-f100-e934-c048-c6a9-2619.ngrok-free.app/asr'
-
-export interface ChatSelectProps {
-  chatState: State
-  chatDispatch: React.Dispatch<any>
-  showAutofillQuestions: boolean
-  setCurrentVideoFile: (file: string) => void
-  setShowAutofillQuestions: (show: boolean) => void
-  setAutofillApi: (file: boolean) => void
-  setChoosedElement: (file: number | undefined) => void
-  submitButtonRef: React.MutableRefObject<HTMLButtonElement | null>
-  chatContainerRef: React.RefObject<HTMLDivElement>
-  videoRef: React.RefObject<HTMLVideoElement>
-  videoFiles: string[]
-  currentVideoFile: string
-}
-
-
-export enum FallBackVideoID {
-  ID = '65b9b9a74c7620f1c80955b1'
-}
-
+import { ChatSelectProps, DefaultVideo, FallBackVideoID } from './ChatSelectorTypes';
+import { ServerConfig } from '../../server/serverConfig'
+import API_KEYS from '../../apis/apiKeys'
 
 const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
   const { selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = chatState
-  console.log(selectedFileData)
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
 
@@ -77,7 +51,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 
       const options = {
         video_id: selectedFileData ? selectedFileData?.id : FallBackVideoID.ID,
-        api_key: apiKey,
+        api_key: API_KEYS.MAIN,
         prompt: inputBox,
         agent_history: null,
         description: "",
@@ -86,12 +60,12 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 
       try {
         const response = await axios.post(
-          ServerForGeneralChat,
+          ServerConfig.ServerForGeneralChat,
           { options: options }
         )
 
         const responseData2 = await axios.post(
-          ServerForASRRequests,
+          ServerConfig.ServerForASRRequests,
           requestData
         )
 
@@ -101,7 +75,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         const startIndex2 = jsonObject2.indexOf('text')
         const endIndex2 = jsonObject2.indexOf('error_code')
         const extractedText2 = jsonObject2.slice(startIndex2 + 8, endIndex2 - 4).trim()
-        console.log(extractedText2)
         
         let jsonObject = JSON.stringify(response.data)
         jsonObject = JSON.parse(jsonObject)
@@ -127,7 +100,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
           ]
         })
       } catch (error) {
-        console.error('Request error:', error)
         chatDispatch({ type: ActionType.SET_LOADING, payload: false })
       }
     }
@@ -141,8 +113,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent): void => {
       if (event.key === 'Enter' && submitButtonRef.current !== null && submitButtonRef.current !== undefined) {
-        // Check if the Enter key is pressed and the submit button exists
-        submitButtonRef.current.click() // Trigger a click event on the submit button
+        submitButtonRef.current.click() 
       }
     }
 
@@ -152,7 +123,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
     }
 
     return () => {
-      // Cleanup the event listener when the component unmounts
       if (inputElement !== null) {
         inputElement.removeEventListener('keydown', handleKeyPress)
       }

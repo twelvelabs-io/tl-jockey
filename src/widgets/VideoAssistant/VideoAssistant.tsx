@@ -1,23 +1,13 @@
 import React from 'react'
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg'
 import ModalCentral from '../../components/Modal/ModalCentral'
-import ChatSelector, { type ChatSelectProps } from '../ChatSelector/ChatSelector'
+import ChatSelector from '../ChatSelector/ChatSelector'
+import { type ChatSelectProps } from '../ChatSelector/ChatSelectorTypes'
 
 import { useChat, ActionType } from './hooks/useChat'
 import useAutofillQuestions from './hooks/useAutofillQuestions'
 import useVideo from './hooks/useVideo'
 import { Link } from 'react-router-dom'
-
-export interface Message {
-  sender: 'user' | 'ai'
-  text: string
-  link: string | '' | undefined
-  linkText: string | '' | undefined
-  twelveText: string | '' | undefined
-  asrTest: string | '' | undefined
-  lameText: string | '' | undefined
-  question: string | '' | undefined
-}
 
 const VideoAssistant: React.FC = () => {
   const [chatState, chatDispatch] = useChat()

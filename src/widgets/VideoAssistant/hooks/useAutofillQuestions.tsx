@@ -1,19 +1,5 @@
 import { useState } from 'react'
-
-interface UseAutofillQuestionsProps {
-  choosedElement: number | undefined
-  autofillApi: boolean
-  showAutofillQuestions: boolean
-}
-
-interface UseAutofillQuestions {
-  valuesAutofillQuestions: UseAutofillQuestionsProps
-  actionsAutofillQuestions: {
-    setChoosedElement: React.Dispatch<React.SetStateAction<number | undefined>>
-    setAutofillApi: React.Dispatch<React.SetStateAction<boolean>>
-    setShowAutofillQuestions: React.Dispatch<React.SetStateAction<boolean>>
-  }
-}
+import { UseAutofillQuestions } from './useAutofillQuestionsTypes'
 
 function useAutofillQuestions (): UseAutofillQuestions {
   const [choosedElement, setChoosedElement] = useState<number | undefined>()

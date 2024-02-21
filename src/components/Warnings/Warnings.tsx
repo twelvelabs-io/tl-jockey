@@ -1,10 +1,7 @@
 import { Alert } from "@mui/material"
 import { ReactComponent as WarningIcon } from '../../icons/Warning.svg'
 import React from "react"
-
-interface WarningsProps {
-    type: string
-}
+import { WarningsProps } from "./WarningsTypes"
 
 const Warnings: React.FC<WarningsProps> = (type) => {
         return (

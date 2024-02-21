@@ -1,26 +1,6 @@
 import { useState, useEffect } from 'react'
 
-interface Answer {
-  question: string
-  link: string
-  linkText: string
-  asrTest: string
-  lameText: string
-  answer: string
-  twelveText: string
-}
-
-type Answers = Record<string, Answer[]>
-
-interface MatchResult {
-  link: string
-  linkText: string
-  arsTextCheck: string
-  lameTextCheck: string
-  staticAnswer: string
-  staticAnswerTwelve: string
-  matchingAnswer: Answer | undefined
-}
+import { Answer, Answers, MatchResult } from './useMatchTypes'
 
 const useMatch = (
   answers: Answers,

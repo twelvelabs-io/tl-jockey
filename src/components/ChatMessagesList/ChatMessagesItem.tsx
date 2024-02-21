@@ -1,12 +1,12 @@
 import React from 'react'
 import { ChatCompareResults } from '../../constants'
-import { type Message } from '../../widgets/VideoAssistant/VideoAssistant'
+import { type QuestionMessage } from '../../types/messageTypes'
 
 import { ReactComponent as UserIcon } from '../../icons/user.svg'
 import { ReactComponent as AIIcon } from '../../icons/ai.svg'
 
 interface ChatMessagesItemProps {
-  message: Message
+  message: QuestionMessage
   index: number
   handleClick: (event: React.MouseEvent<HTMLSpanElement>) => void
   handleShow: (index: number | undefined, question: string) => void

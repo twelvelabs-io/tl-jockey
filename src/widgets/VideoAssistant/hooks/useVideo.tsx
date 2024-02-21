@@ -1,20 +1,6 @@
 import { useState, useRef } from 'react'
 
-interface UseVideoProps {
-  videoFiles: string[]
-  currentVideoFile: string
-  chatContainerRef: React.MutableRefObject<HTMLDivElement | null>
-  submitButtonRef: React.MutableRefObject<HTMLButtonElement | null>
-  videoRef: React.MutableRefObject<HTMLVideoElement | null>
-}
-
-interface UseVideo {
-  valuesVideo: UseVideoProps
-  actionsVideo: {
-    setVideoFiles: React.Dispatch<React.SetStateAction<string[]>>
-    setCurrentVideoFile: React.Dispatch<React.SetStateAction<string>>
-  }
-}
+import { UseVideo } from './useVideoTypes'
 
 function useVideo (): UseVideo {
   const [videoFiles, setVideoFiles] = useState<string[]>([])
