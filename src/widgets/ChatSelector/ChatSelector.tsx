@@ -153,7 +153,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 
   return (
     <div>
-          <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col border-l border-gray-300 flex h-[80vh]'} ref={chatContainerRef} >
+          <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col border-l border-gray-300 flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]'} ref={chatContainerRef} >
             <ChatMessagesList
                 chatState={chatState}
                 chatDispatch={chatDispatch}
