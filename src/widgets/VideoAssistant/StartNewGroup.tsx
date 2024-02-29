@@ -16,7 +16,7 @@ const StartNewGroup: React.FC<StartNewGroupProps> = ({ clearChat }) => {
               <RefreshIcon />
             </div>
             <Button className="btn-primary-new">
-              <p className="start-new-group-text">{HeaderTexts.START_NEW_CHAT}</p>
+              <p>{HeaderTexts.START_NEW_CHAT}</p>
             </Button>
           </div>
       </div>

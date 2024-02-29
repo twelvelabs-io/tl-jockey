@@ -8,6 +8,7 @@ import { useChat, ActionType } from './hooks/useChat'
 import useAutofillQuestions from './hooks/useAutofillQuestions'
 import useVideo from './hooks/useVideo'
 import { Link } from 'react-router-dom'
+import VideoAssistantHeader from './VideoAssistantHeader'
 
 const VideoAssistant: React.FC = () => {
   const [chatState, chatDispatch] = useChat()
@@ -57,12 +58,7 @@ const VideoAssistant: React.FC = () => {
 
   return (
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
-        <div className={'pl-[70px] pr-[70px] text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]'}>
-          <Link to="/Chat">
-            <LogoIcon />
-          </Link>
-          <div></div>
-        </div>
+      <VideoAssistantHeader/>
       <div className={'w-full'}>
         <ChatSelector {...chatSelectProps}/>
       </div>

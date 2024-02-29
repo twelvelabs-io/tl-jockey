@@ -69,6 +69,8 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
           requestData
         )
 
+        //rewrite this part when API is ready 
+
         let jsonObject2 = JSON.stringify(responseData2.data)
         jsonObject2 = JSON.parse(jsonObject2)
 
