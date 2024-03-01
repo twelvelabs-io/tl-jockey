@@ -15,7 +15,6 @@ const CentralPoints: React.FC<CentralPointsProps> = ({ currentPage, totalPages, 
       </button>
     ));
   };
-//className="flex items-center justify-center"
   return (
     <>
       {renderPageNumbers()}

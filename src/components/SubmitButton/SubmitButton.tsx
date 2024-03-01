@@ -3,10 +3,7 @@ import { SubmitButtonProps, ButtonText } from './SubmitButtonTypes'
 
 const SubmitButton: React.FC<SubmitButtonProps> = ({
   submitButtonRef,
-  autofillQuestions,
-  responseText,
   setAutofillApi,
-  handleChat,
   handleChatApi
 }) => {
   return (
