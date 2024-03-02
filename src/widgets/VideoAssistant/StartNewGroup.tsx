@@ -10,8 +10,10 @@ interface StartNewGroupProps {
 const StartNewGroup: React.FC<StartNewGroupProps> = ({ clearChat }) => {
   return (
       <div className={'text-center justify-between flex'}>
-          <div className={'flex-row gap-[4px] justify-center items-center flex cursor-pointer'}
-            onClick={clearChat}>
+          <div 
+            className={'flex-row gap-[4px] justify-center items-center flex cursor-pointer'}
+            onClick={clearChat}
+          >
             <div className={'justify-center items-center w-[16px] h-[16px] flex'}>
               <RefreshIcon />
             </div>

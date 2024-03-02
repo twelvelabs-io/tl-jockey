@@ -24,3 +24,8 @@ export enum HeaderTexts {
 export enum ButtonTexts {
   UPLOAD_VIDEO = 'Upload video'
 }
+
+export enum WarningTexts {
+  PLEASE_SELECT_VIDEOS_TO_DELETE = 'Please select videos to delete'
+}
+

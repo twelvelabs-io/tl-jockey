@@ -2,6 +2,7 @@ import { Alert } from "@mui/material"
 import { ReactComponent as WarningIcon } from '../../icons/Warning.svg'
 import React from "react"
 import { WarningsProps } from "./WarningsTypes"
+import { WarningTexts } from "../../constants"
 
 const Warnings: React.FC<WarningsProps> = () => {
         return (
@@ -9,7 +10,7 @@ const Warnings: React.FC<WarningsProps> = () => {
             <div className={'w-full flex flex-row justify-start items-center gap-2'}>
                 <WarningIcon/>
                 <p className={'font-aeonik text-sm text-gray-700'}>
-                    Please select videos to delete
+                    {WarningTexts.PLEASE_SELECT_VIDEOS_TO_DELETE}
                 </p>
             </div>
         </Alert>

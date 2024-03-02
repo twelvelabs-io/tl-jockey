@@ -8,8 +8,6 @@ const VideoAssistantHeader = () => {
       <Link to="/Chat">
         <LogoIcon />
       </Link>
-      <div>
-      </div>
     </div>
   );
 };
