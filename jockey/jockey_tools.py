@@ -141,18 +141,15 @@ def download_video(video_id: str, index_id: str) -> str:
 
 
 class CombineClipsInput(BaseModel):
-    clips: List[Dict] = Field(description="""Clips found using the video-search tool. Clips must contain the following fields: 
-                              video_id: [ID fo the video the clip is part of], 
-                              start: [start time of the clip], 
-                              end: [end time of the clip]""")
-    queries: List[str] = Field(description="The search queries passed to the video-search tool to find the clips.")
+    clips: List = Field(description="""Clip results found using the video-search tool.""")
+    queries: List[str] = Field(description="The search queries passed to the video-search tool to find the clips. One for each clip.")
     output_filename: str = Field(description="The output filename of the combined clips. Must be in the form: [filename].mp4")
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, index_id: str) -> str:
-    """Combine or edit multiple clips together. The full filepath for the combined clips is returned."""
+    """Combine or edit multiple clips together that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
         loaded_clips = []
 
@@ -166,7 +163,7 @@ def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, i
             loaded_clips.append(CompositeVideoClip([video_clip, text_clip]))
 
         combined_clips = concatenate_videoclips(loaded_clips)
-        output_filepath = os.path.join(os.getcwd(), output_filename)
+        output_filepath = os.path.join(os.getcwd(), index_id, output_filename)
         combined_clips.write_videofile(filename=output_filepath, logger=None, write_logfile=False)
 
         return output_filepath
