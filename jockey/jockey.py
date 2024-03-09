@@ -46,16 +46,14 @@ async def run_jockey():
                 Your responses will be parsed and presented in a UI to the user so you must always adhere to the following to ensure your responses can be properly returned to the user.
                 
                 Your final response should ALWAYS be a JSON object including the following fields:
-                    tool_used,
-                    tool_input,
-                    tool_output,
-                    final_response
+                    tools: [dict(tool_name, tool_input, tool_output)],
+                    final_response: string
 
                 If you used any tools the `final_response` field should just be a general recap of the actions you took.
-                DO NOT include any data in the `tool_output` or `tool_input` fields in the `final_response` field.
+                DO NOT include any data from the `tools` field in the `final_response` field.
 
                 Otherwise, `final_response` field should just be your general response to the user.
-                If a tool was not used you can omit the `tool_used`, `tool_input`, and `tool_output` fields.
+                If a tool was not used you can omit the `tools` field.
                 """
             ),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -72,7 +70,7 @@ async def run_jockey():
     )
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
-    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=False, return_intermediate_steps=True)
+    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True)
     
 
     chat_history = ChatMessageHistory()
