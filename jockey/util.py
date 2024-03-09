@@ -1,11 +1,16 @@
+import os
+import requests
+import urllib
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID
 from rich import print
 from rich.console import Console
 from langchain_core.outputs import ChatGenerationChunk, GenerationChunk
-from langchain_core.agents import AgentFinish
+from langchain_core.agents import AgentFinish, AgentActionMessageLog
 
+TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
+INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 CONSOLE = Console(width=80)
 
 class TokenByTokenHandler(AsyncCallbackHandler):
@@ -41,3 +46,17 @@ class TokenByTokenHandler(AsyncCallbackHandler):
     async def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         """Run on agent end."""
         CONSOLE.print("\n")
+
+
+def get_video_metadata(index_id: str, video_id: str) -> dict:
+    video_url = f"{INDEX_URL}{index_id}/videos/{video_id}"
+
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json",
+        "x-api-key": os.environ["TWELVE_LABS_API_KEY"]
+    }
+
+    response = requests.get(video_url, headers=headers)
+
+    return response

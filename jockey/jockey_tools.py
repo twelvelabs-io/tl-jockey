@@ -11,6 +11,7 @@ from moviepy.editor import (
     CompositeVideoClip,
     concatenate_videoclips
 )
+from util import get_video_metadata
 
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
@@ -61,7 +62,7 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
 
     if response.status_code != 200:
         error_response = {
-            "message": "There was an API error.",
+            "message": "There was an API error when searching the index.",
             "url": SEARCH_URL,
             "headers": headers,
             "json_payload": payload,
@@ -70,12 +71,27 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
         return error_response
 
     if group_by == "video":
-        top_n_results = [video["id"] for video in response.json()["data"][:top_n]]
+        top_n_results = [{"video_id": video["id"]} for video in response.json()["data"][:top_n]]
     else:
         top_n_results = response.json()["data"][:top_n]
-        for clip in top_n_results:
-            clip.pop("thumbnail_url")
-        print(top_n_results)
+
+    for result in top_n_results:
+        video_id = result["video_id"]
+
+        response = get_video_metadata(video_id=video_id, index_id=index_id)
+
+        if response.status_code != 200:
+            error_response = {
+                "message": "There was an API error when retrieving video metadata.",
+                "video_id": video_id,
+                "response": response.text
+            }
+            return error_response
+        
+        result["video_url"] = response.json()["hls"]["video_url"]
+
+        if group_by == "video":
+            result["thumbnail_url"] = response.json()["hls"]["thumbnail_urls"][0]
 
     return top_n_results
 
@@ -87,8 +103,8 @@ class DownloadVideoInput(BaseModel):
 
 @tool("video-download", args_schema=DownloadVideoInput)
 def download_video(video_id: str, index_id: str) -> str:
-    """Download a video from a collection of videos.
-    The full filepath for the downloaded video is returned."""
+    """Download a video for a given video in a given index and get the filepath. 
+    Should only be used when the user explicitly requests video editing functionalities."""
     headers = {
         "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
         "accept": "application/json",
