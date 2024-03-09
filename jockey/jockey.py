@@ -15,6 +15,7 @@ from jockey_tools import (
 )
 from util import TokenByTokenHandler
 
+
 load_dotenv()
 
 async def run_jockey():
@@ -28,15 +29,33 @@ async def run_jockey():
         [
             (
                 "system",
-                """You are Jockey, a helpful assistant and conversational video agent developed by Twelve Labs. 
+                """You are Jockey, a conversational video agent developed by Twelve Labs. 
                 Your objective is to assist the user with all their needs including those related to video.
                 You will not directly interact with video content yourself but can parse user input so that it can be 
                 passed to video-language foundation models created by Twelve Labs or auxillary video functions.
                 For non-video related requests, assist the user to the best of your ability.
 
-                You have access to the following tools to help you achieve your goal:
+                In order to use certain tools that you have access to, you will need an Index ID.
+                If the user has not explicitly specified an Index ID and you need to use a tool that requires one, ask them to specify an Index ID.
+                When a user specifies an Index ID use that Index ID for tools that require it until a user specifies a new Index ID.
+
+                You have access to the following tools:
                
                 {tool_descriptions}
+
+                Your responses will be parsed and presented in a UI to the user so you must always adhere to the following to ensure your responses can be properly returned to the user.
+                
+                Your final response should ALWAYS be a JSON object including the following fields:
+                    tool_used,
+                    tool_input,
+                    tool_output,
+                    final_response
+
+                If you used any tools the `final_response` field should just be a general recap of the actions you took.
+                DO NOT include any data in the `tool_output` or `tool_input` fields in the `final_response` field.
+
+                Otherwise, `final_response` field should just be your general response to the user.
+                If a tool was not used you can omit the `tool_used`, `tool_input`, and `tool_output` fields.
                 """
             ),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -48,12 +67,13 @@ async def run_jockey():
     llm = AzureChatOpenAI(
         deployment_name="gpt-4-32k",
         streaming=True,
-        temperature=0,
+        temperature=0.01,
         model_version="0613"
     )
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
-    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=False)
+    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=False, return_intermediate_steps=True)
+    
 
     chat_history = ChatMessageHistory()
 
@@ -74,9 +94,9 @@ async def run_jockey():
 
         console.print(f"[cyan]Jockey: ", end="")
 
-        await jockey.ainvoke({"input": user_input, "tool_descriptions": tool_descriptions},
+        response = await jockey.ainvoke({"input": user_input, "tool_descriptions": tool_descriptions},
                             {"configurable": {"session_id": "1"}, "callbacks": [handler]})
-        
+                
 if __name__ == "__main__":
    loop = asyncio.get_event_loop()
    exit = loop.run_until_complete(run_jockey())
