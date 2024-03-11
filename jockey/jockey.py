@@ -96,6 +96,4 @@ async def run_jockey():
                             {"configurable": {"session_id": "1"}, "callbacks": [handler]})
                 
 if __name__ == "__main__":
-   loop = asyncio.get_event_loop()
-   exit = loop.run_until_complete(run_jockey())
-   print(exit)
+    asyncio.run(run_jockey())
