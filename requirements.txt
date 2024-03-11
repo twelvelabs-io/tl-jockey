@@ -1,5 +1,5 @@
 pandas==2.0.3
-moviepy==1.0.3
+ffmpeg-python==0.2.0
 pytube==15.0.0
 grequests==0.7.0
 m3u8-To-MP4==0.1.11

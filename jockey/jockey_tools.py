@@ -1,16 +1,10 @@
 import urllib
 import requests
 import os
-import subprocess
+import ffmpeg
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
-from moviepy.editor import (
-    VideoFileClip,
-    TextClip,
-    CompositeVideoClip,
-    concatenate_videoclips
-)
 from util import get_video_metadata
 
 
@@ -28,13 +22,6 @@ class MarengoSearchInput(BaseModel):
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     top_n: int = Field(description="Used to select the top N results of a search.", gt=0, le=10)
     group_by: str = Field(description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
-
-
-class MarengoSearchResponse(BaseModel):
-    query: str = Field(description="Search query used to find clips or videos.")
-    results: Union[List[Dict], List[str]] = Field(
-        description="Results found in a collection of videos using a search query. Results can be a list of clips or list of video IDs."
-    )
 
 
 @tool("video-search", args_schema=MarengoSearchInput)
@@ -122,20 +109,14 @@ def download_video(video_id: str, index_id: str) -> str:
     video_path = os.path.join(video_dir, video_filename)
 
     if os.path.isfile(video_path) is False:
-        ffmpeg_command = [
-            "ffmpeg",
-            "-i", hls_uri,
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-strict", "experimental",
-            "-loglevel", "quiet",
-            video_path
-        ]
-
         try:
-            subprocess.run(ffmpeg_command, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error during conversion: {e}")
+            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet").output(video_path).run()
+        except Exception as error:
+            error_response = {
+                "message": "There was a video editing error.",
+                "error": error
+            }
+            return error_response
 
     return video_path
 
@@ -149,22 +130,27 @@ class CombineClipsInput(BaseModel):
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, index_id: str) -> str:
-    """Combine or edit multiple clips together that are results from the video-search tool. The full filepath for the combined clips is returned."""
+    """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
-        loaded_clips = []
+        input_streams = []
+        arial_font_file = os.path.join(os.getcwd(), "assets", "fonts", "Arial.ttf")
 
         for clip, query in zip(clips, queries):
             video_id = clip["video_id"]
             video_filepath = os.path.join(os.getcwd(), index_id, f"{video_id}.mp4")
             start = clip["start"]
             end = clip["end"]
-            video_clip = VideoFileClip(video_filepath).subclip(start, end)
-            text_clip = TextClip(query, color='white', bg_color='black', fontsize=24).set_position(('center', 'top')).set_duration(end - start)
-            loaded_clips.append(CompositeVideoClip([video_clip, text_clip]))
 
-        combined_clips = concatenate_videoclips(loaded_clips)
+            video_input_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=start, end=end).filter("setpts", "PTS-STARTPTS")
+            audio_input_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=start, end=end).filter("asetpts", "PTS-STARTPTS")
+            clip_with_text_stream = video_input_stream.drawtext(text=query, x="(w-text_w)/2", fontfile=arial_font_file, box=1, 
+                                                                boxcolor="black", fontcolor="white", fontsize=28)
+            
+            input_streams.append(clip_with_text_stream)
+            input_streams.append(audio_input_stream)
+
         output_filepath = os.path.join(os.getcwd(), index_id, output_filename)
-        combined_clips.write_videofile(filename=output_filepath, logger=None, write_logfile=False)
+        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath).overwrite_output().run()
 
         return output_filepath
     except Exception as error:
@@ -177,16 +163,22 @@ def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, i
 
 class RemoveSegmentInput(BaseModel):
     video_filepath: str = Field(description="Full path to target video file.")
-    start: str = Field(description="""Start time of segment to be removed. Must be in one of the following formats: 
-                       seconds.milliseconds, minutes:seconds, hours:minutes:seconds""")
-    end: str = Field(description="""End time of segment to be removed. Must be in one of the following formats: 
-                       seconds.milliseconds, minutes:seconds, hours:minutes:seconds""")
+    start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
+    end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
-def remove_segment(video_filepath: str, start: str, end: str) -> str:
-    """Remove a segment from a video at specified start and end times.
-    The full filepath for the edited video is returned."""
-    VideoFileClip(video_filepath).cutout(start, end).write_videofile(filename=video_filepath, logger=None, write_logfile=True)
+def remove_segment(video_filepath: str, start: float, end: float) -> str:
+    """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
+    output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
 
-    return video_filepath
+    left_cut_video_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
+    left_cut_audio_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
+    right_cut_video_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
+    right_cut_audio_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
+
+    streams = [left_cut_video_stream, left_cut_audio_stream, right_cut_video_stream, right_cut_audio_stream]
+
+    ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath).overwrite_output().run()
+
+    return output_filepath
