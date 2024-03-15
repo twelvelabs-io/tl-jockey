@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -14,16 +15,16 @@ from jockey_tools import (
     remove_segment
 )
 from util import TokenByTokenHandler
+from fastapi import FastAPI
+from langchain.pydantic_v1 import BaseModel, Field
+from typing import Any
+from langserve import add_routes
 
 
 load_dotenv()
 
-async def run_jockey():
+def build_jockey():
     tools = [video_search, download_video, combine_clips, remove_segment]
-
-    tool_descriptions = {
-        tool.name: tool.description.split("-")[-1] for tool in tools
-    }
     
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -70,8 +71,7 @@ async def run_jockey():
     )
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
-    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True)
-    
+    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=False, return_intermediate_steps=False)
 
     chat_history = ChatMessageHistory()
 
@@ -80,8 +80,19 @@ async def run_jockey():
         lambda session_id: chat_history,
         input_messages_key="input",
         output_messages_key="output",
-        history_messages_key="chat_history"
+        history_messages_key="chat_history",
     )
+
+    return jockey
+
+async def run_jockey():
+    jockey = build_jockey()
+
+    tools = [video_search, download_video, combine_clips, remove_segment]
+
+    tool_descriptions = {
+        tool.name: tool.description.split("-")[-1] for tool in tools
+    }
 
     console = Console()
 
@@ -92,8 +103,48 @@ async def run_jockey():
 
         console.print(f"[cyan]Jockey: ", end="")
 
-        response = await jockey.ainvoke({"input": user_input, "tool_descriptions": tool_descriptions},
-                            {"configurable": {"session_id": "1"}, "callbacks": [handler]})
+        await jockey.ainvoke({"input": user_input, "tool_descriptions": tool_descriptions},
+                             {"configurable": {"session_id": "1"}, "callbacks": [handler]})
                 
 if __name__ == "__main__":
-    asyncio.run(run_jockey())
+    if len(sys.argv) < 2:
+        print("Missing argument: 'server' or 'local' as argument when launching.")
+    elif sys.argv[1] == "local":
+        asyncio.run(run_jockey())
+    elif sys.argv[1] == "server":
+        app = FastAPI(
+        title="Jockey Server",
+        version="0.1",
+        description="Server for interacting with Jockey via API.",
+        )
+
+        tools = [video_search, download_video, combine_clips, remove_segment]
+
+        tool_descriptions = {
+            tool.name: tool.description.split("-")[-1] for tool in tools
+        }
+
+        class InputChat(BaseModel):
+            """Input for the chat endpoint."""
+            input: str = Field(
+                description="The human input to the chat system.",
+                extra={"widget": {"type": "chat", "input": "input", "output": "output"}},
+            )
+            tool_descriptions = tool_descriptions
+
+        class Output(BaseModel):
+            output: Any
+
+        jockey = build_jockey().with_types(input_type=InputChat, output_type=Output)
+
+        add_routes(
+            app,
+            jockey,
+            path="/jockey",
+        )
+
+        import uvicorn
+
+        uvicorn.run(app, host="localhost", port=8000)
+    else:
+        print("Use one of: 'server', 'local' as argument when launching.")
