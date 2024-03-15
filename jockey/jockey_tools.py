@@ -110,7 +110,7 @@ def download_video(video_id: str, index_id: str) -> str:
 
     if os.path.isfile(video_path) is False:
         try:
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet").output(video_path).run()
+            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet").output(video_path, vcodec="copy", acodec="libmp3lame").run()
         except Exception as error:
             error_response = {
                 "message": "There was a video editing error.",
@@ -141,8 +141,8 @@ def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, i
             start = clip["start"]
             end = clip["end"]
 
-            video_input_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=start, end=end).filter("setpts", "PTS-STARTPTS")
-            audio_input_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=start, end=end).filter("asetpts", "PTS-STARTPTS")
+            video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=start, end=end).filter("setpts", "PTS-STARTPTS")
+            audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=start, end=end).filter("asetpts", "PTS-STARTPTS")
             clip_with_text_stream = video_input_stream.drawtext(text=query, x="(w-text_w)/2", fontfile=arial_font_file, box=1, 
                                                                 boxcolor="black", fontcolor="white", fontsize=28)
             
@@ -150,7 +150,7 @@ def combine_clips(clips: List[Dict], queries: List[str], output_filename: str, i
             input_streams.append(audio_input_stream)
 
         output_filepath = os.path.join(os.getcwd(), index_id, output_filename)
-        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath).overwrite_output().run()
+        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, acodec="libmp3lame").overwrite_output().run()
 
         return output_filepath
     except Exception as error:
@@ -172,13 +172,13 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
     output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
 
-    left_cut_video_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
-    left_cut_audio_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
-    right_cut_video_stream = ffmpeg.input(filename=video_filepath).video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
-    right_cut_audio_stream = ffmpeg.input(filename=video_filepath).audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
+    left_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
+    left_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
+    right_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
+    right_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
 
     streams = [left_cut_video_stream, left_cut_audio_stream, right_cut_video_stream, right_cut_audio_stream]
 
-    ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath).overwrite_output().run()
+    ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
 
     return output_filepath
