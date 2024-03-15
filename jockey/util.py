@@ -1,7 +1,6 @@
 import os
 import requests
 import urllib
-import time
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID
@@ -62,16 +61,3 @@ def get_video_metadata(index_id: str, video_id: str) -> dict:
     response = requests.get(video_url, headers=headers)
 
     return response
-
-def parse_langserve_events(event: dict):
-    if event["event"] == "on_chat_model_stream":
-        content = event["data"]["chunk"].content
-        if content:
-            print(f"{content}", end="", flush=True)
-            time.sleep(0.05)
-    elif event["event"] == "on_tool_start":
-        tool = event["name"]
-        print(f"Running => {tool}", end="\n", flush=True)
-    elif event["event"] == "on_tool_end":
-        tool = event["name"]
-        print(f"Finished running {tool}", end="\n", flush=True)
