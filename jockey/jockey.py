@@ -64,10 +64,10 @@ def build_jockey():
     )
 
     llm = AzureChatOpenAI(
-        deployment_name="gpt-4-32k",
+        deployment_name="gpt-4",
         streaming=True,
         temperature=0.01,
-        model_version="0613"
+        model_version="1106-preview"
     )
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
