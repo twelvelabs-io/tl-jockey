@@ -1,20 +1,19 @@
 import asyncio
 import sys
 from dotenv import load_dotenv
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from rich import print
 from rich.console import Console
-from jockey_tools import ( 
+from jockey_tools import (
     video_search,
-    download_video, 
-    combine_clips, 
+    download_video,
+    combine_clips,
     remove_segment
 )
-from util import TokenByTokenHandler
 from fastapi import FastAPI
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import Any
@@ -23,9 +22,10 @@ from langserve import add_routes
 
 load_dotenv()
 
+
 def build_jockey():
     tools = [video_search, download_video, combine_clips, remove_segment]
-    
+
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -40,6 +40,8 @@ def build_jockey():
                 If the user has not explicitly specified an Index ID and you need to use a tool that requires one, ask them to specify an Index ID.
                 When a user specifies an Index ID use that Index ID for tools that require it until a user specifies a new Index ID.
 
+                In order to perform actions on the videos, you will need to download them.
+                
                 You have access to the following tools:
                
                 {tool_descriptions}
@@ -63,15 +65,24 @@ def build_jockey():
         ]
     )
 
-    llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
-        streaming=True,
+    # llm = AzureChatOpenAI(
+    #     deployment_name="gpt-4",
+    #     streaming=True,
+    #     temperature=0.01,
+    #     model_version="1106-preview"
+    # )
+
+    llm = ChatOpenAI(
+        # model_name="gpt-3.5-turbo-0613",
+        model_name="gpt-4-turbo-preview",
         temperature=0.01,
-        model_version="1106-preview"
+        max_tokens=1000,
+        streaming=True,
     )
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
-    jockey_executor = AgentExecutor(agent=jockey_agent, tools=tools, verbose=False, return_intermediate_steps=False)
+    jockey_executor = AgentExecutor(
+        agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True)
 
     chat_history = ChatMessageHistory()
 
@@ -85,6 +96,7 @@ def build_jockey():
 
     return jockey
 
+
 async def run_jockey():
     jockey = build_jockey()
 
@@ -96,55 +108,72 @@ async def run_jockey():
 
     console = Console()
 
-    handler = TokenByTokenHandler()
-
     while True:
         user_input = console.input("[green]Chat: ")
 
         console.print(f"[cyan]Jockey: ", end="")
 
-        await jockey.ainvoke({"input": user_input, "tool_descriptions": tool_descriptions},
-                             {"configurable": {"session_id": "1"}, "callbacks": [handler]})
-                
+        # don't need async callback handler, can just stream agent tasks
+        async for chunk in jockey.astream({"input": user_input, "tool_descriptions": tool_descriptions},
+                                          {"configurable": {"session_id": "1"}}):
+            # Agent Action
+            if "actions" in chunk:
+                for action in chunk["actions"]:
+                    print(
+                        f"Calling Tool: `{action.tool}` with input `{action.tool_input}`")
+            # Observation
+            elif "steps" in chunk:
+                for step in chunk["steps"]:
+                    print(f"Tool Result: `{step.observation}`")
+            # Final result
+            elif "output" in chunk:
+                print(f'Final Output: {chunk["output"]}')
+            else:
+                raise ValueError()
+            print("---")
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Missing argument: 'server' or 'local' as argument when launching.")
-    elif sys.argv[1] == "local":
-        asyncio.run(run_jockey())
-    elif sys.argv[1] == "server":
-        app = FastAPI(
-        title="Jockey Server",
-        version="0.1",
-        description="Server for interacting with Jockey via API.",
-        )
+    asyncio.run(run_jockey())
+    # if len(sys.argv) < 2:
+    #     print("Missing argument: 'server' or 'local' as argument when launching.")
+    # elif sys.argv[1] == "local":
+    #     asyncio.run(run_jockey())
+    # elif sys.argv[1] == "server":
+    #     app = FastAPI(
+    #         title="Jockey Server",
+    #         version="0.1",
+    #         description="Server for interacting with Jockey via API.",
+    #     )
 
-        tools = [video_search, download_video, combine_clips, remove_segment]
+    #     tools = [video_search, download_video, combine_clips, remove_segment]
 
-        tool_descriptions = {
-            tool.name: tool.description.split("-")[-1] for tool in tools
-        }
+    #     tool_descriptions = {
+    #         tool.name: tool.description.split("-")[-1] for tool in tools
+    #     }
+    #     print(tool_descriptions)
 
-        class InputChat(BaseModel):
-            """Input for the chat endpoint."""
-            input: str = Field(
-                description="The human input to the chat system.",
-                extra={"widget": {"type": "chat", "input": "input", "output": "output"}},
-            )
-            tool_descriptions = tool_descriptions
+    #     class InputChat(BaseModel):
+    #         """Input for the chat endpoint."""
+    #         input: str = Field(
+    #             description="The human input to the chat system.",
+    #             extra={"widget": {"type": "chat",
+    #                               "input": "input", "output": "output"}},
+    #         )
+    #         tool_descriptions = tool_descriptions
 
-        class Output(BaseModel):
-            output: Any
+    #     class Output(BaseModel):
+    #         output: Any
 
-        jockey = build_jockey().with_types(input_type=InputChat, output_type=Output)
+    #     jockey = build_jockey().with_types(input_type=InputChat, output_type=Output)
 
-        add_routes(
-            app,
-            jockey,
-            path="/jockey",
-        )
+    #     add_routes(
+    #         app,
+    #         jockey,
+    #         path="/jockey",
+    #     )
 
-        import uvicorn
+    #     import uvicorn
 
-        uvicorn.run(app, host="localhost", port=8000)
-    else:
-        print("Use one of: 'server', 'local' as argument when launching.")
+    #     uvicorn.run(app, host="localhost", port=8000)
+    # else:
+    #     print("Use one of: 'server', 'local' as argument when launching.")
