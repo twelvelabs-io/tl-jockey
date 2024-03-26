@@ -10,7 +10,7 @@ from rich import print
 from rich.console import Console
 from jockey_tools import (
     video_search,
-    download_video,
+    download_videos,
     combine_clips,
     remove_segment
 )
@@ -24,7 +24,7 @@ load_dotenv()
 
 
 def build_jockey():
-    tools = [video_search, download_video, combine_clips, remove_segment]
+    tools = [video_search, download_videos, combine_clips, remove_segment]
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -100,7 +100,7 @@ def build_jockey():
 async def run_jockey():
     jockey = build_jockey()
 
-    tools = [video_search, download_video, combine_clips, remove_segment]
+    tools = [video_search, download_videos, combine_clips, remove_segment]
 
     tool_descriptions = {
         tool.name: tool.description.split("-")[-1] for tool in tools
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     #         description="Server for interacting with Jockey via API.",
     #     )
 
-    #     tools = [video_search, download_video, combine_clips, remove_segment]
+    #     tools = [video_search, download_videos, combine_clips, remove_segment]
 
     #     tool_descriptions = {
     #         tool.name: tool.description.split("-")[-1] for tool in tools

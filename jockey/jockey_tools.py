@@ -1,12 +1,15 @@
 import urllib
 import requests
 import os
+import aiohttp
 import ffmpeg
+import asyncio
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
 from dotenv import load_dotenv
 from interfaces import VideoSearchResult
+import time
 
 load_dotenv()
 
@@ -21,17 +24,16 @@ GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
 INDEX_ID = "65ff6c55da6cb29b7857a03c"
 
 
-def get_video_metadata(index_id: str, video_id: str) -> dict:
+async def get_video_metadata(index_id: str, video_id: str) -> dict:
     video_url = f"{INDEX_URL}{index_id}/videos/{video_id}"
-
     headers = {
         "accept": "application/json",
         "Content-Type": "application/json",
         "x-api-key": os.environ["TWELVE_LABS_API_KEY"]
     }
-
-    response = requests.get(video_url, headers=headers)
-    return response
+    async with aiohttp.ClientSession() as session:
+        async with session.get(video_url, headers=headers) as response:
+            return await response.json()
 
 
 class MarengoSearchInput(BaseModel):
@@ -45,7 +47,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-@tool("video-search", args_schema=MarengoSearchInput)
+# @tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -84,32 +86,16 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
                              for video in response.json()["data"][:top_n]]
         else:
             top_n_results = response.json()["data"][:top_n]
-        search_results = []
-        for result in top_n_results:
-            video_id = result["video_id"]
-            response = get_video_metadata(video_id=video_id, index_id=index_id)
 
-            if response.status_code != 200:
-                error_response = {
-                    "message": "There was an API error when retrieving video metadata.",
-                    "video_id": video_id,
-                    "response": response.text
-                }
-                return error_response
+        video_ids = [result["video_id"] for result in top_n_results]
+        video_metadata = await asyncio.gather(*[get_video_metadata(video_id=video_id, index_id=index_id) for video_id in video_ids])
 
-            video_url = response.json()["hls"]["video_url"]
+        for result, metadata in zip(top_n_results, video_metadata):
+            result["video_url"] = metadata["hls"]["video_url"]
+            if group_by == "video":
+                result["thumbnail_url"] = metadata["hls"]["thumbnail_urls"][0]
 
-            result = VideoSearchResult(
-                video_id=video_id,
-                score=result["score"],
-                start=result["start"],
-                end=result["end"],
-                confidence=result["confidence"],
-                video_url=video_url
-            )
-            search_results.append(result)
-
-        return search_results
+        return top_n_results
 
     except Exception as e:
         error_response = {
@@ -120,39 +106,63 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
 
 
 class DownloadVideoInput(BaseModel):
-    video_id: str = Field(
-        description="Video ID used to download a video. It is also used as the filename for the video.")
+    video_ids: List[str] = Field(
+        description="Video IDs used to download a video. It is also used as the filename for the video.")
     index_id: str = Field(
         description="Index ID which contains a collection of videos.")
 
+# @tool("download-videos", args_schema=DownloadVideoInput)
 
-@tool("video-download", args_schema=DownloadVideoInput)
-def download_video(video_id: str, index_id: str) -> str:
-    """Download a video for a given video in a given index and get the filepath. 
+
+async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
+    """Download given videos in a given index and get the filepaths. 
     Should only be used when the user explicitly requests video editing functionalities."""
-    response = get_video_metadata(index_id=index_id, video_id=video_id)
-    hls_uri = response.json()["hls"]["video_url"]
     video_dir = os.path.join(os.getcwd(), index_id)
 
-    # Create video directory if it does not exist
     if not os.path.exists(video_dir):
         os.makedirs(video_dir)
 
-    video_filename = f"{video_id}.mp4"
-    video_path = os.path.join(video_dir, video_filename)
+    async def download_single_video(video_id: str, index_id: str):
+        video_metadata = await get_video_metadata(index_id=index_id, video_id=video_id)
+        hls_uri = video_metadata["hls"]["video_url"]
 
-    if os.path.isfile(video_path) is False:
-        try:
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet").output(
-                video_path, vcodec="copy", acodec="libmp3lame").run()
-        except Exception as error:
-            error_response = {
-                "message": "There was a video editing error.",
-                "error": error
-            }
-            return error_response
+        video_filename = f"{video_id}.mp4"
+        video_path = os.path.join(video_dir, video_filename)
 
-    return video_path
+        if not os.path.isfile(video_path):
+            try:
+                # Start FFmpeg process and return immediately, not waiting for it to complete
+                cmd = [
+                    'ffmpeg',
+                    '-n',
+                    '-i', str(hls_uri),
+                    '-c:v', 'copy',
+                    '-c:a', 'libmp3lame',
+                    '-loglevel', 'quiet',
+                    '-strict', 'experimental',
+                    str(video_path)
+                ]
+                return await asyncio.create_subprocess_exec(*cmd)
+            except Exception as error:
+                error_response = {
+                    "message": "There was a video editing error.",
+                    "error": error
+                }
+                return error_response
+
+        return None
+    ffmpeg_processes = await asyncio.gather(*[download_single_video(video_id, index_id) for video_id in video_ids])
+
+    # Wait for all FFmpeg processes to complete
+    for process in ffmpeg_processes:
+        # Check if it's an FFmpeg process and not an error response
+        if process is not None and not isinstance(process, dict):
+            await process.wait()
+
+    # After all processes are complete, return the paths
+    video_paths = [os.path.join(
+        os.getcwd(), index_id, f"{video_id}.mp4") for video_id in video_ids]
+    return video_paths
 
 
 class Clip(BaseModel):
@@ -173,8 +183,8 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-@tool("combine-clips", args_schema=CombineClipsInput)
-def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
+# @tool("combine-clips", args_schema=CombineClipsInput)
+async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
         clips: List[Clip] = [Clip(**clip) for clip in clips]
@@ -196,10 +206,9 @@ def combine_clips(clips: List, queries: List[str], output_filename: str, index_i
 
             if os.path.isfile(video_filepath) is False:
                 return {
-                    "message": "Please download the video first.",
+                    "message": "Please download the videos first.",
                     "video_id": video_id,
-                    "error": "Video file does not exist."
-
+                    "error": "Video file not found."
                 }
 
             start = clip.start
@@ -238,7 +247,7 @@ class RemoveSegmentInput(BaseModel):
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
-def remove_segment(video_filepath: str, start: float, end: float) -> str:
+async def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
     output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
 
@@ -258,3 +267,35 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
                                              acodec="libmp3lame").overwrite_output().run()
 
     return output_filepath
+
+
+if __name__ == "__main__":
+    video_search_query = {
+        'query': 'logo', 'index_id': '65ff6c55da6cb29b7857a03c', 'top_n': 10, 'group_by': 'clip'}
+    start_time = time.time()
+    video_search_response = asyncio.run(video_search(**video_search_query))
+    print(video_search_response)
+    print(
+        f"Video search took {round(time.time() - start_time, 2)} seconds.")
+
+    video_ids = [result["video_id"] for result in video_search_response]
+    download_videos_query = {
+        'video_ids': video_ids, 'index_id': '65ff6c55da6cb29b7857a03c'}
+    start_time = time.time()
+    download_response = asyncio.run(download_videos(**download_videos_query))
+    print(download_response)
+    print(
+        f"Download videos took {round(time.time() - start_time, 2)} seconds.")
+
+    clips = [
+        {'video_id': result['video_id'],
+            'start': result['start'], 'end': result['end']}
+        for result in video_search_response
+    ]
+    combine_clips_query = {
+        'clips': clips, 'queries': ['logo' for _ in download_response], 'output_filename': 'combined_clips.mp4', 'index_id': '65ff6c55da6cb29b7857a03c'}
+    start_time = time.time()
+    combine_clips_response = asyncio.run(combine_clips(**combine_clips_query))
+    print(combine_clips_response)
+    print(
+        f"Combine clips took {round(time.time() - start_time, 2)} seconds.")
