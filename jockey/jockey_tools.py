@@ -5,14 +5,11 @@ import ffmpeg
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
-from twelvelabs import TwelveLabs
 from dotenv import load_dotenv
 from interfaces import VideoSearchResult
 
 load_dotenv()
 
-
-twelvelabs_client = TwelveLabs(api_key=os.environ["TWELVE_LABS_API_KEY"])
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
@@ -52,22 +49,44 @@ class MarengoSearchInput(BaseModel):
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
-        search_results = twelvelabs_client.search.query(
-            index_id=index_id,
-            query=query,
-            options=["visual", "conversation", "text_in_video", "logo"],
-            group_by=group_by,
-            threshold="low",
-            sort_option="score",
-            operator="or",
-            conversation_option="semantic",
-            page_limit=top_n
-        )
+        headers = {
+            "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
+            "accept": "application/json",
+            "Content-Type": "application/json"
+        }
 
-        top_n_results = []
+        payload = {
+            "search_options": ["visual", "conversation", "text_in_video", "logo"],
+            "group_by": group_by,
+            "threshold": "low",
+            "sort_option": "score",
+            "operator": "or",
+            "conversation_option": "semantic",
+            "page_limit": top_n,
+            "index_id": index_id,
+            "query": query
+        }
 
-        for clip in search_results.data[:top_n]:
-            video_id = clip.video_id
+        response = requests.post(SEARCH_URL, json=payload, headers=headers)
+
+        if response.status_code != 200:
+            error_response = {
+                "message": "There was an API error when searching the index.",
+                "url": SEARCH_URL,
+                "headers": headers,
+                "json_payload": payload,
+                "response": response.text
+            }
+            return error_response
+
+        if group_by == "video":
+            top_n_results = [{"video_id": video["id"]}
+                             for video in response.json()["data"][:top_n]]
+        else:
+            top_n_results = response.json()["data"][:top_n]
+        search_results = []
+        for result in top_n_results:
+            video_id = result["video_id"]
             response = get_video_metadata(video_id=video_id, index_id=index_id)
 
             if response.status_code != 200:
@@ -82,15 +101,15 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
 
             result = VideoSearchResult(
                 video_id=video_id,
-                score=clip.score,
-                start=clip.start,
-                end=clip.end,
-                confidence=clip.confidence,
+                score=result["score"],
+                start=result["start"],
+                end=result["end"],
+                confidence=result["confidence"],
                 video_url=video_url
             )
-            top_n_results.append(result)
+            search_results.append(result)
 
-        return top_n_results
+        return search_results
 
     except Exception as e:
         error_response = {
@@ -136,9 +155,17 @@ def download_video(video_id: str, index_id: str) -> str:
     return video_path
 
 
+class Clip(BaseModel):
+    video_id: str = Field(description="Video ID of the clip.")
+    start: float = Field(
+        description="""Start time of the clip. Must be in the format of: seconds.milliseconds""")
+    end: float = Field(
+        description="""End time of the clip. Must be in the format of: seconds.milliseconds""")
+
+
 class CombineClipsInput(BaseModel):
     clips: List = Field(
-        description="""Clip results found using the video-search tool.""")
+        description="""Clip results found using the video-search tool. Must contain video_id, start, and end for each clip.""")
     queries: List[str] = Field(
         description="The search queries passed to the video-search tool to find the clips. One for each clip.")
     output_filename: str = Field(
@@ -150,12 +177,20 @@ class CombineClipsInput(BaseModel):
 def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
+        clips: List[Clip] = [Clip(**clip) for clip in clips]
+    except Exception as error:
+        error_response = {
+            "message": "There was an error while parsing the clips.",
+            "error": str(error)
+        }
+        return error_response
+    try:
         input_streams = []
         arial_font_file = os.path.join(
             os.getcwd(), "assets", "fonts", "Arial.ttf")
 
         for clip, query in zip(clips, queries):
-            video_id = clip["video_id"]
+            video_id = clip.video_id
             video_filepath = os.path.join(
                 os.getcwd(), index_id, f"{video_id}.mp4")
 
@@ -167,8 +202,8 @@ def combine_clips(clips: List, queries: List[str], output_filename: str, index_i
 
                 }
 
-            start = clip["start"]
-            end = clip["end"]
+            start = clip.start
+            end = clip.end
 
             video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter(
                 "trim", start=start, end=end).filter("setpts", "PTS-STARTPTS")
