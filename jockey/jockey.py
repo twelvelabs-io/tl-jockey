@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_community.chat_message_histories.in_memory import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from rich import print
 from rich.console import Console
