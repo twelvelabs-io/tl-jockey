@@ -71,7 +71,6 @@ def build_jockey():
     # )
 
     llm = ChatOpenAI(
-        # model_name="gpt-3.5-turbo-0613",
         model_name="gpt-4-turbo-preview",
         temperature=0.01,
         max_tokens=1000,
@@ -80,7 +79,7 @@ def build_jockey():
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
     jockey_executor = AgentExecutor(
-        agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True)
+        agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True, max_iterations=3)
 
     chat_history = ChatMessageHistory()
 
@@ -127,7 +126,7 @@ async def run_jockey():
             elif "output" in chunk:
                 print(f'Final Output: {chunk["output"]}')
             else:
-                raise ValueError()
+                print(f"Unknown chunk: {chunk}")
             print("---")
 
 if __name__ == "__main__":
