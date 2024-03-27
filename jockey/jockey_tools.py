@@ -258,6 +258,12 @@ class RemoveSegmentInput(BaseModel):
 @tool("remove-segment", args_schema=RemoveSegmentInput)
 async def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
+    if not os.path.isfile(video_filepath):
+        return {
+            "message": "Please provide a valid video file.",
+            "error": "Video file not found."
+        }
+
     output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
 
     left_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter(

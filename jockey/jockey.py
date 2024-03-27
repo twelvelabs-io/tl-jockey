@@ -79,7 +79,7 @@ def build_jockey():
 
     jockey_agent = create_openai_tools_agent(llm, tools, prompt)
     jockey_executor = AgentExecutor(
-        agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True, max_iterations=3)
+        agent=jockey_agent, tools=tools, verbose=True, return_intermediate_steps=True)
 
     chat_history = ChatMessageHistory()
 
