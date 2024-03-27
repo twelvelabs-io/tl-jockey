@@ -1,9 +1,9 @@
-import urllib
-import requests
 import os
+import requests
 import aiohttp
 import ffmpeg
 import asyncio
+from urllib.parse import urljoin
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
@@ -15,11 +15,11 @@ load_dotenv()
 
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
-INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
-EXTERNAL_UPLOAD_URL = urllib.parse.urljoin(
+INDEX_URL = urljoin(TL_BASE_URL, "indexes/")
+EXTERNAL_UPLOAD_URL = urljoin(
     TL_BASE_URL, "tasks/external-provider/")
-SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
-GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
+SEARCH_URL = urljoin(TL_BASE_URL, "search/")
+GENERATE_URL = urljoin(TL_BASE_URL, "generate/")
 
 INDEX_ID = "65ff6c55da6cb29b7857a03c"
 
@@ -47,7 +47,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-# @tool("video-search", args_schema=MarengoSearchInput)
+@tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -111,9 +111,8 @@ class DownloadVideoInput(BaseModel):
     index_id: str = Field(
         description="Index ID which contains a collection of videos.")
 
-# @tool("download-videos", args_schema=DownloadVideoInput)
 
-
+@tool("download-videos", args_schema=DownloadVideoInput)
 async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
     """Download given videos in a given index and get the filepaths. 
     Should only be used when the user explicitly requests video editing functionalities."""
@@ -142,13 +141,10 @@ async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
                     '-strict', 'experimental',
                     str(video_path)
                 ]
-                return await asyncio.create_subprocess_exec(*cmd)
+                process = await asyncio.create_subprocess_exec(*cmd)
+                return process
             except Exception as error:
-                error_response = {
-                    "message": "There was a video editing error.",
-                    "error": error
-                }
-                return error_response
+                print(f"Error downloading video: {error}")
 
         return None
     ffmpeg_processes = await asyncio.gather(*[download_single_video(video_id, index_id) for video_id in video_ids])
@@ -156,7 +152,7 @@ async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
     # Wait for all FFmpeg processes to complete
     for process in ffmpeg_processes:
         # Check if it's an FFmpeg process and not an error response
-        if process is not None and not isinstance(process, dict):
+        if process is not None:
             await process.wait()
 
     # After all processes are complete, return the paths
@@ -183,10 +179,11 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-# @tool("combine-clips", args_schema=CombineClipsInput)
+@tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
+        # Parse the clips from the input
         clips: List[Clip] = [Clip(**clip) for clip in clips]
     except Exception as error:
         error_response = {
@@ -299,3 +296,14 @@ if __name__ == "__main__":
     print(combine_clips_response)
     print(
         f"Combine clips took {round(time.time() - start_time, 2)} seconds.")
+
+    filepath = combine_clips_response
+
+    remove_segment_query = {
+        'video_filepath': filepath, 'start': 10.0, 'end': 20.0}
+    start_time = time.time()
+    remove_segment_response = asyncio.run(
+        remove_segment(**remove_segment_query))
+    print(remove_segment_response)
+    print(
+        f"Remove segment took {round(time.time() - start_time, 2)} seconds.")

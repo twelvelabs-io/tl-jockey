@@ -40,8 +40,6 @@ def build_jockey():
                 If the user has not explicitly specified an Index ID and you need to use a tool that requires one, ask them to specify an Index ID.
                 When a user specifies an Index ID use that Index ID for tools that require it until a user specifies a new Index ID.
 
-                In order to perform actions on the videos, you will need to download them.
-                
                 You have access to the following tools:
                
                 {tool_descriptions}
