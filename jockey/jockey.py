@@ -131,47 +131,46 @@ async def run_jockey():
             print("---")
 
 if __name__ == "__main__":
-    asyncio.run(run_jockey())
-    # if len(sys.argv) < 2:
-    #     print("Missing argument: 'server' or 'local' as argument when launching.")
-    # elif sys.argv[1] == "local":
-    #     asyncio.run(run_jockey())
-    # elif sys.argv[1] == "server":
-    #     app = FastAPI(
-    #         title="Jockey Server",
-    #         version="0.1",
-    #         description="Server for interacting with Jockey via API.",
-    #     )
+    if len(sys.argv) < 2:
+        print("Missing argument: 'server' or 'local' as argument when launching.")
+    elif sys.argv[1] == "local":
+        asyncio.run(run_jockey())
+    elif sys.argv[1] == "server":
+        app = FastAPI(
+            title="Jockey Server",
+            version="0.1",
+            description="Server for interacting with Jockey via API.",
+        )
 
-    #     tools = [video_search, download_videos, combine_clips, remove_segment]
+        tools = [video_search, download_videos, combine_clips, remove_segment]
 
-    #     tool_descriptions = {
-    #         tool.name: tool.description.split("-")[-1] for tool in tools
-    #     }
-    #     print(tool_descriptions)
+        tool_descriptions = {
+            tool.name: tool.description.split("-")[-1] for tool in tools
+        }
+        print(tool_descriptions)
 
-    #     class InputChat(BaseModel):
-    #         """Input for the chat endpoint."""
-    #         input: str = Field(
-    #             description="The human input to the chat system.",
-    #             extra={"widget": {"type": "chat",
-    #                               "input": "input", "output": "output"}},
-    #         )
-    #         tool_descriptions = tool_descriptions
+        class InputChat(BaseModel):
+            """Input for the chat endpoint."""
+            input: str = Field(
+                description="The human input to the chat system.",
+                extra={"widget": {"type": "chat",
+                                  "input": "input", "output": "output"}},
+            )
+            tool_descriptions = tool_descriptions
 
-    #     class Output(BaseModel):
-    #         output: Any
+        class Output(BaseModel):
+            output: Any
 
-    #     jockey = build_jockey().with_types(input_type=InputChat, output_type=Output)
+        jockey = build_jockey().with_types(input_type=InputChat, output_type=Output)
 
-    #     add_routes(
-    #         app,
-    #         jockey,
-    #         path="/jockey",
-    #     )
+        add_routes(
+            app,
+            jockey,
+            path="/jockey",
+        )
 
-    #     import uvicorn
+        import uvicorn
 
-    #     uvicorn.run(app, host="localhost", port=8000)
-    # else:
-    #     print("Use one of: 'server', 'local' as argument when launching.")
+        uvicorn.run(app, host="localhost", port=8000)
+    else:
+        print("Use one of: 'server', 'local' as argument when launching.")
