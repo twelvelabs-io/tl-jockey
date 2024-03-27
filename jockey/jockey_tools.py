@@ -1,6 +1,5 @@
 import os
 import requests
-import aiohttp
 import ffmpeg
 import asyncio
 from urllib.parse import urljoin
@@ -31,9 +30,12 @@ async def get_video_metadata(index_id: str, video_id: str) -> dict:
         "Content-Type": "application/json",
         "x-api-key": os.environ["TWELVE_LABS_API_KEY"]
     }
-    async with aiohttp.ClientSession() as session:
-        async with session.get(video_url, headers=headers) as response:
-            return await response.json()
+
+    response = requests.get(video_url, headers=headers)
+    if response.status_code != 200:
+        return None
+
+    return response.json()
 
 
 class MarengoSearchInput(BaseModel):
@@ -56,6 +58,9 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
             "accept": "application/json",
             "Content-Type": "application/json"
         }
+
+        # Limit top_n to 50
+        top_n = min(top_n, 50)
 
         payload = {
             "search_options": ["visual", "conversation", "text_in_video", "logo"],
@@ -88,6 +93,8 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
             top_n_results = response.json()["data"][:top_n]
 
         video_ids = [result["video_id"] for result in top_n_results]
+
+        # Get video metadata for each video ID in parallel
         video_metadata = await asyncio.gather(*[get_video_metadata(video_id=video_id, index_id=index_id) for video_id in video_ids])
 
         for result, metadata in zip(top_n_results, video_metadata):
@@ -130,7 +137,7 @@ async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
 
         if not os.path.isfile(video_path):
             try:
-                # Start FFmpeg process and return immediately, not waiting for it to complete
+
                 cmd = [
                     'ffmpeg',
                     '-n',
@@ -141,18 +148,22 @@ async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
                     '-strict', 'experimental',
                     str(video_path)
                 ]
+                # Start FFmpeg process and return immediately, not waiting for it to complete
                 process = await asyncio.create_subprocess_exec(*cmd)
                 return process
             except Exception as error:
                 print(f"Error downloading video: {error}")
 
         return None
+
+    # Download all videos in parallel
     ffmpeg_processes = await asyncio.gather(*[download_single_video(video_id, index_id) for video_id in video_ids])
 
     # Wait for all FFmpeg processes to complete
     for process in ffmpeg_processes:
         # Check if it's an FFmpeg process and not an error response
         if process is not None:
+            # Wait for the process to complete
             await process.wait()
 
     # After all processes are complete, return the paths
@@ -201,6 +212,7 @@ async def combine_clips(clips: List, queries: List[str], output_filename: str, i
             video_filepath = os.path.join(
                 os.getcwd(), index_id, f"{video_id}.mp4")
 
+            # Check if the video file exists before proceeding
             if os.path.isfile(video_filepath) is False:
                 return {
                     "message": "Please download the videos first.",
