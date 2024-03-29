@@ -49,7 +49,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-@tool("video-search", args_schema=MarengoSearchInput)
+# @tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -119,57 +119,43 @@ class DownloadVideoInput(BaseModel):
         description="Index ID which contains a collection of videos.")
 
 
-@tool("download-videos", args_schema=DownloadVideoInput)
-async def download_videos(video_ids: List[str], index_id: str) -> List[str]:
-    """Download given videos in a given index and get the filepaths. 
-    Should only be used when the user explicitly requests video editing functionalities."""
+# @tool("download-videos", args_schema=DownloadVideoInput)
+async def download_videos(video_ids: List[str], index_id: str) -> List[Union[str, dict]]:
     video_dir = os.path.join(os.getcwd(), index_id)
+    video_ids = list(set(video_ids))
 
-    if not os.path.exists(video_dir):
-        os.makedirs(video_dir)
+    os.makedirs(video_dir, exist_ok=True)
 
-    async def download_single_video(video_id: str, index_id: str):
+    async def download_single_video(video_id: str, index_id: str) -> Union[str, dict]:
         video_metadata = await get_video_metadata(index_id=index_id, video_id=video_id)
-        hls_uri = video_metadata["hls"]["video_url"]
+        if not video_metadata:
+            return {"error": f"Metadata not found for video {video_id}"}
 
-        video_filename = f"{video_id}.mp4"
-        video_path = os.path.join(video_dir, video_filename)
+        hls_uri = video_metadata.get("hls", {}).get("video_url")
+        video_path = os.path.join(video_dir, f"{video_id}.mp4")
 
-        if not os.path.isfile(video_path):
-            try:
+        # Skip download if file already exists
+        if os.path.isfile(video_path):
+            return video_path
 
-                cmd = [
-                    'ffmpeg',
-                    '-n',
-                    '-i', str(hls_uri),
-                    '-c:v', 'copy',
-                    '-c:a', 'libmp3lame',
-                    '-loglevel', 'quiet',
-                    '-strict', 'experimental',
-                    str(video_path)
-                ]
-                # Start FFmpeg process and return immediately, not waiting for it to complete
-                process = await asyncio.create_subprocess_exec(*cmd)
-                return process
-            except Exception as error:
-                print(f"Error downloading video: {error}")
+        process = (
+            ffmpeg
+            .input(hls_uri)
+            .output(video_path, codec="copy")
+            .overwrite_output()
+            .run_async(pipe_stdout=True, pipe_stderr=True)
+        )
 
-        return None
+        out, err = process.communicate()
+        if process.returncode == 0:
+            return video_path
+        else:
+            return {"error": f"Failed to download video {video_id}", "details": err.decode() if err else "Unknown error"}
 
-    # Download all videos in parallel
-    ffmpeg_processes = await asyncio.gather(*[download_single_video(video_id, index_id) for video_id in video_ids])
+    # Initiate all downloads in parallel and gather results
+    results = await asyncio.gather(*[download_single_video(video_id, index_id) for video_id in video_ids], return_exceptions=True)
 
-    # Wait for all FFmpeg processes to complete
-    for process in ffmpeg_processes:
-        # Check if it's an FFmpeg process and not an error response
-        if process is not None:
-            # Wait for the process to complete
-            await process.wait()
-
-    # After all processes are complete, return the paths
-    video_paths = [os.path.join(
-        os.getcwd(), index_id, f"{video_id}.mp4") for video_id in video_ids]
-    return video_paths
+    return results
 
 
 class Clip(BaseModel):
@@ -190,7 +176,7 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-@tool("combine-clips", args_schema=CombineClipsInput)
+# @tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
@@ -222,11 +208,11 @@ async def combine_clips(clips: List, queries: List[str], output_filename: str, i
 
             start = clip.start
             end = clip.end
-
             video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter(
                 "trim", start=start, end=end).filter("setpts", "PTS-STARTPTS")
             audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter(
                 "atrim", start=start, end=end).filter("asetpts", "PTS-STARTPTS")
+
             clip_with_text_stream = video_input_stream.drawtext(text=query, x="(w-text_w)/2", fontfile=arial_font_file, box=1,
                                                                 boxcolor="black", fontcolor="white", fontsize=28)
 
@@ -255,9 +241,11 @@ class RemoveSegmentInput(BaseModel):
         description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
 
-@tool("remove-segment", args_schema=RemoveSegmentInput)
+# @tool("remove-segment", args_schema=RemoveSegmentInput)
 async def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
+
+    # Check if the video file exists before proceeding
     if not os.path.isfile(video_filepath):
         return {
             "message": "Please provide a valid video file.",
@@ -286,21 +274,20 @@ async def remove_segment(video_filepath: str, start: float, end: float) -> str:
 
 if __name__ == "__main__":
     video_search_query = {
-        'query': 'logo', 'index_id': '65ff6c55da6cb29b7857a03c', 'top_n': 10, 'group_by': 'clip'}
+        'query': 'logos', 'index_id': INDEX_ID, 'top_n': 10, 'group_by': 'clip'}
     start_time = time.time()
     video_search_response = asyncio.run(video_search(**video_search_query))
-    print(video_search_response)
     print(
-        f"Video search took {round(time.time() - start_time, 2)} seconds.")
+        f"Video search len {len(video_search_response)} took {round(time.time() - start_time, 2)} seconds.")
 
     video_ids = [result["video_id"] for result in video_search_response]
     download_videos_query = {
-        'video_ids': video_ids, 'index_id': '65ff6c55da6cb29b7857a03c'}
+        'video_ids': video_ids, 'index_id': INDEX_ID}
     start_time = time.time()
     download_response = asyncio.run(download_videos(**download_videos_query))
     print(download_response)
     print(
-        f"Download videos took {round(time.time() - start_time, 2)} seconds.")
+        f"Download videos len {len(download_response)} took {round(time.time() - start_time, 2)} seconds.")
 
     clips = [
         {'video_id': result['video_id'],
@@ -308,7 +295,7 @@ if __name__ == "__main__":
         for result in video_search_response
     ]
     combine_clips_query = {
-        'clips': clips, 'queries': ['logo' for _ in download_response], 'output_filename': 'combined_clips.mp4', 'index_id': '65ff6c55da6cb29b7857a03c'}
+        'clips': clips, 'queries': ['logo' for _ in download_response], 'output_filename': 'combined_clips.mp4', 'index_id': INDEX_ID}
     start_time = time.time()
     combine_clips_response = asyncio.run(combine_clips(**combine_clips_query))
     print(combine_clips_response)
