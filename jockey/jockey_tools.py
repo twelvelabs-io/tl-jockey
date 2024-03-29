@@ -49,7 +49,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-# @tool("video-search", args_schema=MarengoSearchInput)
+@tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -59,8 +59,8 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
             "Content-Type": "application/json"
         }
 
-        # Limit top_n to 50
-        top_n = min(top_n, 50)
+        # Limit top_n to 10
+        top_n = min(top_n, 10)
 
         payload = {
             "search_options": ["visual", "conversation", "text_in_video", "logo"],
@@ -119,7 +119,7 @@ class DownloadVideoInput(BaseModel):
         description="Index ID which contains a collection of videos.")
 
 
-# @tool("download-videos", args_schema=DownloadVideoInput)
+@tool("download-videos", args_schema=DownloadVideoInput)
 async def download_videos(video_ids: List[str], index_id: str) -> List[Union[str, dict]]:
     video_dir = os.path.join(os.getcwd(), index_id)
     video_ids = list(set(video_ids))
@@ -176,7 +176,7 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-# @tool("combine-clips", args_schema=CombineClipsInput)
+@tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
@@ -241,7 +241,7 @@ class RemoveSegmentInput(BaseModel):
         description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
 
-# @tool("remove-segment", args_schema=RemoveSegmentInput)
+@tool("remove-segment", args_schema=RemoveSegmentInput)
 async def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
 
@@ -273,8 +273,13 @@ async def remove_segment(video_filepath: str, start: float, end: float) -> str:
 
 
 if __name__ == "__main__":
+    # delete the dir and files
+    import shutil
+    if os.path.exists(INDEX_ID):
+        shutil.rmtree(INDEX_ID)
+
     video_search_query = {
-        'query': 'logos', 'index_id': INDEX_ID, 'top_n': 10, 'group_by': 'clip'}
+        'query': 'find me humans', 'index_id': INDEX_ID, 'top_n': 10, 'group_by': 'clip'}
     start_time = time.time()
     video_search_response = asyncio.run(video_search(**video_search_query))
     print(
@@ -285,7 +290,6 @@ if __name__ == "__main__":
         'video_ids': video_ids, 'index_id': INDEX_ID}
     start_time = time.time()
     download_response = asyncio.run(download_videos(**download_videos_query))
-    print(download_response)
     print(
         f"Download videos len {len(download_response)} took {round(time.time() - start_time, 2)} seconds.")
 
@@ -298,7 +302,6 @@ if __name__ == "__main__":
         'clips': clips, 'queries': ['logo' for _ in download_response], 'output_filename': 'combined_clips.mp4', 'index_id': INDEX_ID}
     start_time = time.time()
     combine_clips_response = asyncio.run(combine_clips(**combine_clips_query))
-    print(combine_clips_response)
     print(
         f"Combine clips took {round(time.time() - start_time, 2)} seconds.")
 
@@ -309,6 +312,5 @@ if __name__ == "__main__":
     start_time = time.time()
     remove_segment_response = asyncio.run(
         remove_segment(**remove_segment_query))
-    print(remove_segment_response)
     print(
         f"Remove segment took {round(time.time() - start_time, 2)} seconds.")
