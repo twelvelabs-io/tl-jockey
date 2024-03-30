@@ -7,7 +7,7 @@ from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
 from dotenv import load_dotenv
-from jockey.interfaces import VideoSearchResult
+from interfaces import VideoSearchResult
 import time
 import aiohttp
 
