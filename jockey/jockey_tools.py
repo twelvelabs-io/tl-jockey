@@ -7,7 +7,7 @@ from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
 from dotenv import load_dotenv
-from interfaces import VideoSearchResult
+from jockey.interfaces import VideoSearchResult
 import time
 import aiohttp
 
@@ -52,7 +52,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-# @tool("video-search", args_schema=MarengoSearchInput)
+@tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -121,8 +121,10 @@ class DownloadVideoInput(BaseModel):
         description="Index ID which contains a collection of videos.")
 
 
-# @tool("download-videos", args_schema=DownloadVideoInput)
+@tool("download-videos", args_schema=DownloadVideoInput)
 async def download_videos(video_ids: List[str], index_id: str) -> List[Union[str, dict]]:
+    """Download videos for given video ids in a given index and get the filepath. 
+    Should only be used when the user explicitly requests video editing functionalities."""
     video_dir = os.path.join(os.getcwd(), index_id)
     video_ids = list(set(video_ids))
 
@@ -178,7 +180,7 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-# @tool("combine-clips", args_schema=CombineClipsInput)
+@tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
@@ -243,7 +245,7 @@ class RemoveSegmentInput(BaseModel):
         description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
 
-# @tool("remove-segment", args_schema=RemoveSegmentInput)
+@tool("remove-segment", args_schema=RemoveSegmentInput)
 async def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
 

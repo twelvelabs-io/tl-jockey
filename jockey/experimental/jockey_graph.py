@@ -7,7 +7,7 @@ from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.messages import BaseMessage, HumanMessage
 from rich import print
 from rich.console import Console
-from jockey_tools import (
+from jockey.jockey_tools import (
     video_search,
     download_videos,
     combine_clips,
