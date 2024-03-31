@@ -181,7 +181,7 @@ class CombineClipsInput(BaseModel):
 
 
 @tool("combine-clips", args_schema=CombineClipsInput)
-async def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
+def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. The full filepath for the combined clips is returned."""
     try:
         # Parse the clips from the input
@@ -246,7 +246,7 @@ class RemoveSegmentInput(BaseModel):
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
-async def remove_segment(video_filepath: str, start: float, end: float) -> str:
+def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
 
     # Check if the video file exists before proceeding
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     combine_clips_query = {
         'clips': clips, 'queries': ['logo' for _ in download_response], 'output_filename': 'combined_clips.mp4', 'index_id': INDEX_ID}
     start_time = time.time()
-    combine_clips_response = asyncio.run(combine_clips(**combine_clips_query))
+    combine_clips_response = combine_clips(**combine_clips_query)
     print(
         f"Combine clips took {round(time.time() - start_time, 2)} seconds.")
 
@@ -314,7 +314,6 @@ if __name__ == "__main__":
     remove_segment_query = {
         'video_filepath': filepath, 'start': 10.0, 'end': 20.0}
     start_time = time.time()
-    remove_segment_response = asyncio.run(
-        remove_segment(**remove_segment_query))
+    remove_segment_response = remove_segment(**remove_segment_query)
     print(
         f"Remove segment took {round(time.time() - start_time, 2)} seconds.")

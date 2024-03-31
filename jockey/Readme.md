@@ -1,47 +1,50 @@
-# Results Over 3 Trials Each
+## Optimizations
 
-## Prompt: Find Me Logos
+### `video_search`
 
-### Old Process Averages
+- Used `asyncio.gather` to get video metadata for each video ID in parallel, instead of sequentially
 
-- Video search: 4.74 seconds
-- Download videos: 12.76 seconds
-- Combine clips: 7.20 seconds
-- Remove segment: 3.79 seconds
-- **Total average time: 28.49 seconds**
+### `download_videos`
 
-### New Process Averages
+- Was the most time consuming as each video was being download sequentially.
+- Changed `download_video` to `download_videos` function that takes a list of video IDs and downloads with `ffmpeg` `run_async` in parallel using `asyncio.gather`.
 
-- Video search: 1.60 seconds
-- Download videos: 8.09 seconds
-- Combine clips: 4.18 seconds
-- Remove segment: 2.20 seconds
-- **Total average time: 16.07 seconds**
+### LangGraph Experimentation
 
-### Improvements
+- Currently, there is one main agent that makes decisions and routes to different functions.
+- Limited to token length, number of tools, prompt sizes, llm, etc. Time-consuming.
+- LangGraph allows for a more fine tuned orchestration of multiple agents, see here: `jockey/jockey_graph.py`.
+- Did not finish implementing it yet, but found it interesting.
 
-- **Time reduction:** 12.42 seconds
-- **Percentage improvement:** 43.60%
+### Streaming Agent Output
 
-## Prompt: Find Me Humans
+- Removed `TokenByTokenHandler` and streamed agent's output with `astream`.
 
-### Old Process Averages
+## Results Over 3 Trials Each
 
-- Video search: 4.82 seconds
-- Download videos: 13.76 seconds
-- Combine clips: 8.66 seconds
-- Remove segment: 5.86 seconds
-- **Total average time: 33.10 seconds**
+### Prompt: Find Me Logos
 
-### New Process Averages
+- **Video Search**
+  - Old Time: 4.74 seconds
+  - New Time: 1.60 seconds
+- **Download Videos**
+  - Old Time: 12.76 seconds
+  - New Time: 8.09 seconds
+- **Total Time Reduction:** 7.81 seconds.
+- **Percentage Improvement:** 44.63%
 
-- Video search: 1.88 seconds
-- Download videos: 9.58 seconds
-- Combine clips: 4.80 seconds
-- Remove segment: 2.86 seconds
-- **Total average time: 19.11 seconds**
+### Prompt: Find Me Humans
 
-### Improvements
+- **Video Search**
+  - Old Time: 4.82 seconds
+  - New Time: 1.88 seconds
+- **Download Videos**
+  - Old Time: 13.76 seconds
+  - New Time: 9.58 seconds
+- **Total Time Reduction:** 7.12 seconds.
+- **Percentage Improvement:** 38.32%
 
-- **Time reduction:** 13.99 seconds
-- **Percentage improvement:** 42.27%
+### Avg Improvements
+
+- **Time reduction:** 7.465 seconds
+- **Percentage improvement:** 41.48%

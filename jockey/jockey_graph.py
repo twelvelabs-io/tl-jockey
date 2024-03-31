@@ -7,7 +7,7 @@ from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.messages import BaseMessage, HumanMessage
 from rich import print
 from rich.console import Console
-from jockey.jockey_tools import (
+from jockey_tools import (
     video_search,
     download_videos,
     combine_clips,
@@ -63,7 +63,11 @@ function_def = {
         "title": "routeSchema",
         "type": "object",
         "properties": {
-            "next": {"title": "Next", "anyOf": [{"enum": options}]},
+            "next": {"title": "Next",
+                     "anyOf": [
+                         {"enum": options}
+                     ]
+                     },
         },
         "required": ["next"],
     },
