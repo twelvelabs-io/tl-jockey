@@ -115,59 +115,49 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
 
 
 class DownloadVideoInput(BaseModel):
-    video_ids: List[str] = Field(
-        description="Video IDs used to download a video. It is also used as the filename for the video.")
+    video_id: str = Field(
+        description="Video ID used to download a video. It is also used as the filename for the video.")
     index_id: str = Field(
         description="Index ID which contains a collection of videos.")
 
 
-@tool("download-videos", args_schema=DownloadVideoInput)
-async def download_videos(video_ids: List[str], index_id: str) -> List[Union[str, Dict]]:
-    """Download videos for given video ids in a given index and get the filepath. 
+@tool("download-video", args_schema=DownloadVideoInput)
+async def download_video(video_id: str, index_id: str) -> Union[str, Dict]:
+    """Download a video for a given video id in a given index and get the filepath.
     Should only be used when the user explicitly requests video editing functionalities."""
+    print(
+        f"running download_video for {video_id} at {index_id} during {time.time()}")
     video_dir = os.path.join(os.getcwd(), index_id)
-    video_ids = list(set(video_ids))
     os.makedirs(video_dir, exist_ok=True)
 
-    async def download_single_video(video_id: str) -> Union[str, Tuple]:
-        video_metadata = await get_video_metadata(index_id=index_id, video_id=video_id)
-        if not video_metadata:
-            return {"error": f"Metadata not found for video {video_id}"}
-        hls_uri = video_metadata.get("hls", {}).get("video_url")
-        video_path = os.path.join(video_dir, f"{video_id}.mp4")
-        # Skip download if file already exists
-        if os.path.isfile(video_path):
-            return video_path
-        process = (
-            ffmpeg
-            .input(hls_uri)
-            .output(video_path, codec="copy")
-            .overwrite_output()
-            .run_async(pipe_stdout=True, pipe_stderr=True)
-        )
-        return process, video_path
+    video_metadata = await get_video_metadata(index_id=index_id, video_id=video_id)
+    if not video_metadata:
+        return {"error": f"Metadata not found for video {video_id}"}
 
-    # Start all download processes concurrently
-    download_tasks = [asyncio.create_task(download_single_video(
-        video_id)) for video_id in video_ids]
-    processes_and_paths = await asyncio.gather(*download_tasks)
-    # Wait for all processes to complete and gather results
-    # Can be improved by waiting for them in parallel
-    results = []
-    for process_and_path in processes_and_paths:
-        if isinstance(process_and_path, tuple):
-            process, video_path = process_and_path
-            process.wait()
-            if process.returncode == 0:
-                results.append(video_path)
-            else:
-                results.append({
-                    "message": "Failed to download video",
-                    "error": "FFmpeg process failed."
-                })
-        else:
-            results.append(process_and_path)
-    return results
+    hls_uri = video_metadata.get("hls", {}).get("video_url")
+    video_path = os.path.join(video_dir, f"{video_id}.mp4")
+
+    # Skip download if file already exists
+    if os.path.isfile(video_path):
+        return video_path
+
+    process = (
+        ffmpeg
+        .input(hls_uri)
+        .output(video_path, codec="copy")
+        .overwrite_output()
+        .run_async(pipe_stdout=True, pipe_stderr=True)
+    )
+
+    process.wait()
+
+    if process.returncode == 0:
+        return video_path
+    else:
+        return {
+            "message": "Failed to download video",
+            "error": "FFmpeg process failed."
+        }
 
 
 class Clip(BaseModel):

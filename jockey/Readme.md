@@ -4,10 +4,10 @@
 
 - Used `asyncio.gather` to get video metadata for each video ID in parallel, instead of sequentially
 
-### `download_videos`
+### `download_video`
 
 - Was the most time consuming as each video was being download sequentially.
-- Changed `download_video` to `download_videos` function that takes a list of video IDs and downloads with `ffmpeg` `run_async` in parallel using `asyncio.gather`.
+- Changed `download_video` to an async function that downloads with `ffmpeg` `run_async`.
 
 ### LangGraph Experimentation
 
@@ -46,9 +46,11 @@
 
 ### Avg Improvements in functions
 
-- **Time reduction:** 7.465 seconds
-- **Percentage improvement:** 41.48%
+- **Time Reduction:** 7.465 seconds
+- **Percentage Improvement:** 41.48%
 
 ### Improvements in agent run for the prompt `compile all logos from 65ff6c55da6cb29b7857a03c`
 
-- **New time:** 76.32 seconds
+- **Old Time:** 126.81 seconds
+- **New Time:** 56.05 seconds
+- **Percentage Improvement:** 55.80%
