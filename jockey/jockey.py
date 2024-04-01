@@ -149,7 +149,6 @@ if __name__ == "__main__":
         tool_descriptions = {
             tool.name: tool.description.split("-")[-1] for tool in tools
         }
-        print(tool_descriptions)
 
         class InputChat(BaseModel):
             """Input for the chat endpoint."""
