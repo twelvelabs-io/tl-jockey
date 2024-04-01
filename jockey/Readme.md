@@ -13,13 +13,13 @@
 
 - Currently, there is one main agent that makes decisions and routes to different functions.
 
-![Agent Image](jockey/assets/images/agent.png)
+![Agent Image](/assets/images/agent.png)
 
 - Limited to token length, number of tools, prompt sizes, llm, etc. Time-consuming.
 - LangGraph allows for a more fine tuned orchestration of multiple agents, see here: `jockey/jockey_graph.py`.
 - Did not finish implementing it yet, but found it interesting.
 
-![Agent 2 Image](jockey/assets/images/agent2.png)
+![Agent 2 Image](/assets/images/agent2.png)
 
 ### Streaming Agent Output
 
