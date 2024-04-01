@@ -12,6 +12,8 @@ TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 EXTERNAL_UPLOAD_URL = urllib.parse.urljoin(TL_BASE_URL, "tasks/external-provider/")
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
+GIST_URL = urllib.parse.urljoin(TL_BASE_URL, "gist/")
+SUMMARIZE_URL = urllib.parse.urljoin(TL_BASE_URL, "summarize/")
 GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
 
 PEGASUS_INDEX_ID = "659ecd3e6bb8e7df9af19eaa"
@@ -182,3 +184,53 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
     ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
 
     return output_filepath
+
+
+class PegasusGenerateInput(BaseModel):
+    video_id: str = Field(description="The ID of the video to generate text from.")
+    endpoint: str = Field(description="""What type of text to generate from a video: must be one of: ['gist', 'summarize', 'generate']
+                                      gist: For topics, titles, and hashtags using predefined formats.
+                                      summarize: For summaries, chapters, and highlights, allowing customization with a prompt
+                                      generate: For open-ended text, requiring clear instructions in the form of a prompt to guide the output.""")
+    prompt: str = Field(default=None, description="The prompt to be used when generating output for a certain task. Only required for the 'generate' endpoint and optional for the 'summarize' endpoint.")
+    endpoint_options: Union[str, List[str]] = Field(default=None, description="""Determines what the user wishes to generate. For the 'summarize' endpoint must be exactly one of: ['summary', 'highlight', 'chapter'].
+                                                                              For the 'gist' endpoint can be any combination of: ['topic', 'hashtag', 'title'].""")
+
+
+@tool("video-text-generation", args_schema=PegasusGenerateInput)
+def video_text_generation(video_id: str, endpoint: str, prompt: str = None, endpoint_options: Union[str, List[str]] = None):
+    """Generate text output for a single video. The text generated can have various options depending on the user's request."""
+
+    headers = {
+            "accept": "application/json",
+            "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
+            "Content-Type": "application/json"
+        }
+    
+    payload = {
+        "video_id": video_id
+    }
+
+    url = None
+
+    if endpoint == "gist":
+        url = GIST_URL
+
+        if endpoint_options is not None:
+            payload["types"] = endpoint_options
+    elif endpoint == "summarize":
+        url = SUMMARIZE_URL
+
+        if endpoint_options is not None:
+            payload["type"] = endpoint_options
+    elif endpoint == "generate":
+        url = GENERATE_URL
+
+    if prompt is not None:
+        payload["prompt"] = prompt
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    return response.json()
+
+JOCKEY_TOOLKIT = [video_search, download_video, combine_clips, remove_segment, video_text_generation]
