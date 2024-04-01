@@ -18,13 +18,14 @@ from fastapi import FastAPI
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import Any
 from langserve import add_routes
-
+import json
 
 load_dotenv()
 
+tools = [video_search, download_video, combine_clips, remove_segment]
+
 
 def build_jockey():
-    tools = [video_search, download_video, combine_clips, remove_segment]
 
     # remove "tools: [dict(tool_name, tool_input, tool_output)]" from the prompt since it took too long and astream handles it already.
     prompt = ChatPromptTemplate.from_messages(
@@ -97,8 +98,6 @@ def build_jockey():
 async def run_jockey():
     jockey = build_jockey()
 
-    tools = [video_search, download_video, combine_clips, remove_segment]
-
     tool_descriptions = {
         tool.name: tool.description.split("-")[-1] for tool in tools
     }
@@ -115,18 +114,24 @@ async def run_jockey():
                                           {"configurable": {"session_id": "1"}}):
             # Agent Action
             if "actions" in chunk:
+                actions = []
                 for action in chunk["actions"]:
-                    print(
-                        f"Calling Tool: `{action.tool}` with input `{action.tool_input}`")
+                    actions.append({
+                        "tool": action.tool,
+                        "tool_input": action.tool_input
+                    })
+                print(json.dumps({"type": "actions", "data": actions}))
             # Observation
             elif "steps" in chunk:
+                steps = []
                 for step in chunk["steps"]:
-                    print(f"Tool Result: `{step.observation}`")
+                    steps.append({"observation": step.observation})
+                print(json.dumps({"type": "steps", "data": steps}))
             # Final result
             elif "output" in chunk:
-                print(f'Final Output: {chunk["output"]}')
+                print(json.dumps({"type": "output", "data": chunk["output"]}))
             else:
-                print(f"Unknown chunk: {chunk}")
+                print(json.dumps({"type": "unknown", "data": chunk}))
             print("---")
 
 if __name__ == "__main__":
@@ -140,8 +145,6 @@ if __name__ == "__main__":
             version="0.1",
             description="Server for interacting with Jockey via API.",
         )
-
-        tools = [video_search, download_video, combine_clips, remove_segment]
 
         tool_descriptions = {
             tool.name: tool.description.split("-")[-1] for tool in tools

@@ -52,7 +52,7 @@ class MarengoSearchInput(BaseModel):
         description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
 
 
-# @tool("video-search", args_schema=MarengoSearchInput)
+@tool("video-search", args_schema=MarengoSearchInput)
 async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str = "clip") -> Union[List[VideoSearchResult], Dict]:
     """Run a search query against a collection of videos and get results."""
     try:
@@ -121,7 +121,7 @@ class DownloadVideoInput(BaseModel):
         description="Index ID which contains a collection of videos.")
 
 
-# @tool("download-video", args_schema=DownloadVideoInput)
+@tool("download-video", args_schema=DownloadVideoInput)
 async def download_video(video_id: str, index_id: str) -> Union[str, Dict]:
     """Download a video for a given video id in a given index and get the filepath.
     Should only be used when the user explicitly requests video editing functionalities."""
@@ -176,7 +176,7 @@ class CombineClipsInput(BaseModel):
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
-# @tool("combine-clips", args_schema=CombineClipsInput)
+@tool("combine-clips", args_schema=CombineClipsInput)
 def combine_clips(clips: List, queries: List[str], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on video IDs that are results from the video-search tool. 
     The full filepath for the combined clips is returned."""
@@ -242,7 +242,7 @@ class RemoveSegmentInput(BaseModel):
         description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
 
-# @tool("remove-segment", args_schema=RemoveSegmentInput)
+@tool("remove-segment", args_schema=RemoveSegmentInput)
 def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."""
 
