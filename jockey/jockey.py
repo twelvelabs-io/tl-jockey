@@ -26,6 +26,7 @@ load_dotenv()
 def build_jockey():
     tools = [video_search, download_videos, combine_clips, remove_segment]
 
+    # remove "tools: [dict(tool_name, tool_input, tool_output)]" from the prompt since it took too long and astream handles it already.
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -47,7 +48,6 @@ def build_jockey():
                 Your responses will be parsed and presented in a UI to the user so you must always adhere to the following to ensure your responses can be properly returned to the user.
                 
                 Your final response should ALWAYS be a JSON object including the following fields:
-                    tools: [dict(tool_name, tool_input, tool_output)],
                     final_response: string
 
                 If you used any tools the `final_response` field should just be a general recap of the actions you took.

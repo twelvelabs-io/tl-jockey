@@ -44,7 +44,11 @@
 - **Total Time Reduction:** 7.12 seconds.
 - **Percentage Improvement:** 38.32%
 
-### Avg Improvements
+### Avg Improvements in functions
 
 - **Time reduction:** 7.465 seconds
 - **Percentage improvement:** 41.48%
+
+### Improvements in agent run for the prompt `compile all logos from 65ff6c55da6cb29b7857a03c`
+
+- **New time:** 76.32 seconds
