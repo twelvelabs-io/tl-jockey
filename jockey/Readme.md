@@ -59,3 +59,62 @@
 - **Old Time:** 126.81 seconds
 - **New Time:** 56.05 seconds
 - **Percentage Improvement:** 55.80%
+
+## Structured Outputs
+
+### Actions
+
+```json
+{
+  "type": "actions",
+  "data": [
+    {
+      "tool": "<tool_name>",
+      "tool_input": {
+        ...
+      }
+    }
+  ]
+}
+```
+
+- Represents actions or tools that the agent wants to execute.
+
+### Steps
+
+```json
+{
+  "type": "steps",
+  "data": [
+    {
+      "observation": "<observation>"
+    }
+  ]
+}
+```
+
+- Represents intermediate steps or observations (output) made by the agent during the conversation.
+
+### Output
+
+```json
+{
+  "type": "output",
+  "data": "<output>"
+}
+```
+
+- Represents the final output or result provided by the agent.
+
+### Unknown
+
+```json
+{
+  "type": "unknown",
+  "data": {
+    ...
+  }
+}
+```
+
+- Represents an unknown or unrecognized type of data received from the agent.

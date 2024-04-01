@@ -116,16 +116,22 @@ async def run_jockey():
             if "actions" in chunk:
                 actions = []
                 for action in chunk["actions"]:
-                    actions.append({
+                    action_data = {
                         "tool": action.tool,
                         "tool_input": action.tool_input
-                    })
+                    }
+                    print(json.dumps(action_data))
+                    actions.append(action_data)
                 print(json.dumps({"type": "actions", "data": actions}))
             # Observation
             elif "steps" in chunk:
                 steps = []
                 for step in chunk["steps"]:
-                    steps.append({"observation": step.observation})
+                    observation_data = {
+                        "observation": step.observation
+                    }
+                    print(json.dumps(observation_data))
+                    steps.append(observation_data)
                 print(json.dumps({"type": "steps", "data": steps}))
             # Final result
             elif "output" in chunk:
