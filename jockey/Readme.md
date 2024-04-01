@@ -54,7 +54,7 @@
 - **Time Reduction:** 7.465 seconds
 - **Percentage Improvement:** 41.48%
 
-### Improvements in agent run for the prompt `compile all logos from 65ff6c55da6cb29b7857a03c`
+### Improvements in agent run for the prompt `compile all logos from [index-id]`
 
 - **Old Time:** 126.81 seconds
 - **New Time:** 56.05 seconds
