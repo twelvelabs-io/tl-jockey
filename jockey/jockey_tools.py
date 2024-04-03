@@ -36,7 +36,7 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
     }
 
     payload = {
-        "search_options": ["visual", "conversation", "text_in_video", "logo"],
+        "search_options": ["visual", "conversation"],
         "group_by": group_by,
         "threshold": "low",
         "sort_option": "score",
