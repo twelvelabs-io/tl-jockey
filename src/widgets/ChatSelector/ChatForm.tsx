@@ -83,16 +83,17 @@ const ChatForm: React.FC<ChatFormProps> = ({
   }
 
   return (
-    <div className={`flex flex-row justify-between gap-2 w-full  ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
+    <div className={`flex flex-row w-full  ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
       <Input
         disabled={selectedFile === undefined}
         onChange={handleInputChange}
-        placeholder='Start typing'
+        placeholder='Type here'
         onClick={handleInputClick}
         value={inputBox}
-        className={'w-full shadow-sm h-12 border border-solid border-[#D4D5D2] pl-2 text-[16px] font-aeonik'}
+        className={'w-full shadow-sm ml-7 h-12 border border-solid border-[#D4D5D2] pl-2 text-[16px] font-aeonik'}
       />
       <SubmitButton
+        value={inputBox}
         submitButtonRef={submitButtonRef}
         autofillQuestions={autofillQuestions}
         responseText={responseText}

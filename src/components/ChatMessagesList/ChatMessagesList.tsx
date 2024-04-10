@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import ChatMessagesItem from './ChatMessagesItem'
 import { ActionType } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 import { ChatMessagesListProps } from './ChatMessagesListTypes'
@@ -77,16 +77,18 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ chatState, chatDisp
   }
 
   return (
-    <>
+    <div className={'flex flex-col gap-5'}>
     { arrayMessages?.map((message, index) => (
         <ChatMessagesItem
           message={message}
           index={index}
           handleClick={handleClick}
           handleShow={handleShow}
-          key={index}/>
+          key={index}
+          chatState={chatState}/>
+          
     ))}
-    </>
+    </div>
   )
 }
 

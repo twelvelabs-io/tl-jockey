@@ -86,31 +86,23 @@ code {
 }
 
 .userBubble {
-  padding: 10px;
+  padding-left: 10px;
+  padding-top: 12px;
   align-self: flex-end; 
   max-width: 40vw;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  border-bottom-left-radius: 10px;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  border: 1px solid var(--TL-Grey-300); 
-  background-color: #F4F4F3; 
   font-family: 'Aeonik';
 }
 
 /* AI chat bubble style */
 .aiBubble {
-  background-color: #F7FEF2; 
   color: #333; 
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  border: 1px solid var(--TL-Green-300); 
   font-weight: 400;
   font-size: 16px;
-  padding: 10px;
+  padding-left: 10px;
+  padding-top: 12px;
   align-self: flex-start; 
   max-width: 40vw;
   line-height: 24px;
@@ -128,9 +120,109 @@ code {
   margin: 3px 6px;
   border-radius: 50%;
   background-color: 
-  #5AC903;
+  #9AED59;
   opacity: 1;
   animation: bouncing-loader 0.6s infinite alternate;
+}
+
+.disappearing-loader {
+  display: flex;
+  justify-content: center;
+}
+
+.disappearing-loader > div {
+  width: 12px;
+  height: 12px;
+  margin: 3px 6px;
+  border-radius: 50%;
+  background-color: #9AED59;
+  opacity: 0; /* Initially set opacity to 0 */
+  animation: disappearing-loader 1.2s infinite; /* Remove 'alternate' for simple disappearance and appearance */
+}
+
+.dot-pulse {
+  position: relative;
+  left: -9999px;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color:   #9AED59;
+  color:  #9AED59;
+  box-shadow: 9999px 0 0 -5px;
+  animation: dot-pulse 1.5s infinite linear;
+  animation-delay: 0.25s;
+}
+.dot-pulse::before, .dot-pulse::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color:  #9AED59;
+  color:  #9AED59;
+}
+.dot-pulse::before {
+  box-shadow: 9984px 0 0 -5px;
+  animation: dot-pulse-before 1.5s infinite linear;
+  animation-delay: 0s;
+}
+.dot-pulse::after {
+  box-shadow: 10014px 0 0 -5px;
+  animation: dot-pulse-after 1.5s infinite linear;
+  animation-delay: 0.5s;
+}
+
+@keyframes dot-pulse-before {
+  0% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9984px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+}
+@keyframes dot-pulse {
+  0% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9999px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+}
+@keyframes dot-pulse-after {
+  0% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 10014px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+}
+
+@keyframes disappearing-loader {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.disappearing-loader > div:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.disappearing-loader > div:nth-child(3) {
+  animation-delay: 0.8s;
 }
 
 @keyframes App-logo-spin {
@@ -191,4 +283,5 @@ code {
 .custom-modal .modal-dialog {
   max-width: 60%;
   max-height: 60%;
+  
 }

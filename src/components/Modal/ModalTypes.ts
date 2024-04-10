@@ -3,7 +3,7 @@ import { type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 export interface QuestionHeaderProps {
     logo: string
     handleClose: () => void
-    text: string[]
+    text: string
 }
 
 export interface ModalCentralProps {

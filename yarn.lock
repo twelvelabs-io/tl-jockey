@@ -2175,6 +2175,11 @@
   resolved "https://registry.yarnpkg.com/@leichtgewicht/ip-codec/-/ip-codec-2.0.4.tgz#b2ac626d6cb9c8718ab459166d4bb405b8ffa78b"
   integrity sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==
 
+"@magicul/react-chat-stream@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@magicul/react-chat-stream/-/react-chat-stream-0.3.1.tgz#335c31dea9653016b25469638165c50ae52c2a18"
+  integrity sha512-mCXnBb51tvYkHUHMa9fmGWkK1Ws+qPe6MEgNx/cUpqyEQh+Lm8VY83LIdKmOmzjrpx9d10P1hUxbTEuITvNpQQ==
+
 "@mui/base@5.0.0-beta.29":
   version "5.0.0-beta.29"
   resolved "https://registry.yarnpkg.com/@mui/base/-/base-5.0.0-beta.29.tgz#bc50d1dbb825c0546603ea711907a01467be014a"
@@ -9933,6 +9938,13 @@ run-parallel@^1.1.9:
   integrity sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==
   dependencies:
     queue-microtask "^1.2.2"
+
+rxjs@^7.8.1:
+  version "7.8.1"
+  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.1.tgz#6f6f3d99ea8044291efd92e7c7fcf562c4057543"
+  integrity sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==
+  dependencies:
+    tslib "^2.1.0"
 
 safe-array-concat@^1.0.0, safe-array-concat@^1.0.1:
   version "1.0.1"

@@ -1,15 +1,11 @@
-import React from 'react'
-import logo from '../../../src/icons/logo.svg'
+import React, { useRef } from 'react'
 
 import Modal from 'react-bootstrap/Modal'
-import asr from '../../../src/icons/asr.svg'
-import lama from '../../../src/icons/lama.svg'
 import union from '../../../src/icons/union.svg'
 
-import { ModelNames } from '../../constants'
 import QuestionHeader from './QuestionHeader'
-import ColumnGroup from './ColumnGroup'
 import { ModalCentralProps } from './ModalTypes'
+import ReactHlsPlayer from 'react-hls-player/dist'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   chatState,
@@ -18,60 +14,73 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
   choosedElement,
   autofillApi
 }) => {
-  const adjastableColumns: string = autofillApi ? 'col-md-4' : 'col-md-6'
-  const renderTextByElement = (element: any, index: number) =>
-    index === choosedElement ? element : '';
   const { arrayMessages, showModal } = chatState
+  console.log(choosedElement)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoUrl = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.video_url as string
+  const textForModal = arrayMessages
+  ?.map(message =>
+    message?.toolsData?.[choosedElement as number]?.metadata?.map(meta =>
+      meta?.type === 'conversation' ? meta?.text : null
+    )
+  )
+  .flat() // Flatten the array of arrays into a single array
+  .filter(text => text !== null)
+  .join('\n');
+  const confidenceScore = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.score ?? ''
+  const confidenceName = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.confidence ?? ''
+  const renderConfidence = (score: number) => {
+    let confidenceText = '';
+    let confidenceColor = '';
 
-  const columnData = [
-    {
-      className: adjastableColumns,
-      modelLogo: logo,
-      modelName: ModelNames.MODEL_TWELVE_LABS,
-      backgroundColor: 'bg-[#F7FEF2]',
-      text: arrayMessages.map((element, index) =>
-        renderTextByElement(element.twelveText as string, index)
-      ),
-    },
-    {
-      className: adjastableColumns,
-      modelLogo: asr,
-      modelName: ModelNames.MODEL_ASR_AND_GPT,
-      backgroundColor: 'bg-[#F9FAF9]',
-      text: arrayMessages.map((element, index) =>
-        renderTextByElement(element.asrTest as string, index)
-      ),
-    },
-    ...(autofillApi
-      ? [
-          {
-            className: 'col-md-4',
-            modelLogo: lama,
-            modelName: ModelNames.MODEL_LAMA,
-            backgroundColor: 'bg-[#F9FAF9]',
-            text: arrayMessages.map((element, index) =>
-              renderTextByElement(element.lameText as string, index)
-            ),
-          }
-        ]
-      : [])
-  ]
+    if (score < 75) {
+      confidenceText = 'Low';
+      confidenceColor = '#929490';
+    } else if (score >= 75 && score < 85) {
+      confidenceText = 'Medium';
+      confidenceColor = '#FDC14E';
+    } else {
+      confidenceText = 'High';
+      confidenceColor = '#2EC29F';
+    }
 
-  return (
-    <Modal show={showModal} onHide={handleClose} centered className={'custom-modal'} scrollable >
-      <div className={`${!autofillApi ? 'block' : ''}`}>
-        <QuestionHeader
-            handleClose={handleClose}
-            logo={union}
-            text={arrayMessages.map((element, index) =>
-              renderTextByElement(element.question as string, index)
-            )}
-        />
+    return (
+      <div style={{ color: confidenceColor }} className={`flex flex-row gap-2 justify-center items-center`}>
+        <p className={'font-aeonikBold'}>
+          {confidenceName} 
+        </p>
+        <div style={{ color: confidenceColor }} className={`p`}>
+           <p className={`p-1  font-aeonikBold text-white rounded-md`} style={{ backgroundColor: confidenceColor }}>
+              {confidenceScore}
+           </p>
         </div>
+      </div>
+    );
+  };
+  return (
+    <Modal show={showModal} onHide={handleClose} centered className={'custom-modal '} scrollable >
     <Modal.Body>
-    <div className={`pb-3 pl-6 pr-6 block ${!autofillApi ? 'items-center' : ''} ${!autofillApi ? 'justify-center' : ''}`}>
-      <ColumnGroup columnData={columnData} />
-    </div>
+    <div className={'flex flex-col justify-center items-center'}>
+        <div className={`${!autofillApi ? 'block' : ''}`}>
+          <QuestionHeader
+              handleClose={handleClose}
+              logo={union}
+              text={textForModal}
+          />
+        </div>
+        <div>
+          <div className={'absolute right-0 pr-10 pt-4'}>
+            {renderConfidence(confidenceScore as unknown as number)}
+          </div>
+          <ReactHlsPlayer
+            src={videoUrl}
+            controls={true}
+            height="auto"
+            playerRef={videoRef}
+            className={'rounded'}
+          />
+        </div>
+      </div>
     </Modal.Body>
   </Modal>
   )

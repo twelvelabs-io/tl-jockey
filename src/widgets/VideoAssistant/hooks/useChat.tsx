@@ -9,7 +9,9 @@ const initialState: State = {
   linkUrl: '',
   loading: false,
   arrayMessages: [],
-  showModal: false
+  statusMessages: [],
+  showModal: false,
+  toolsData: []
 }
 
 function reducer (state: State, action: Action): State {
@@ -28,10 +30,32 @@ function reducer (state: State, action: Action): State {
       return { ...state, loading: action.payload }
     case ActionType.SET_ARRAY_MESSAGES:
       return { ...state, arrayMessages: [...state.arrayMessages, ...action.payload] }
+    case ActionType.CLEAR_STATUS_MESSAGES:
+        return { ...state, statusMessages: [] }
+    case ActionType.SET_STATUS_MESSAGES:
+      return { ...state, statusMessages: [...state.statusMessages, ...action.payload] }
+    case ActionType.CHANGE_ARRAY_MESSAGE:
+      const newArrayMessages = [...state.arrayMessages];
+      const newMessage = action.payload[0]; // Assuming payload is an array, extract the first element
+      newArrayMessages[newArrayMessages.length - 1] = newMessage; // Change only the last element
+      return { ...state, arrayMessages: newArrayMessages }
     case ActionType.SET_ARRAY_MESSAGES_CLEAN:
       return { ...state, arrayMessages: [] }
     case ActionType.SET_SHOW_MODAL:
       return { ...state, showModal: action.payload }
+      case ActionType.ADD_TOOLS_DATA_TO_LAST_ELEMENT:
+      const lastElementIndex = state.arrayMessages.length - 1;
+      if (lastElementIndex >= 0) {
+        const updatedLastElement = {
+          ...state.arrayMessages[lastElementIndex],
+          toolsData: action.payload
+        };
+        const newArrayMessages = [...state.arrayMessages];
+        newArrayMessages[lastElementIndex] = updatedLastElement;
+        return { ...state, arrayMessages: newArrayMessages };
+      } else {
+        return state; // No messages to add tools data to
+      }
     default:
       return state
   }

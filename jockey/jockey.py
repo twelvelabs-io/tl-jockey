@@ -46,12 +46,10 @@ def build_jockey():
 
                 Your responses will be parsed and presented in a UI to the user so you must always adhere to the following to ensure your responses can be properly returned to the user.
                 
-                Your final response should ALWAYS be a JSON object including the following fields:
-                    tools: [dict(tool_name, tool_input, tool_output)],
-                    final_response: string
+                Your final response should ALWAYS be a text
 
                 If you used any tools the `final_response` field should just be a general recap of the actions you took.
-                DO NOT include any data from the `tools` field in the `final_response` field.
+                DO NOT include any data from the `tools` field in the `final_response` field.  Don't send JSON object at all only `final_response` as a text
 
                 Otherwise, `final_response` field should just be your general response to the user.
                 If a tool was not used you can omit the `tools` field.
