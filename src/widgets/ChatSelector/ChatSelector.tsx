@@ -19,9 +19,8 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   const [streamData, setStreamData] = useState(['']);
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
-
       chatDispatch({ type: ActionType.SET_LOADING, payload: true })
-
+      chatDispatch({ type: ActionType.REMOVE_INITIAL_MESSAGE })
       chatDispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: inputBox })
       chatDispatch({
         type: ActionType.SET_ARRAY_MESSAGES,
@@ -182,21 +181,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
 .catch(error => {
   console.error('Error:', error);
 });
-
-
-        // const responseData2 = await axios.post(
-        //   ServerConfig.ServerForASRRequests,
-        //   requestData
-        // )
-
-        //rewrite this part when API is ready 
-
-        // let jsonObject2 = JSON.stringify(responseData2.data)
-        // jsonObject2 = JSON.parse(jsonObject2)
-
-        // const startIndex2 = jsonObject2.indexOf('text')
-        // const endIndex2 = jsonObject2.indexOf('error_code')
-        // const extractedText2 = jsonObject2.slice(startIndex2 + 8, endIndex2 - 4).trim()
         
         let jsonObject = JSON.stringify(Response)
         jsonObject = JSON.parse(jsonObject)
@@ -269,10 +253,10 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
                 videoRef={videoRef}
                 setChoosedElement={setChoosedElement}
             />
-            <div className={`justify-end flex items-end flex-col flex-1 ${showAutofillQuestions ? 'gap-3' : 'gap-6'}`}>
+            {/* <div className={`justify-end flex items-end flex-col flex-1 ${showAutofillQuestions ? 'gap-3' : 'gap-6'}`}>
               {loading ? <Loading/> : '' }
-            </div>
-            {showAutofillQuestions &&
+            </div> */}
+            {/* {showAutofillQuestions &&
               <div className='relative'>
                 <div className="sticky ml-7">
                     <AutofillQuestions
@@ -282,7 +266,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
                     />
                 </div>
               </div>
-              }
+              } */}
           </div>
           <div className={'pl-[10vw] pr-[10vw] '}>
             <ChatForm

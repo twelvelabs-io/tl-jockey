@@ -1,5 +1,4 @@
 import React from 'react'
-import { ChatSelectQuestions } from '../../constants'
 import AutofillQuestionsItem from './AutofillQuestionsItem'
 import { ActionType } from '../../widgets/VideoAssistant/hooks/useChat'
 import { AutofillQuestionsProps } from './AutofillQuestionsTypes'
@@ -12,8 +11,7 @@ const AutofillQuestions: React.FC<AutofillQuestionsProps> = ({ autofillQuestions
   }
 
   return (
-    <div className={'mb-2 flex w-full justify-center items-start flex-col bg-[#fff] shadow-md border border-solid border-[#D4D5D2] '}>
-        <div className={'text-[12px] font-semibold text-gray-500 p-2 font-aeonik sans-serif'}>{ChatSelectQuestions.TOP_QUESTIONS}</div>
+    <div className={'mb-2 flex w-full justify-center items-start flex-col gap-2'}>
         {autofillQuestions.map((question, index) => (
             <AutofillQuestionsItem
                 key={index}

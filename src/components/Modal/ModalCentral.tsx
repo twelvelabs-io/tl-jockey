@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import Modal from 'react-bootstrap/Modal'
 import union from '../../../src/icons/union.svg'
@@ -6,6 +6,7 @@ import union from '../../../src/icons/union.svg'
 import QuestionHeader from './QuestionHeader'
 import { ModalCentralProps } from './ModalTypes'
 import ReactHlsPlayer from 'react-hls-player/dist'
+import Pagination from '../Pagination/Pagination'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   chatState,
@@ -15,20 +16,24 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
   autofillApi
 }) => {
   const { arrayMessages, showModal } = chatState
-  console.log(choosedElement)
+  const [chosenIndex, setChosenIndex] = useState<number | undefined>(choosedElement)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const videoUrl = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.video_url as string
+  const videoUrl = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.video_url as string
   const textForModal = arrayMessages
   ?.map(message =>
-    message?.toolsData?.[choosedElement as number]?.metadata?.map(meta =>
+    message?.toolsData?.[chosenIndex as number]?.metadata?.map(meta =>
       meta?.type === 'conversation' ? meta?.text : null
     )
   )
-  .flat() // Flatten the array of arrays into a single array
+  .flat() 
   .filter(text => text !== null)
   .join('\n');
-  const confidenceScore = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.score ?? ''
-  const confidenceName = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[choosedElement as number]?.confidence ?? ''
+  const confidenceScore = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.score ?? ''
+  const confidenceName = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.confidence ?? ''
+  useEffect(() => {
+    setChosenIndex(choosedElement);
+  }, [choosedElement]);
+
   const renderConfidence = (score: number) => {
     let confidenceText = '';
     let confidenceColor = '';
@@ -57,6 +62,12 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
       </div>
     );
   };
+
+  const handlePageChange = (newIndex: number, totalIndexes: number): void => {
+    const index = newIndex % totalIndexes
+    setChosenIndex(index);
+  };
+
   return (
     <Modal show={showModal} onHide={handleClose} centered className={'custom-modal '} scrollable >
     <Modal.Body>
@@ -81,6 +92,7 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
           />
         </div>
       </div>
+      <Pagination chosenIndex={chosenIndex as number} totalIndexes={arrayMessages?.[arrayMessages.length - 1]?.toolsData?.length as number} handlePageChange={handlePageChange}/>
     </Modal.Body>
   </Modal>
   )

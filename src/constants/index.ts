@@ -9,10 +9,6 @@ export enum VideoSelectState {
   CHOOSE_VIDEO = 'Choose video'
 }
 
-export enum ChatSelectQuestions {
-  TOP_QUESTIONS = 'Try this'
-}
-
 export enum HeaderTexts {
   START_NEW_CHAT = 'Start new'
 }

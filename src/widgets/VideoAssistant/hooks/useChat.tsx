@@ -8,7 +8,17 @@ const initialState: State = {
   inputBox: '',
   linkUrl: '',
   loading: false,
-  arrayMessages: [],
+  arrayMessages: [{
+    twelveText: 'Hey',
+    asrTest: '',
+    lameText: '',
+    question: 'Hey',
+    toolsData: [],
+    sender: 'initial',
+    text: 'Howdy! The Twelve Labs platform, powered by our video foundation model, allows you to search, generate-text and classify from your videos. Experience the Twelve Labs video understanding AI in action.',
+    handleShow(index, question) {
+    },
+  }],
   statusMessages: [],
   showModal: false,
   toolsData: []
@@ -39,6 +49,14 @@ function reducer (state: State, action: Action): State {
       const newMessage = action.payload[0]; // Assuming payload is an array, extract the first element
       newArrayMessages[newArrayMessages.length - 1] = newMessage; // Change only the last element
       return { ...state, arrayMessages: newArrayMessages }
+    case ActionType.REMOVE_INITIAL_MESSAGE:
+        if (state.arrayMessages.length > 0 && state.arrayMessages[0].sender === "initial") {
+          const newArrayMessages = [...state.arrayMessages];
+          newArrayMessages.shift(); // Remove the first element
+          return { ...state, arrayMessages: newArrayMessages };
+        } else {
+          return state; // No initial message to remove
+        }
     case ActionType.SET_ARRAY_MESSAGES_CLEAN:
       return { ...state, arrayMessages: [] }
     case ActionType.SET_SHOW_MODAL:

@@ -85,6 +85,7 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ chatState, chatDisp
           handleClick={handleClick}
           handleShow={handleShow}
           key={index}
+          chatDispatch={chatDispatch}
           chatState={chatState}/>
           
     ))}

@@ -1,30 +1,32 @@
-import React from 'react'
-import { AutofillQuestionsItemProps } from './AutofillQuestionsItemTypes'
+import React, { useState } from 'react';
+import { AutofillQuestionsItemProps } from './AutofillQuestionsItemTypes';
 
 const AutofillQuestionsItem: React.FC<AutofillQuestionsItemProps> = ({ question, index, handleQuestionClick }) => {
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = '#F4F4F3';
-  }
+  const [isHovered, setIsHovered] = useState(false);
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.backgroundColor = 'initial';
-  }
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
 
   const handleClick = () => {
     handleQuestionClick(question);
-  }
+  };
 
   return (
     <div
-        className="p-2 cursor-pointer w-full font-aeonik"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleClick}
-        key={index}
+      className={`cursor-pointer pt-3 pr-5 pb-3 pl-5 rounded-full ${isHovered ? 'bg-[#F4F4F3] border-[#F4F4F3] border-1' : 'bg-[#F7FEF2] border-1 border-[#DBFEBE]'}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
+      key={index}
     >
-        {question}
+      <p className="font-aeonik text-[16px]">{question}</p>
     </div>
-  )
-}
+  );
+};
 
-export default AutofillQuestionsItem
+export default AutofillQuestionsItem;

@@ -8,4 +8,5 @@ export interface ChatMessagesItemProps {
     handleShow: (index: number | undefined, question: string) => void
     key: number
     chatState: State
+    chatDispatch: React.Dispatch<any>
 }

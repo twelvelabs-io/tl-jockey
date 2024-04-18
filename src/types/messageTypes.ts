@@ -1,5 +1,5 @@
 export interface Message {
-    sender: 'user' | 'ai';
+    sender: 'user' | 'ai' | 'initial';
     text: string;
     link?: string;
     linkText?: string;
