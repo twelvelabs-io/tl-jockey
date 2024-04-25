@@ -21,7 +21,7 @@ load_dotenv()
 
 def build_jockey():
     if len(sys.argv) < 3:
-        prompt_filepath = os.path.join(os.path.curdir, "prompts", "generic.txt")
+        prompt_filepath = os.path.join(os.path.curdir, "prompts", "video_truncation.txt")
     elif os.path.isfile(os.path.join(os.path.curdir, "prompts", sys.argv[2])):
         prompt_filepath = os.path.join(os.path.curdir, "prompts", sys.argv[2])
 
