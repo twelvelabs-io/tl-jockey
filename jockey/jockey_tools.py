@@ -76,6 +76,7 @@ async def video_search(query: str, index_id: str, top_n: int = 3, group_by: str 
             return error_response
         
         result["video_url"] = response.json()["hls"]["video_url"]
+        result["video_title"] = response.json()["metadata"]["filename"]
 
         if group_by == "video":
             result["thumbnail_url"] = response.json()["hls"]["thumbnail_urls"][0]
