@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ChatMessagesItem from './ChatMessagesItem'
 import { ActionType } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 import { ChatMessagesListProps } from './ChatMessagesListTypes'
+import { useChat } from '../../widgets/VideoAssistant/hooks/useChat'
 
-const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ chatState, chatDispatch, videoRef, setChoosedElement }) => {
-  const { arrayMessages, linkUrl } = chatState
+const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ videoRef }) => {
+  const [ state, dispatch ] = useChat()
+  const { arrayMessages, linkUrl } = state
+
   const handleClick = (event: React.MouseEvent<HTMLSpanElement>): void => {
     const timeString = linkUrl
     const regexPatternMinutesSecondsDash = /^ *(\d+[:.-]\d+) *to *(\d+[:.-]\d+) *$/i
@@ -71,22 +74,28 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ chatState, chatDisp
   }
 
   const handleShow = (index: number | undefined, question: string): void => {
-    chatDispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: question })
-    setChoosedElement(index)
-    chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
+    dispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: question })
+    dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: index })
+    dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
   }
 
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [arrayMessages]);
+
   return (
-    <div className={'flex flex-col gap-5'}>
+    <div ref={chatContainerRef} className={'flex flex-col gap-5 overflow-y-auto max-h-50vh'}>
     { arrayMessages?.map((message, index) => (
         <ChatMessagesItem
           message={message}
           index={index}
           handleClick={handleClick}
           handleShow={handleShow}
-          key={index}
-          chatDispatch={chatDispatch}
-          chatState={chatState}/>
+          key={index}/>
           
     ))}
     </div>

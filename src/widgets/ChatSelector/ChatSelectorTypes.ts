@@ -1,8 +1,6 @@
 import { State } from '../VideoAssistant/hooks/useChatTypes';
 
 export interface ChatSelectProps {
-  chatState: State;
-  chatDispatch: React.Dispatch<any>;
   showAutofillQuestions: boolean;
   setCurrentVideoFile: (file: string) => void;
   setShowAutofillQuestions: (show: boolean) => void;

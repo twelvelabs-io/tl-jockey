@@ -12,12 +12,7 @@ enum initialTexts {
     Body = "Here are some things I can do:"
 }
 
-const InitialResponse: React.FC<{ message: string, chatState: State, chatDispatch: React.Dispatch<any> }> = ({ message, chatDispatch, chatState }) => {
-    const { actionsAutofillQuestions } = useAutofillQuestions()
-
-    const {
-        setShowAutofillQuestions
-      } = actionsAutofillQuestions
+const InitialResponse: React.FC<{ message: string }> = ({ message }) => {
 
     return (
         <div className={'ml-7'}>
@@ -38,8 +33,6 @@ const InitialResponse: React.FC<{ message: string, chatState: State, chatDispatc
                { initialTexts.Body }
         </div>
         <AutofillQuestions 
-            chatDispatch={chatDispatch} 
-            setShowAutofillQuestions={setShowAutofillQuestions}  
             autofillQuestions={autofillQuestions}
         />
       </div>

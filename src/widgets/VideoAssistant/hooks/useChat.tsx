@@ -1,5 +1,7 @@
-import { useReducer } from 'react'
+import React, { ReactNode, createContext, useContext, useReducer } from 'react';
+
 import { ActionType, State, Action } from './useChatTypes'
+import { ModalType } from '../../../types/messageTypes';
 
 const initialState: State = {
   selectedFile: null,
@@ -21,7 +23,14 @@ const initialState: State = {
   }],
   statusMessages: [],
   showModal: false,
-  toolsData: []
+  modalType: ModalType.MESSAGES,
+  toolsData: [],
+  autofill: {
+    choosedElement: undefined,
+    autofillApi: false,
+    showAutofillQuestions: false,
+  },
+  panelVideosList: []
 }
 
 function reducer (state: State, action: Action): State {
@@ -40,6 +49,8 @@ function reducer (state: State, action: Action): State {
       return { ...state, loading: action.payload }
     case ActionType.SET_ARRAY_MESSAGES:
       return { ...state, arrayMessages: [...state.arrayMessages, ...action.payload] }
+    case ActionType.SET_PANEL_ARRAY_MESSAGES:
+      return { ...state, panelVideosList: [...state.panelVideosList, ...action.payload] }
     case ActionType.CLEAR_STATUS_MESSAGES:
         return { ...state, statusMessages: [] }
     case ActionType.SET_STATUS_MESSAGES:
@@ -61,6 +72,8 @@ function reducer (state: State, action: Action): State {
       return { ...state, arrayMessages: [] }
     case ActionType.SET_SHOW_MODAL:
       return { ...state, showModal: action.payload }
+    case ActionType.SET_MODAL_TYPE:
+        return { ...state, modalType: action.payload };
       case ActionType.ADD_TOOLS_DATA_TO_LAST_ELEMENT:
       const lastElementIndex = state.arrayMessages.length - 1;
       if (lastElementIndex >= 0) {
@@ -74,15 +87,41 @@ function reducer (state: State, action: Action): State {
       } else {
         return state; // No messages to add tools data to
       }
+      case ActionType.SET_CHOOSED_ELEMENT:
+        return { ...state, autofill: { ...state.autofill, choosedElement: action.payload } };
+      case ActionType.SET_AUTOFILL_API:
+        return { ...state, autofill: { ...state.autofill, autofillApi: action.payload } };
+      case ActionType.SET_SHOW_AUTOFILL_QUESTIONS:
+        return { ...state, autofill: { ...state.autofill, showAutofillQuestions: action.payload } }
     default:
       return state
   }
 }
 
-function useChat (): [State, React.Dispatch<Action>] {
-  const [state, dispatch] = useReducer(reducer, initialState)
+const ChatContext = createContext<[State, React.Dispatch<Action>] | undefined>(undefined);
 
-  return [state, dispatch]
-}
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-export { useChat, ActionType }
+  return (
+    <ChatContext.Provider value={[state, dispatch]}>
+      {children}
+    </ChatContext.Provider>
+  );
+};
+
+export const useChat = (): [State, React.Dispatch<Action>] => {
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+};
+
+// function useChat (): [State, React.Dispatch<Action>] {
+//   const [state, dispatch] = useReducer(reducer, initialState)
+
+//   return [state, dispatch]
+// }
+
+export { ActionType }

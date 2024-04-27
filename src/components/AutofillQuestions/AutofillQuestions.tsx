@@ -1,13 +1,13 @@
 import React from 'react'
 import AutofillQuestionsItem from './AutofillQuestionsItem'
-import { ActionType } from '../../widgets/VideoAssistant/hooks/useChat'
+import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
 import { AutofillQuestionsProps } from './AutofillQuestionsTypes'
 
-const AutofillQuestions: React.FC<AutofillQuestionsProps> = ({ autofillQuestions, chatDispatch, setShowAutofillQuestions }) => {
+const AutofillQuestions: React.FC<AutofillQuestionsProps> = ({ autofillQuestions }) => {
+  const [state, dispatch] = useChat()
   const handleQuestionClick = (question: string): void => {
-    chatDispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: question })
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: question })
-    setShowAutofillQuestions(false)
+    dispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: question })
+    dispatch({ type: ActionType.SET_INPUT_BOX, payload: question })
   }
 
   return (

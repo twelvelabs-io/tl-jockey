@@ -5,10 +5,9 @@ import useMatch from './hooks/useMatch'
 import answers from '../../info/answers.json'
 import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
 import { ChatFormProps } from './ChatFormTypes'
+import { useChat } from '../VideoAssistant/hooks/useChat'
 
 const ChatForm: React.FC<ChatFormProps> = ({
-  chatState,
-  chatDispatch,
   submitButtonRef,
   autofillQuestions,
   setAutofillApi,
@@ -16,9 +15,10 @@ const ChatForm: React.FC<ChatFormProps> = ({
   showAutofillQuestions,
   setShowAutofillQuestions
 }) => {
-  const { inputBox, responseText, selectedFile } = chatState
+  const [ state, dispatch] = useChat()
+  const {inputBox, responseText, selectedFile } = state
   const handleInputChange = (event: { target: { value: React.SetStateAction<string> } }): void => {
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: event.target.value as string })
+    dispatch({ type: ActionType.SET_INPUT_BOX, payload: event.target.value as string })
     setShowAutofillQuestions(false)
   }
   const {
@@ -33,10 +33,10 @@ const ChatForm: React.FC<ChatFormProps> = ({
 
   const handleChat = async (): Promise<void> => {
     if (selectedFile !== null && selectedFile !== undefined) {
-      chatDispatch({ type: ActionType.SET_LINK_URL, payload: link })
-      chatDispatch({ type: ActionType.SET_LOADING, payload: true })
+      dispatch({ type: ActionType.SET_LINK_URL, payload: link })
+      dispatch({ type: ActionType.SET_LOADING, payload: true })
       try {
-        chatDispatch({
+        dispatch({
           type: ActionType.SET_ARRAY_MESSAGES,
           payload: [
             {
@@ -53,7 +53,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
         })
         const randomDelay = Math.random() * (5000 - 1000) + 5000 // Random time between 1000ms and 2500ms (1 to 2.5 seconds)
         setTimeout(() => {
-          chatDispatch({
+          dispatch({
             type: ActionType.SET_ARRAY_MESSAGES,
             payload: [
               {
@@ -68,14 +68,14 @@ const ChatForm: React.FC<ChatFormProps> = ({
               }
             ]
           })
-          chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+          dispatch({ type: ActionType.SET_LOADING, payload: false })
         }, randomDelay)
       } catch (error) {
-        chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+        dispatch({ type: ActionType.SET_LOADING, payload: false })
         console.error('Error sending chat request:', error)
       }
     }
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
+    dispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
   }
 
   const handleInputClick = (): void => {
@@ -90,7 +90,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
         placeholder='Type here'
         onClick={handleInputClick}
         value={inputBox}
-        className={'w-full shadow-sm ml-7 h-12 border border-solid border-[#D4D5D2] pl-2 text-[16px] font-aeonik'}
+        className={'w-full shadow-sm ml-7 h-12 border-1 border-solid border-[#D4D5D2] pl-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none'}
       />
       <SubmitButton
         value={inputBox}

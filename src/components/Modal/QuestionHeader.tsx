@@ -6,7 +6,7 @@ const QuestionHeader: React.FC<QuestionHeaderProps> = ({ logo, text, handleClose
       <div className={'text-xl font-bold text-left pb-6 font-aeonik'}>
         {text}
       </div>
-      <div onClick={handleClose} className={'cursor-pointer w-8 h-8'}>
+      <div onClick={handleClose} className={'cursor-pointer w-8 h-8 flex justify-center items-center'}>
         <img src={logo} alt="logoColumns"/>
       </div>
     </div>

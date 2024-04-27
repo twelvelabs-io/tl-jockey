@@ -13,16 +13,24 @@ import StartNewGroup from '../VideoAssistant/StartNewGroup'
 
 import { ChatSelectProps, DefaultVideo } from './ChatSelectorTypes';
 import { chunk } from 'lodash'
+import PanelWrapper from '../Panel/PanelWrapper'
+import { useChat } from '../VideoAssistant/hooks/useChat'
+import { ModalType } from '../../types/messageTypes'
+import { ButtonTypes } from '../../types/buttonTypes'
 
-const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
-  const { selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = chatState
+const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
+  const [state, dispatch] = useChat()
+  const {selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = state
   const [streamData, setStreamData] = useState(['']);
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
-      chatDispatch({ type: ActionType.SET_LOADING, payload: true })
-      chatDispatch({ type: ActionType.REMOVE_INITIAL_MESSAGE })
-      chatDispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: inputBox })
-      chatDispatch({
+      dispatch({ type: ActionType.SET_LOADING, payload: true })
+      dispatch({
+        type: ActionType.REMOVE_INITIAL_MESSAGE,
+        payload: undefined
+      })
+      dispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: inputBox })
+      dispatch({
         type: ActionType.SET_ARRAY_MESSAGES,
         payload: [
           {
@@ -74,7 +82,8 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   if (!response.ok) {
     throw new Error(response.statusText);
   }
-  chatDispatch({
+  console.log(response)
+  dispatch({
     type: ActionType.SET_ARRAY_MESSAGES,
     payload: [
       {
@@ -94,26 +103,28 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   if (!responseBody) {
     throw new Error('Response body is null or undefined');
   }
-  chatDispatch({ type: ActionType.SET_LOADING, payload: true })
+  dispatch({ type: ActionType.SET_LOADING, payload: true })
   const reader = responseBody.getReader();
   const decoder = new TextDecoder();
   let done = false;
   let accumulatedContent = '';
+
   
   async function processChunk(chunkValue: string) {
     if (!chunkValue.startsWith('Running =>')) {
       accumulatedContent += chunkValue
     }
+    console.log(accumulatedContent)
     const jsonStartIndex =accumulatedContent.indexOf('[');
     const jsonEndIndex = accumulatedContent.lastIndexOf(']');
     let accumulatedContentWithoutJSON = accumulatedContent.replace(/\[.*\]/s, '')
     if (chunkValue.startsWith('Running =>')) {
-      chatDispatch({
+      dispatch({
         type: ActionType.SET_STATUS_MESSAGES,
         payload: [chunkValue],
       });
     }
-    chatDispatch({
+    dispatch({
       type: ActionType.CHANGE_ARRAY_MESSAGE,
       payload: [
         {
@@ -135,7 +146,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         jsonData = JSON.parse(jsonChunk);
         console.log(arrayMessages)
         console.log('Parsed JSON data:', jsonData);
-        chatDispatch({
+        dispatch({
           type: ActionType.ADD_TOOLS_DATA_TO_LAST_ELEMENT,
           payload: jsonData
         });
@@ -169,13 +180,13 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
       console.log("Received chunk:", chunkValue);
       console.log("Accumulated content:", accumulatedContent);
   }
-  chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+  dispatch({ type: ActionType.SET_LOADING, payload: false })
   console.log("Streaming complete. Final content:", accumulatedContent);
-  chatDispatch({
+  dispatch({
     type: ActionType.CLEAR_STATUS_MESSAGES,
     payload: [],
   });
-  chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+  dispatch({ type: ActionType.SET_LOADING, payload: false })
   return accumulatedContent
 })
 .catch(error => {
@@ -184,17 +195,17 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
         
         let jsonObject = JSON.stringify(Response)
         jsonObject = JSON.parse(jsonObject)
-        chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+        dispatch({ type: ActionType.SET_LOADING, payload: false })
 
         const startIndex = jsonObject.indexOf('text')
         const endIndex = jsonObject.indexOf('error_code')
         const extractedText = jsonObject.slice(startIndex + 8, endIndex - 4).trim()
         console.log('here')
       } catch (error) {
-        chatDispatch({ type: ActionType.SET_LOADING, payload: false })
+        dispatch({ type: ActionType.SET_LOADING, payload: false })
       }
     }
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
+    dispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
   }
 
   const answersFull = answers[selectedFileData?.filename as unknown as keyof typeof answers]
@@ -221,7 +232,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   })
 
   useEffect(() => {
-    chatDispatch({ type: ActionType.SET_SELECTED_FILE, payload: DefaultVideo.FILE_NAME })
+    dispatch({ type: ActionType.SET_SELECTED_FILE, payload: DefaultVideo.FILE_NAME })
     setCurrentVideoFile(DefaultVideo.FILE_PATH)
   }, [])
 
@@ -234,53 +245,47 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatState, chatDispatch, chat
   }, [arrayMessages, autofillQuestions, responseText, setAutofillApi])
 
   const clearChat = (): void => {
-    chatDispatch({ type: ActionType.SET_LOADING, payload: false })
-    chatDispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
-    chatDispatch({
-      type: ActionType.SET_ARRAY_MESSAGES_CLEAN,
-      payload: []
-    })
+    dispatch({
+        type: ActionType.SET_MODAL_TYPE,
+        payload: ModalType.CLEAR_CHAT,
+    });
+    dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
   }
   console.log(arrayMessages)
 
+  const isInitialMessage = arrayMessages[0].sender === 'initial'
+
   return (
-    <div>
-          <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col border-l border-gray-300 flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]'} ref={chatContainerRef} >
-            <StartNewGroup clearChat={clearChat}/>
-            <ChatMessagesList
-                chatState={chatState}
-                chatDispatch={chatDispatch}
-                videoRef={videoRef}
-                setChoosedElement={setChoosedElement}
-            />
-            {/* <div className={`justify-end flex items-end flex-col flex-1 ${showAutofillQuestions ? 'gap-3' : 'gap-6'}`}>
-              {loading ? <Loading/> : '' }
-            </div> */}
-            {/* {showAutofillQuestions &&
-              <div className='relative'>
-                <div className="sticky ml-7">
-                    <AutofillQuestions
-                        chatDispatch={chatDispatch}
-                        autofillQuestions={autofillQuestions}
-                        setShowAutofillQuestions={setShowAutofillQuestions}
-                    />
-                </div>
-              </div>
-              } */}
-          </div>
-          <div className={'pl-[10vw] pr-[10vw] '}>
-            <ChatForm
-              chatState={chatState}
-              chatDispatch={chatDispatch}
-              setShowAutofillQuestions={setShowAutofillQuestions}
-              submitButtonRef={submitButtonRef}
-              autofillQuestions={autofillQuestions}
-              setAutofillApi={setAutofillApi}
-              // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              // eslint-disable-next-line @typescript-eslint/no-misused-promises
-              handleChatApi={handleChatApi}
-              showAutofillQuestions={showAutofillQuestions}
-            />
+    <div className='flex flex-row  border-[#E5E6E4]'>
+          <div className=" bg-[#F9FAF9]  h-[100vh] border-r-[#E5E6E4]"><PanelWrapper/></div>
+          <div className=" w-full">
+            <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col  flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]'} ref={chatContainerRef} >
+              { !isInitialMessage && 
+                <StartNewGroup 
+                  clearChat={clearChat} 
+                  text={ButtonTypes.CLEAR} 
+                  colorOfIcon='#929490' 
+                  width={'11.67'} 
+                  height={'15'}
+                />
+              }
+              <ChatMessagesList
+                  videoRef={videoRef}
+                  setChoosedElement={setChoosedElement}
+              />
+            </div>
+            <div className={'pl-[10vw] pr-[10vw] '}>
+              <ChatForm
+                setShowAutofillQuestions={setShowAutofillQuestions}
+                submitButtonRef={submitButtonRef}
+                autofillQuestions={autofillQuestions}
+                setAutofillApi={setAutofillApi}
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                handleChatApi={handleChatApi}
+                showAutofillQuestions={showAutofillQuestions}
+              />
+            </div>
           </div>
         </div>
   )

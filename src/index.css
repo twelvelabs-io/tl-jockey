@@ -279,9 +279,53 @@ code {
   text-align: center;
 }
 
+.custom-modal-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 /* Customize the modal's width if needed */
 .custom-modal .modal-dialog {
   max-width: 60%;
   max-height: 60%;
-  
+}
+
+.custom-modal-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.custom-modal-clear .modal-dialog {
+  max-width: 470px;
+  max-height: 190px;
+}
+
+.clear-button {
+  width: 69px;
+  height: 40px
+}
+
+.error-button {
+  background-color: #F44336;
+  width: 72px;
+  height: 40px;
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease-in-out;
 }

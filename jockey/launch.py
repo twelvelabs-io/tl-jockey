@@ -57,13 +57,26 @@ async def stream_events(request: Request):
                         if event["data"]["input"]["messages"]:
                             if "content" in event["data"]["input"]["messages"][0][-1]:
                                 messages = event["data"]["input"]["messages"][0][-1]["content"]
-                                print("content here")
-                                print(event["event"])
-                                print(f"{messages}", end="", flush=True)
-                                yield messages
+                                # textDataWhole = str(event["data"]["input"]["messages"][0][-1]["content"])
+                                yield messages 
+
+            if event["event"] == "on_chat_model_end":
+                if "input" in event["data"]:
+                    if "messages" in event["data"]["input"]:
+                        if event["data"]["input"]["messages"]:
+                            if "content" in event["data"]["input"]["messages"][0][-1]:
+                                messages = event["data"]["input"]["messages"][0][-1]["content"]
+                                # print(messages)
+                                # mes = event["data"]["output"]["messages"][-1]
+                                # print(mes)
+                                # yield messages                 
             if event["event"] == "on_tool_start":
                 tool = event["name"]
                 toolsusign = f"Running => {tool}\n"
+                yield  toolsusign
+            if event["event"] == "on_tool_end":
+                tool = event["name"]
+                toolsusign = f"Finish => {tool}\n"
                 yield  toolsusign
             if event["event"] == "on_chat_model_stream":
                 content = event["data"]["chunk"].content

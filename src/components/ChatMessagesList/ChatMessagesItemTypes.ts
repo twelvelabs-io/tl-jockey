@@ -7,6 +7,4 @@ export interface ChatMessagesItemProps {
     handleClick: (event: React.MouseEvent<HTMLSpanElement>) => void
     handleShow: (index: number | undefined, question: string) => void
     key: number
-    chatState: State
-    chatDispatch: React.Dispatch<any>
 }

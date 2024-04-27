@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React, { useEffect, useRef, useState } from 'react'
 
 import Modal from 'react-bootstrap/Modal'
@@ -7,32 +8,57 @@ import QuestionHeader from './QuestionHeader'
 import { ModalCentralProps } from './ModalTypes'
 import ReactHlsPlayer from 'react-hls-player/dist'
 import Pagination from '../Pagination/Pagination'
+import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
+import { ModalType } from '../../types/messageTypes'
+import Loading from '../Loading/Loading'
+import Button from '../Button/Button'
+import ModalClear from './ModalClear'
+import StartNewGroup from '../../widgets/VideoAssistant/StartNewGroup'
+import { ButtonTypes } from '../../types/buttonTypes'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
-  chatState,
-  chatDispatch,
   handleClose,
-  choosedElement,
   autofillApi
 }) => {
-  const { arrayMessages, showModal } = chatState
-  const [chosenIndex, setChosenIndex] = useState<number | undefined>(choosedElement)
+  const [ state, dispatch ] = useChat()
+  const { autofill, modalType, panelVideosList, arrayMessages, showModal } = state;
+  const { choosedElement } = autofill;
+  const [chosenIndex, setChosenIndex] = useState<number | string | undefined>(choosedElement)
+  const [loading, setLoading] = useState(false);
+
+
+  const findElementById = (array: any[], id: string | number | undefined) => {
+    return array?.find(item => item._id === id);
+  };
+
+  let arrayOfChoosedElements = arrayMessages?.[arrayMessages.length - 1]?.toolsData
+
+  let fallbackImage = modalType === ModalType.MESSAGES ? 
+arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
+  findElementById(panelVideosList, chosenIndex)?.hls.thumbnails_urls[0]
+
+  let totalIndexes = modalType === ModalType.MESSAGES ? arrayOfChoosedElements?.length as number : panelVideosList.length
   const videoRef = useRef<HTMLVideoElement>(null)
-  const videoUrl = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.video_url as string
-  const textForModal = arrayMessages
-  ?.map(message =>
-    message?.toolsData?.[chosenIndex as number]?.metadata?.map(meta =>
-      meta?.type === 'conversation' ? meta?.text : null
-    )
-  )
-  .flat() 
-  .filter(text => text !== null)
-  .join('\n');
-  const confidenceScore = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.score ?? ''
-  const confidenceName = arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.confidence ?? ''
+  let videoUrl = modalType === ModalType.MESSAGES ? 
+    arrayOfChoosedElements?.[chosenIndex as number]?.video_url as string : 
+    findElementById(panelVideosList, chosenIndex)?.hls.video_url
+
+  let textForModal = modalType === ModalType.MESSAGES ?arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.video_title : findElementById(panelVideosList, chosenIndex)?.metadata.filename
+  let confidenceScore = modalType === ModalType.MESSAGES  ?arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.score ?? '' : ''
+  let confidenceName = modalType === ModalType.MESSAGES  ? arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.confidence ?? '' : ''
+
   useEffect(() => {
     setChosenIndex(choosedElement);
   }, [choosedElement]);
+
+  if (modalType === ModalType.CLEAR_CHAT) {
+    return (
+      <ModalClear 
+        showModal={showModal} 
+        handleClose={handleClose}
+      />
+    )
+  }
 
   const renderConfidence = (score: number) => {
     let confidenceText = '';
@@ -64,27 +90,50 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
   };
 
   const handlePageChange = (newIndex: number, totalIndexes: number): void => {
-    const index = newIndex % totalIndexes
-    setChosenIndex(index);
+    setLoading(true); // Start loading when switching pages
+    if (modalType === ModalType.MESSAGES ) {
+      const index = newIndex % totalIndexes
+      setChosenIndex(index);
+    } else {
+      const panelItem = panelVideosList[newIndex % totalIndexes];
+      console.log(panelItem)
+      if (panelItem) {
+        const index = panelItem?._id
+        setChosenIndex(index)
+      }
+    }
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
   };
 
+  const clearChat = (): void => {
+    dispatch({
+        type: ActionType.SET_MODAL_TYPE,
+        payload: ModalType.CLEAR_CHAT,
+    });
+    dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
+  }
+
+  console.log(panelVideosList)
+
   return (
-    <Modal show={showModal} onHide={handleClose} centered className={'custom-modal '} scrollable >
+    <Modal show={showModal} onHide={handleClose} centered className={modalType === ModalType.MESSAGES  ?'custom-modal-messages' :'custom-modal'} scrollable >
     <Modal.Body>
-    <div className={'flex flex-col justify-center items-center'}>
-        <div className={`${!autofillApi ? 'block' : ''}`}>
+    <div className={'flex flex-col'}>
+        <div>
           <QuestionHeader
               handleClose={handleClose}
               logo={union}
               text={textForModal}
           />
         </div>
+        {loading && <Loading/> }
         <div>
-          <div className={'absolute right-0 pr-10 pt-4'}>
-            {renderConfidence(confidenceScore as unknown as number)}
-          </div>
           <ReactHlsPlayer
+            poster={fallbackImage}
             src={videoUrl}
+            width={'auto'}
             controls={true}
             height="auto"
             playerRef={videoRef}
@@ -92,7 +141,14 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
           />
         </div>
       </div>
-      <Pagination chosenIndex={chosenIndex as number} totalIndexes={arrayMessages?.[arrayMessages.length - 1]?.toolsData?.length as number} handlePageChange={handlePageChange}/>
+      <div className="flex justify-between items-center flex-row mt-4">
+        <StartNewGroup clearChat={clearChat} colorOfIcon='#B7B9B4' width='14' height='18'/>
+        <Pagination 
+        chosenIndex={chosenIndex as number} 
+        totalIndexes={totalIndexes} 
+        handlePageChange={handlePageChange}
+      />
+      </div>
     </Modal.Body>
   </Modal>
   )

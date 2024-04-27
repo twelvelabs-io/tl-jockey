@@ -9,7 +9,7 @@ import useVideo from './hooks/useVideo'
 import VideoAssistantHeader from './VideoAssistantHeader'
 
 const VideoAssistant: React.FC = () => {
-  const [chatState, chatDispatch] = useChat()
+  const [state, dispatch] = useChat()
   const { valuesVideo, actionsVideo } = useVideo()
   const { valuesAutofillQuestions, actionsAutofillQuestions } = useAutofillQuestions()
 
@@ -37,11 +37,9 @@ const VideoAssistant: React.FC = () => {
     setCurrentVideoFile
   } = actionsVideo
 
-  const handleClose = (): void => { chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
+  const handleClose = (): void => { dispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
 
   const chatSelectProps: ChatSelectProps = {
-    chatState,
-    chatDispatch,
     submitButtonRef,
     setCurrentVideoFile,
     setShowAutofillQuestions,
@@ -61,8 +59,6 @@ const VideoAssistant: React.FC = () => {
         <ChatSelector {...chatSelectProps}/>
       </div>
       <ModalCentral
-        chatState={chatState}
-        chatDispatch={chatDispatch}
         handleClose={handleClose}
         choosedElement={choosedElement}
         autofillApi={autofillApi} />

@@ -1,5 +1,3 @@
-import { type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
-
 export interface QuestionHeaderProps {
     logo: string
     handleClose: () => void
@@ -7,8 +5,6 @@ export interface QuestionHeaderProps {
 }
 
 export interface ModalCentralProps {
-    chatState: State
-    chatDispatch: React.Dispatch<any>
     handleClose: () => void
     choosedElement: number | undefined
     autofillApi: boolean
@@ -36,4 +32,9 @@ export interface ColumnGroupProps {
       backgroundColor: string
       text: string[]
     }>
+}
+
+export enum textsClearModal {
+    header = 'Would you like to delete the chat history?',
+    body = 'Clearing the chat thread will remove all messages.'
 }

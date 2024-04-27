@@ -2,13 +2,11 @@ import React from 'react'
 
 const Loading = (): JSX.Element => {
   return (
-    <div className="flex flex-row items-start justify-start w-full">
-      <div className="bouncing-loader mb-2 ml-7">
-        <div></div>
-        <div></div>
-        <div></div>
+    <div className="dot-pulse w-7 h-7 mr-5">
+      <div className={'stage'}>
+        <div className="dot-pulse"></div>
       </div>
-    </div>
+  </div>
   )
 }
 

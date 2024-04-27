@@ -1,4 +1,6 @@
-export function formatTime(start:number, end:number) {
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
+
+export function formatTime(start:number, end?:number) {
     const formatTimeSegment = (timeSegment:number) => {
       return timeSegment.toString().padStart(2, '0');
     };
@@ -8,6 +10,10 @@ export function formatTime(start:number, end:number) {
     const seconds = start % 60;
   
     const formattedStart = `${formatTimeSegment(hours)}:${formatTimeSegment(minutes)}:${formatTimeSegment(seconds)}`;
+
+    if (!end) {
+      return `${formatTimeSegment(minutes)}:${formatTimeSegment(seconds)}`
+    }
   
     const endHours = Math.floor(end / 3600);
     const endMinutes = Math.floor((end % 3600) / 60);
