@@ -17,6 +17,17 @@ import PanelWrapper from '../Panel/PanelWrapper'
 import { useChat } from '../VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
 import { ButtonTypes } from '../../types/buttonTypes'
+import { ErrorBoundary } from 'react-error-boundary'
+
+interface ErrorFallbackProps {
+  error: Error
+}
+
+const ErrorFallback:React.FC<ErrorFallbackProps> = ({ error }) => (
+  <div>
+    <p>Something went wrong: {error.message}</p>
+  </div>
+);
 
 const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
   const [state, dispatch] = useChat()
@@ -257,6 +268,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
 
   return (
     <div className='flex flex-row  border-[#E5E6E4]'>
+       <ErrorBoundary FallbackComponent={ErrorFallback}>
           <div className=" bg-[#F9FAF9]  h-[100vh] border-r-[#E5E6E4]"><PanelWrapper/></div>
           <div className=" w-full">
             <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col  flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]'} ref={chatContainerRef} >
@@ -287,6 +299,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
               />
             </div>
           </div>
+          </ErrorBoundary>
         </div>
   )
 }

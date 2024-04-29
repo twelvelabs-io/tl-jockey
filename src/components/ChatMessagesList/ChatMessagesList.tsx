@@ -5,6 +5,7 @@ import ChatMessagesItem from './ChatMessagesItem'
 import { ActionType } from '../../widgets/VideoAssistant/hooks/useChatTypes'
 import { ChatMessagesListProps } from './ChatMessagesListTypes'
 import { useChat } from '../../widgets/VideoAssistant/hooks/useChat'
+import { ErrorBoundary } from 'react-error-boundary'
 
 const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ videoRef }) => {
   const [ state, dispatch ] = useChat()
@@ -88,17 +89,19 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ videoRef }) => {
   }, [arrayMessages]);
 
   return (
-    <div ref={chatContainerRef} className={'flex flex-col gap-5 overflow-y-auto max-h-50vh'}>
-    { arrayMessages?.map((message, index) => (
-        <ChatMessagesItem
-          message={message}
-          index={index}
-          handleClick={handleClick}
-          handleShow={handleShow}
-          key={index}/>
-          
-    ))}
-    </div>
+    <ErrorBoundary fallback={<div>Something went wrong. Please refresh or try again later.</div>}>
+      <div ref={chatContainerRef} className={'flex flex-col gap-5 overflow-y-auto max-h-50vh'}>
+        { arrayMessages?.map((message, index) => (
+            <ChatMessagesItem
+              message={message}
+              index={index}
+              handleClick={handleClick}
+              handleShow={handleShow}
+              key={index}/>
+              
+        ))}
+      </div>
+    </ErrorBoundary>
   )
 }
 

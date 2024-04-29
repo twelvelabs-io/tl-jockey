@@ -8,10 +8,23 @@ import { useGetVideos } from '../../apis/hooks';
 import keys from '../../apis/keys';
 import Loading from '../../components/Loading/Loading';
 import PanelList from '../PanelList/PanelList';
+import { ErrorBoundary } from 'react-error-boundary';
 
 interface ExtendedPanelProps {
     toggleWidth: () => void;
 }
+
+interface ErrorFallbackProps {
+    error: Error,
+    resetErrorBoundary: () => void
+}
+
+const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary }) => (
+    <div>
+        <h2>Something went wrong.</h2>
+        <p>{error.message}</p>
+    </div>
+);
 
 export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
 
@@ -39,21 +52,26 @@ export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
                 </div>
                 <SideBarIconBack/>
             </div>
-            {videos && (
-                    <>
+            <ErrorBoundary FallbackComponent={ErrorFallback} >
+                {videos ? (
+                        <>
+                            <div className="pt-[24px] pb-2 pl-5">
+                                <p className="text-[#333431] font-aeonik text-sm font-medium">
+                                    {videos.length} videos
+                                </p>
+                            </div>
+                            <Suspense fallback={<Loading />}>
+                                <PanelList videos={videos} refetchVideos={refetchVideos} />
+                            </Suspense>
+                        </>
+                    ) : (
                         <div className="pt-[24px] pb-2 pl-5">
-                            <p className='text-[#333431] font-aeonik text-sm font-medium'>
-                                {videos.length} videos
+                            <p className="text-[#333431] font-aeonik text-sm font-medium">
+                                No videos available
                             </p>
-                        </div>
-                        <Suspense fallback={<Loading/>}>
-                            <PanelList
-                            videos={videos}
-                            refetchVideos={refetchVideos}
-                            />
-                        </Suspense>
-                    </>
+                    </div>
                     )}
+            </ErrorBoundary>
         </div>
     )
 }
