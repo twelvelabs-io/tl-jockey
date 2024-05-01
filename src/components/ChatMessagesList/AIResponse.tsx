@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { ReactComponent as AIIcon } from '../../icons/ai.svg';
 import { formatTime } from './formatTime';
 import SeeMoreResultsButton from './SeeMoreResultsButton';
@@ -34,9 +34,8 @@ interface AIResponseProps {
 }
 
 const AIResponse: React.FC<AIResponseProps> = ({ message, handleClick, handleShow }) => {
-  const hasValidMessage = message && message.toolsData;
+  const hasValidMessage = message && message.text
   const [state, dispatch] = useChat()
-  const hasValidLink = message && message.link != null && message.linkText != null;
   const [showAllVideos, setShowAllVideos] = useState(false)
 
   const handleVideoClick = (index: number | undefined) => {
@@ -56,16 +55,17 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleClick, handleSho
 
   return (
     <>
-      {hasValidMessage && (
         <div className={'relative ml-7'}>
-          <div className={'flex flex-row gap-2 items-center'}>
-            <div className={'w-7 h-7 flex items-center justify-center border-1 rounded-2xl'}>
-              <AIIcon />
+          {hasValidMessage && 
+            <div className={'flex flex-row gap-2 items-center'}>
+              <div className={'w-7 h-7 flex items-center justify-center border-1 rounded-2xl'}>
+                <AIIcon />
+              </div>
+              <div className={'font-aeonikBold'}>
+                    { message?.sender === 'ai' && 'Jockey'  }
+              </div>
             </div>
-            <div className={'font-aeonikBold'}>
-                  { message?.sender === 'ai' && 'Jockey'  }
-            </div>
-          </div>
+          }
           <div className={'mr-[5px] aiBubble ml-7 whitespace-pre-line gap-4'}>
               <div>
                 {message?.toolsData && (
@@ -80,13 +80,17 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleClick, handleSho
                           return (
                             <li key={index} className=" ">
                               <div className="flex flex-row justify-between items-start gap-2">
-                                {video.thumbnail_url ?  <VideoThumbnail
-                                  thumbnailUrl={video.thumbnail_url}
-                                  index={index}
-                                  onClick={() => handleVideoClick(index)}
-                                  duration={formattedDurations[index]}
-                                  oneThumbnail={message?.toolsData && message.toolsData.length <= 1}
-                                />  : <FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}
+                                { video  ?  
+                                <Suspense fallback={<FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}>
+                                  <VideoThumbnail
+                                    thumbnailUrl={video.thumbnail_url}
+                                    index={index}
+                                    onClick={() => handleVideoClick(index)}
+                                    duration={formattedDurations[index]}
+                                    oneThumbnail={message?.toolsData && message.toolsData.length <= 1}
+                                  />  
+                                </Suspense>
+                                : <FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}
                                 <div className="flex-grow-0 w-[466px]">
                                   {/* Apply the streaming effect to the text */}
                                   { video && <StreamingTextEffect text={video.video_title} />}
@@ -106,14 +110,15 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleClick, handleSho
                   </div>
                 )}
               </div>
-              {hasValidLink && (
+              {message && (
               <div>
-                {!hasValidMessage && message.text}
+                {/* {!hasValidMessage && message.text} */}
+                {!message?.toolsData && message.text}
               </div>
             )}
           </div>
         </div>
-      )}
+      
     </>
   );
 };

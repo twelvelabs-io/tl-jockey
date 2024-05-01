@@ -67,9 +67,11 @@ async def stream_events(request: Request):
                             if "content" in event["data"]["input"]["messages"][0][-1]:
                                 messages = event["data"]["input"]["messages"][0][-1]["content"]
                                 # print(messages)
+                                # outputText = event["data"]["output"]
                                 # mes = event["data"]["output"]["messages"][-1]
                                 # print(mes)
-                                # yield messages                 
+                                # yield outputText    
+                                # yield messages             
             if event["event"] == "on_tool_start":
                 tool = event["name"]
                 toolsusign = f"Running => {tool}\n"

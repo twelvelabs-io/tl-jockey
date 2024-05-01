@@ -1,6 +1,5 @@
 import React, { Suspense } from "react";
 import FallBackVideoPlaceholder from "../../components/Fallback/FallBackVideoPlaceholder";
-import keys from "../../apis/keys";
 import { ErrorBoundary } from "react-error-boundary";
 import PanelVideoItem from "./PanelVideoItem";
 import ErrorFallBack from "../../components/Fallback/ErrorFallBack";

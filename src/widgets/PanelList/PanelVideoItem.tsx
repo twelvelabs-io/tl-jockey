@@ -9,6 +9,7 @@ import { formatTime } from "../../components/ChatMessagesList/formatTime";
 import { ActionType, useChat } from "../VideoAssistant/hooks/useChat";
 import { ModalType } from "../../types/messageTypes";
 import FallBackVideoPlaceholder from "../../components/Fallback/FallBackVideoPlaceholder";
+import { updateChatPanelMessages } from "../../helpers/updateChatPanelMessages";
 
 interface PanelVideoItemProps {
     videoID: string,
@@ -32,22 +33,7 @@ export const PanelVideoItem:React.FC<PanelVideoItemProps> = ({videoID}) => {
 
       useEffect(() => {
         if (videoInfo) {
-            dispatch({
-                type: ActionType.SET_PANEL_ARRAY_MESSAGES,
-                payload: [
-                    {
-                        hls: {
-                            video_url: videoInfo.hls.video_url,
-                            thumbnails_urls: videoInfo.hls.thumbnail_urls
-                        },
-                        metadata: {
-                            duration: videoInfo.metadata.duration,
-                            filename: videoInfo.metadata.filename,
-                        },
-                        _id: videoInfo._id, // Unique identifier
-                    },
-                ],
-            });
+            updateChatPanelMessages(dispatch, videoInfo)
         }
       }, [videoInfo])
 

@@ -12,7 +12,6 @@ import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
 import StartNewGroup from '../VideoAssistant/StartNewGroup'
 
 import { ChatSelectProps, DefaultVideo } from './ChatSelectorTypes';
-import { chunk } from 'lodash'
 import PanelWrapper from '../Panel/PanelWrapper'
 import { useChat } from '../VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
@@ -264,7 +263,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
   }
   console.log(arrayMessages)
 
-  const isInitialMessage = arrayMessages[0].sender === 'initial'
+  const isInitialMessage = arrayMessages[0]?.sender === 'initial'
 
   return (
     <div className='flex flex-row  border-[#E5E6E4]'>
@@ -286,7 +285,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
                   setChoosedElement={setChoosedElement}
               />
             </div>
-            <div className={'pl-[10vw] pr-[10vw] '}>
+            <div className={'pl-[10vw] pr-[10vw]'}>
               <ChatForm
                 setShowAutofillQuestions={setShowAutofillQuestions}
                 submitButtonRef={submitButtonRef}

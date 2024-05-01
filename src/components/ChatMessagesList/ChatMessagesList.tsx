@@ -90,7 +90,7 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({ videoRef }) => {
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please refresh or try again later.</div>}>
-      <div ref={chatContainerRef} className={'flex flex-col gap-5 overflow-y-auto max-h-50vh'}>
+      <div ref={chatContainerRef} className={'flex flex-col gap-5 overflow-y-auto max-h-50vh pb-[80px]'}>
         { arrayMessages?.map((message, index) => (
             <ChatMessagesItem
               message={message}

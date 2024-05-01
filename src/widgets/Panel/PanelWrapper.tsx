@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { ReactComponent as SideBarIcon } from '../../icons/SideBar.svg';
-import { ReactComponent as SideBarIconBack } from '../../icons/SideBarClose.svg'
-import { ReactComponent as VideoChatPlayer } from '../../icons/VideoChatPlayer.svg'
 import ExtendedPanel from "./ExtendedPanel";
 
 interface PanelWrapperProps {

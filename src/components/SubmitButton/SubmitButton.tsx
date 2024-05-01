@@ -11,6 +11,7 @@ const SubmitButton: React.FC<SubmitButtonProps> = ({
     <div className={'flex justify-end'}>
       <div className={'flex flex-row justify-center items-center'}>
           <button
+            disabled={!value}
             onClick={() => {
               setAutofillApi(false)
               handleChatApi()
