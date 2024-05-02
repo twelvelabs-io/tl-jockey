@@ -11,10 +11,9 @@ import Pagination from '../Pagination/Pagination'
 import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
 import Loading from '../Loading/Loading'
-import Button from '../Button/Button'
 import ModalClear from './ModalClear'
 import StartNewGroup from '../../widgets/VideoAssistant/StartNewGroup'
-import { ButtonTypes } from '../../types/buttonTypes'
+import helpersFunctions from '../../helpers/helpers'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   handleClose,
@@ -107,12 +106,8 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
     }, 500);
   };
 
-  const clearChat = (): void => {
-    dispatch({
-        type: ActionType.SET_MODAL_TYPE,
-        payload: ModalType.CLEAR_CHAT,
-    });
-    dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
+  const clearChat = () => {
+    helpersFunctions.openClearModal(dispatch)
   }
 
   console.log(panelVideosList)

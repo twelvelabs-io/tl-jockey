@@ -8,6 +8,7 @@ import Loading from '../../components/Loading/Loading';
 import PanelList from '../PanelList/PanelList';
 import { ErrorBoundary } from 'react-error-boundary';
 import PanelHeader from './PanelHeader';
+import PanelVideosSummary from './PanelVideosSummary';
 
 interface ExtendedPanelProps {
     toggleWidth: () => void;
@@ -41,17 +42,15 @@ export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
         });
       }, []);
 
+      const videosLength = videos?.length
+
     return (
         <div className={`w-[380px] bg-[#F9FAF9] relative h-[100vh] border-r-2 border-r-[#E5E6E4] transition-width duration-500 ease-in-out`}>
             <PanelHeader toggleWidth={toggleWidth}/>
             <ErrorBoundary FallbackComponent={ErrorFallback} >
                 {videos ? (
                         <>
-                            <div className="pt-[24px] pb-2 pl-5">
-                                <p className="text-[#333431] font-aeonik text-sm font-medium">
-                                    {videos.length} videos
-                                </p>
-                            </div>
+                            <PanelVideosSummary videosLength={videosLength}/>
                             <Suspense fallback={<Loading />}>
                                 <PanelList videos={videos} refetchVideos={refetchVideos} />
                             </Suspense>

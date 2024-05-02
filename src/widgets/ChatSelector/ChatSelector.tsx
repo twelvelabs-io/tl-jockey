@@ -17,6 +17,7 @@ import { useChat } from '../VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
 import { ButtonTypes } from '../../types/buttonTypes'
 import { ErrorBoundary } from 'react-error-boundary'
+import helpersFunctions from '../../helpers/helpers'
 
 interface ErrorFallbackProps {
   error: Error
@@ -265,6 +266,10 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
 
   const isInitialMessage = arrayMessages[0]?.sender === 'initial'
 
+  const handleShow = (index: number | undefined, question: string): void => {
+    helpersFunctions.openMessagesModal(dispatch, question, index)
+  }
+
   return (
     <div className='flex flex-row  border-[#E5E6E4]'>
        <ErrorBoundary FallbackComponent={ErrorFallback}>
@@ -281,6 +286,8 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
                 />
               }
               <ChatMessagesList
+                  arrayMessages={arrayMessages}
+                  handleShow={handleShow}
                   videoRef={videoRef}
                   setChoosedElement={setChoosedElement}
               />

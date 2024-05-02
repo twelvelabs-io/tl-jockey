@@ -23,7 +23,7 @@ export const StreamingTextEffect:React.FC<StreamingTextEffectProps> = ({ text })
     return () => clearInterval(intervalId);
   }, [text]);
 
-  return <span>{displayText}</span>;
+  return <span>{ displayText }</span>;
 };
 
 export default StreamingTextEffect;

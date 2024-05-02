@@ -1,12 +1,7 @@
 import React from 'react'
 import { ReactComponent as AIIcon } from '../../icons/ai.svg';
 
-interface AIResponseFallback {
-
-}
-
-export const AIResponseFallback: React.FC<AIResponseFallback> = ({}) => {
-
+export const AIResponseFallback = ({}) => {
     return (
       <div className={'relative ml-7'}>
         <div className={'flex flex-row gap-2 items-center'}>

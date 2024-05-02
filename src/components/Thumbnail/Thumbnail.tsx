@@ -10,15 +10,8 @@ interface ThumbnailProps {
 }
 
 export const Thumbnail: React.FC<ThumbnailProps> = ({ thumbnailUrl, onClick, duration, text }) => {
-  const [isClicked, setIsClicked] = useState(false);
-
-  const handleClick = () => {
-    setIsClicked(!isClicked);
-    onClick(); 
-  };
-
   return (
-    <div className='flex flex-row gap-1 cursor-pointer' onClick={handleClick }>
+    <div className='flex flex-row gap-1 cursor-pointer' onClick={onClick}>
       <div className='relative cursor-pointer'>
         <img
           src={thumbnailUrl}
@@ -33,7 +26,6 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({ thumbnailUrl, onClick, dur
           </p>
         </div>
       </div>
-      {/* //className={`text-sm ${isClicked ? 'bg-[#EDFFDF]' : 'text-[#585956]'}`} */}
       <div>
         <p className='font-aeonik font-normal text-sm text-[#585956]'>
             {text}

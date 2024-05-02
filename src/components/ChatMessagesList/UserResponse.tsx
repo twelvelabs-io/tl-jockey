@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React from 'react';
 import { ReactComponent as UserIcon } from '../../icons/user.svg';
-import { State } from '../../widgets/VideoAssistant/hooks/useChatTypes';
 import Loading from '../Loading/Loading';
-import { useChat } from '../../widgets/VideoAssistant/hooks/useChat';
+import { QuestionMessage } from '../../types/messageTypes';
 
-const UserResponse: React.FC<{ message: string, isUserMessage: boolean}> = ({ message, isUserMessage }) => {
-    const [state, dispatch] = useChat()
-    const { statusMessages, loading, arrayMessages } = state
-    const lastElement = arrayMessages[arrayMessages.length - 2]?.text === message
-    
+interface UserResponseProps {
+  message: string;
+  isUserMessage: boolean;
+  statusMessages: string[]
+  loading: boolean; 
+  lastElement: boolean
+}
+const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, statusMessages, loading, lastElement }) => {
     return (
     <div className={'ml-7'}>
         <div className={'flex flex-row gap-2 items-center'}>

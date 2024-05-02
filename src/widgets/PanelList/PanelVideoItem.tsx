@@ -9,7 +9,7 @@ import { formatTime } from "../../components/ChatMessagesList/formatTime";
 import { ActionType, useChat } from "../VideoAssistant/hooks/useChat";
 import { ModalType } from "../../types/messageTypes";
 import FallBackVideoPlaceholder from "../../components/Fallback/FallBackVideoPlaceholder";
-import { updateChatPanelMessages } from "../../helpers/updateChatPanelMessages";
+import helpersFunctions from "../../helpers/helpers";
 
 interface PanelVideoItemProps {
     videoID: string,
@@ -33,17 +33,12 @@ export const PanelVideoItem:React.FC<PanelVideoItemProps> = ({videoID}) => {
 
       useEffect(() => {
         if (videoInfo) {
-            updateChatPanelMessages(dispatch, videoInfo)
+          helpersFunctions.updateChatPanelMessages(dispatch, videoInfo)
         }
       }, [videoInfo])
 
       const handleThumbnailClick = () => {
-        dispatch({
-            type: ActionType.SET_MODAL_TYPE,
-            payload: ModalType.PANEL,
-        });
-        dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: videoInfo._id });
-        dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
+        helpersFunctions.openPanelModal(dispatch, videoInfo)
       }; 
 
 
@@ -63,7 +58,7 @@ export const PanelVideoItem:React.FC<PanelVideoItemProps> = ({videoID}) => {
         </>
       );
 }
-//thumbnailUrl, index, onClick, duration, oneThumbnail
+
 export default PanelVideoItem
 
 
