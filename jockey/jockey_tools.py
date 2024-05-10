@@ -7,6 +7,7 @@ from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
 from util import get_video_metadata, download_video
 
+#TODO: Add a way to get list of all video ids in an index
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
@@ -15,83 +16,6 @@ SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
 GIST_URL = urllib.parse.urljoin(TL_BASE_URL, "gist/")
 SUMMARIZE_URL = urllib.parse.urljoin(TL_BASE_URL, "summarize/")
 GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
-
-class MarengoSearchInput(BaseModel):
-    query: str | dict = Field(description="Search query to run on a collection of videos.")
-    index_id: str = Field(description="Index ID which contains a collection of videos.")
-    top_n: int = Field(description="Used to select the top N results of a search.", gt=0, le=10)
-    group_by: str = Field(description="Used to decide how to group search results. Must be one of: `clip` or `video`.")
-    video_filter: List[str] = Field(description="Filter search results to only include results from video IDs in this list.")
-
-
-@tool("video-search", args_schema=MarengoSearchInput)
-def video_search(query: str | dict, index_id: str, top_n: int = 3, group_by: str = "clip", video_filter: list = None) -> Union[List[Dict], List]:
-    """Run a search query against a collection of videos and get results. Search queries can be or complex.
-    Simple Query Example: {"text": "a dog playing with a yellow and white tennis ball"}
-
-    Complex queries use logical operators to wrap simple queries. Here are the logical operators you can use:
-        $and -- every simple search query must be true for a result to appear
-            {$and: [<simple_query_1>, <simple_query_2>, ...]}
-        $or -- only a single simple query must be true for a result to appear
-            {$or: [<simple_query_1>, <simple_query_2>, ...]}
-        $not: -- consists of "origin" and "sub" keys where origin is the inclusive set of queries and sub is exclusionary 
-            {$not: {"origin": {<simple_query>} | [<logical_operator_queries>], "sub": {<simple_query>} | [<logical_operator_queries>]}"""
-    headers = {
-        "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "search_options": ["visual"],
-        "group_by": group_by,
-        "threshold": "low",
-        "sort_option": "score",
-        "conversation_option": "semantic",
-        "page_limit": top_n,
-        "index_id": index_id,
-        "query": query
-    }
-
-    if filter is not None:
-        payload["filter"] = {"id": video_filter}
-
-    response = requests.post(SEARCH_URL, json=payload, headers=headers)
-
-    if response.status_code != 200:
-        error_response = {
-            "message": "There was an API error when searching the index.",
-            "url": SEARCH_URL,
-            "headers": headers,
-            "json_payload": payload,
-            "response": response.text
-        }
-        return error_response
-
-    if group_by == "video":
-        top_n_results = [{"video_id": video["id"]} for video in response.json()["data"][:top_n]]
-    else:
-        top_n_results = response.json()["data"][:top_n]
-
-    for result in top_n_results:
-        video_id = result["video_id"]
-
-        response = get_video_metadata(video_id=video_id, index_id=index_id)
-
-        if response.status_code != 200:
-            error_response = {
-                "message": "There was an API error when retrieving video metadata.",
-                "video_id": video_id,
-                "response": response.text
-            }
-            return error_response
-        
-        result["video_url"] = response.json()["hls"]["video_url"]
-
-        if group_by == "video":
-            result["thumbnail_url"] = response.json()["hls"]["thumbnail_urls"][0]
-
-    return top_n_results
 
 
 class CombineClipsInput(BaseModel):
@@ -207,5 +131,3 @@ async def video_text_generation(video_id: str, endpoint: str, prompt: str = None
     response = requests.post(url, json=payload, headers=headers)
 
     return response.json()
-
-JOCKEY_TOOLKIT = [video_search, combine_clips, remove_segment, video_text_generation]
