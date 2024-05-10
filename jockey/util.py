@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 import urllib
 import ffmpeg
@@ -15,39 +16,24 @@ INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 CONSOLE = Console(width=80)
 
 
-class TokenByTokenHandler(AsyncCallbackHandler):
-    def on_tool_start(
-        self,
-        serialized: Dict[str, Any],
-        input_str: str,
-        *,
-        run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
-        tags: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        inputs: Optional[Dict[str, Any]] = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Run when tool starts running."""
-        CONSOLE.print(f"[cyan]=> Using: {serialized["name"]}")
-
-    async def on_llm_new_token(
-        self,
-        token: str,
-        *,
-        chunk: Optional[Union[GenerationChunk, ChatGenerationChunk]] = None,
-        run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
-        tags: Optional[List[str]] = None,
-        **kwargs: Any,
-    ) -> None:
-        """Run on new LLM token. Only available when streaming is enabled."""
-
-        CONSOLE.print(f"[white]{token}", end="")
-
-    async def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
-        """Run on agent end."""
-        CONSOLE.print("\n")
+def parse_langserve_events(event: dict):
+    """Used to parse events emitted from Jockey when called as an API."""
+    if event["event"] == "on_chat_model_stream" and "worker" not in event["tags"]:
+        content = event["data"]["chunk"].content
+        if content:
+            CONSOLE.print(f"[white]{content}", end="")
+    elif event["event"] == "on_tool_start":
+        tool = event["name"]
+        CONSOLE.print(f"[cyan]🏇 Using: {tool}")
+        CONSOLE.print(f"[cyan]🏇 Inputs:\n{json.dumps(event, indent=2)}")
+    elif event["event"] == "on_tool_end":
+        tool = event["name"]
+        CONSOLE.print(f"[cyan]🏇 Finished Using: {tool}")
+        CONSOLE.print(f"[cyan]🏇 Outputs:\n {json.dumps(event["data"]["output"], indent=2)}")
+    elif event["event"] == "on_chat_model_end":
+        CONSOLE.print()
+    # else:
+    #     print(event)
 
 
 def get_video_metadata(index_id: str, video_id: str) -> dict:
