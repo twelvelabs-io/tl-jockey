@@ -3,37 +3,44 @@ import json
 import requests
 import urllib
 import ffmpeg
-from langchain_core.callbacks.base import AsyncCallbackHandler
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
-from uuid import UUID
-from rich import print
+from typing import TYPE_CHECKING, Any, Dict, List
+from rich.padding import Padding
 from rich.console import Console
-from langchain_core.outputs import ChatGenerationChunk, GenerationChunk
-from langchain_core.agents import AgentFinish
+from rich.json import JSON
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
-CONSOLE = Console(width=80)
+CONSOLE = Console()
 
 
 def parse_langserve_events(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
-    if event["event"] == "on_chat_model_stream" and "worker" not in event["tags"]:
+    if event["event"] == "on_chat_model_stream":
         content = event["data"]["chunk"].content
-        if content:
+        if content and "instructions_generator" in event["tags"]:
+            CONSOLE.print(f"[red]{content}", end="")
+        elif content and "planner" in event["tags"]:
+            CONSOLE.print(f"[yellow]{content}", end="")
+        elif content and "supervisor" in event["tags"]:
             CONSOLE.print(f"[white]{content}", end="")
     elif event["event"] == "on_tool_start":
         tool = event["name"]
-        CONSOLE.print(f"[cyan]🏇 Using: {tool}")
-        CONSOLE.print(f"[cyan]🏇 Inputs:\n{json.dumps(event, indent=2)}")
+        CONSOLE.print(Padding(f"\n[cyan]🏇 Using: {tool}", (0, 2)))
+        CONSOLE.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
+        CONSOLE.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (0, 6)))
     elif event["event"] == "on_tool_end":
         tool = event["name"]
-        CONSOLE.print(f"[cyan]🏇 Finished Using: {tool}")
-        CONSOLE.print(f"[cyan]🏇 Outputs:\n {json.dumps(event["data"]["output"], indent=2)}")
-    elif event["event"] == "on_chat_model_end":
-        CONSOLE.print()
-    # else:
-    #     print(event)
+        CONSOLE.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
+        CONSOLE.print(Padding(f"[cyan]🏇 Outputs:", (0, 2)))
+        CONSOLE.print(Padding(str(event["data"]["output"]), (0, 6)))
+    elif event["event"] == "on_chat_model_start":
+        if "instructions_generator" in event["tags"]:
+            CONSOLE.print()
+            CONSOLE.print(f"[red]🏇 Instructions To Worker: ", end="")
+        elif "planner" in event["tags"]:
+            CONSOLE.print(f"\n[yellow]🏇 Planner: ", end="")
+        elif "reflect" in event["tags"]:
+            CONSOLE.print(f"\n[cyan]🏇 Jockey: ", end="")
 
 
 def get_video_metadata(index_id: str, video_id: str) -> dict:
