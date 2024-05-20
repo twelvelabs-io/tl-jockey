@@ -192,16 +192,21 @@ class Jockey(StateGraph):
         # We return the response from the planner as a special human with the name of "planner".
         # This helps with understanding historical context as the chat history grows.
         planner_response = HumanMessage(content=planner_response.content, name="planner")
+        # We update the graph state to ensure the supervisor has access to the `active_plan` and is selected as the `next_worker`
+        # The supervisor is also made aware that the planner was called via `made_plan`
         return {"chat_history": [planner_response], "active_plan": planner_response.content, "next_worker": "supervisor", "made_plan": True}
 
 
-    async def _worker_node(self, state: JockeyState, worker: Runnable):
+    async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
         """A worker_node in the StateGraph instance. Workers are responsible for directly calling tools in their domains.
         This node isn't used directly but is wrapped with a functools.partial call.
 
         Args:
             state (JockeyState): Current state of the graph.
             worker (Runnable): The actual worker Runnable.
+
+        Returns:
+            Dict: Updated state of the graph.
         """
         try:
             # Use the instructor to generate a single task for the current plan and selected worker.
@@ -232,50 +237,80 @@ class Jockey(StateGraph):
         return {"chat_history": [worker_instructions, worker_response]}
     
 
-    async def _reflect_node(self, state: JockeyState):
+    async def _reflect_node(self, state: JockeyState) -> Dict:
+        """The reflect node in the graph. This node reviews all the context for a given user input before generating a final output.
+
+        Args:
+            state (JockeyState): Current state of the graph.
+
+        Returns:
+            Dict: Updated state of the graph.
+        """
+        # TODO: Create specific reflection prompt -- this is just a placeholder.
         reflect_prompt = ChatPromptTemplate.from_messages([
             ("system", self.supervisor_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
             ("system", "Given the above context provide your final response.")
         ])
         reflect_chain = reflect_prompt | self.supervisor_llm
+        # We add a tag for easier parsing of events.
         reflect_chain = reflect_chain.with_config({"tags": ["reflect"]})
         reflect_response = await reflect_chain.ainvoke(state)
+        # NOTE: We reset the `active_plan` and `made_plan` variables of teh graph state for extra safety.
         return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
     
 
     def construct_graph(self):
+        """Construct the actual Jockey agent as a graph."""
+        # This arbitrarily generates worker nodes for each worker in the Jockey instance
+        # We use `functools.partial` to generate a node that takes only a single argument, namely the graph state.
         worker_nodes = [
             functools.partial(self._worker_node, worker=worker) for worker in self.workers   
         ]
 
+        # Create the pre-named nodes
         self.add_node("planner", self._planner_node)
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
 
+        # Since the supervisor decides/calls workers, we need to create edges between the supervisor and each worker.
         for worker, node in zip(self.workers, worker_nodes):
             self.add_node(worker.name, node)
             self.add_edge(worker.name, "supervisor")
 
+        # Since the planner is needed for many user inputs, we need an edge between the planner and the supervisor.
         self.add_edge("planner", "supervisor")
 
+        # We construct a node map as a dictionary where the keys values are the worker names.
+        # So, if a worker's name is looked up, it routes to the name of the node -- which is the same.
         node_map = {worker.name: worker.name for worker in self.workers}
+        # We add the pre-named nodes REFLECT and planner here.
+        # NOTE: The node map keys MUST match the Enum in the router that is constructed for them to be actually reachable.
         node_map["REFLECT"] = "reflect"
         node_map["planner"] = "planner"
         
+        # We need a special edge to the END node to ensure the agent execution terminates after the reflect node runs.
         self.add_edge("reflect", END)
+
+        # The conditional edges here are used to decide when to route to a given node
+        # Since the router we constructed uses a JsonOutputFunctionsParser() we can expect: {"next_worker": <current_next_worker_enum_value>}
+        # Because we also constructed the node map with the keys and values having the worker names this allows us to seamless route
+        # to the correct worker based off of the value of `next_worker` in the graph state.
         self.add_conditional_edges(
             "supervisor",
             lambda x: x["next_worker"],
             node_map,
         )
 
+        # We add a special conditional edge to ensure that the supervisor node is always called next after the planner node.
+        # This is a redundancy as the planner node also updates the graph state so that `next_worker` is always "supervisor" after it runs.
         self.add_conditional_edges(
             "planner",
             lambda _: "supervisor",
             {"supervisor": "supervisor"}
         )
 
+        # Need to ensure that at the start of every agent execution, the supervisor node receives the input first.
         self.set_entry_point("supervisor")
 
     
@@ -283,8 +318,30 @@ def build_jockey_graph(planner_prompt: str,
                        planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
                        supervisor_prompt: str,
                        supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]):
+                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Jockey:
+    """Convenience function for creating an instance of Jockey.
 
+    Args:
+        planner_prompt (str): 
+            String version of the system prompt for the planner.
+
+        planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
+
+        supervisor_prompt (str): 
+            String version of the system prompt for the supervisor.
+
+        supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
+
+        worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+
+    Returns:
+        Jockey: An instance of Jockey a video agent.
+    """
+
+    # Simple call to instantiate a Jockey instance.
     jockey_graph = Jockey(
         planner_prompt=planner_prompt,
         planner_llm=planner_llm,
@@ -292,7 +349,9 @@ def build_jockey_graph(planner_prompt: str,
         supervisor_llm=supervisor_llm, 
         worker_llm=worker_llm)
 
+    # This keeps track of conversation history and supports async.
     memory = AsyncSqliteSaver.from_conn_string(":memory:")
 
+    # Compile the StateGraph instance for this instance of Jockey.
     jockey = jockey_graph.compile(checkpointer=memory)
     return jockey
