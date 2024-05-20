@@ -49,7 +49,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
                     error_response = {
                         "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
                         "Double check that the Video ID and Index ID are valid and correct.",
-                        "error": error
+                        "error": str(error)
                     }
                     return error_response
 
