@@ -17,7 +17,7 @@ def parse_langserve_events(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
     if event["event"] == "on_chat_model_stream":
         content = event["data"]["chunk"].content
-        if content and "instructions_generator" in event["tags"]:
+        if content and "instructor" in event["tags"]:
             CONSOLE.print(f"[red]{content}", end="")
         elif content and "planner" in event["tags"]:
             CONSOLE.print(f"[yellow]{content}", end="")
@@ -25,22 +25,25 @@ def parse_langserve_events(event: dict):
             CONSOLE.print(f"[white]{content}", end="")
     elif event["event"] == "on_tool_start":
         tool = event["name"]
-        CONSOLE.print(Padding(f"\n[cyan]🏇 Using: {tool}", (0, 2)))
+        CONSOLE.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
         CONSOLE.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
-        CONSOLE.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (0, 6)))
+        CONSOLE.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
     elif event["event"] == "on_tool_end":
         tool = event["name"]
         CONSOLE.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
         CONSOLE.print(Padding(f"[cyan]🏇 Outputs:", (0, 2)))
-        CONSOLE.print(Padding(str(event["data"]["output"]), (0, 6)))
+        try:
+            CONSOLE.print(Padding(JSON(event["data"]["output"], indent=2), (1, 6)))
+        except (json.decoder.JSONDecodeError, TypeError):
+            CONSOLE.print(Padding(str(event["data"]["output"]), (0, 6)))
     elif event["event"] == "on_chat_model_start":
-        if "instructions_generator" in event["tags"]:
-            CONSOLE.print()
-            CONSOLE.print(f"[red]🏇 Instructions To Worker: ", end="")
+        if "instructor" in event["tags"]:
+            CONSOLE.print(Padding(f"[red]🏇 Instructor: ", (1, 0)), end="")
         elif "planner" in event["tags"]:
-            CONSOLE.print(f"\n[yellow]🏇 Planner: ", end="")
+            CONSOLE.print(Padding(f"[yellow]🏇 Planner: ", (1, 0)), end="")
         elif "reflect" in event["tags"]:
-            CONSOLE.print(f"\n[cyan]🏇 Jockey: ", end="")
+            CONSOLE.print()
+            CONSOLE.print(f"[cyan]🏇 Jockey: ", end="")
 
 
 def get_video_metadata(index_id: str, video_id: str) -> dict:
@@ -69,6 +72,8 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     video_url = f"https://api.twelvelabs.io/v1.2/indexes/{index_id}/videos/{video_id}"
 
     response = requests.get(video_url, headers=headers)
+        
+    assert response.status_code == 200
 
     hls_uri = response.json()["hls"]["video_url"]
 
@@ -83,11 +88,12 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     if os.path.isfile(video_path) is False:
         try:
             duration = end - start
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=start, t=duration).output(video_path, vcodec="copy", acodec="libmp3lame").run()
+            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
         except Exception as error:
             error_response = {
-                "message": "There was a video editing error.",
-                "error": error
+                "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
+                "Double check that the Video ID and Index ID are valid and correct.",
+                "error": str(error)
             }
             return error_response
 
