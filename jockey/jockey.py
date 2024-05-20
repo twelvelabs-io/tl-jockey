@@ -14,6 +14,7 @@ from langchain_core.messages import HumanMessage
 load_dotenv()
 
 def build_jockey():
+    # Here we load all the required prompts for a Jockey instance.
     if len(sys.argv) < 3:
         supervisor_filepath = os.path.join(os.path.curdir, "prompts", "supervisor.md")
         planner_filepath = os.path.join(os.path.curdir, "prompts", "planner.md")
@@ -28,6 +29,9 @@ def build_jockey():
         planner_prompt = planner_prompt_file.read()
 
 
+    # Here we construct all the LLMs for a Jockey instance.
+    # Currently we only support OpenAI LLMs
+    # Also note the class of LLM used for each component.
     planner_llm = supervisor_llm = AzureChatOpenAI(
         deployment_name="gpt-4",
         streaming=True,
@@ -61,6 +65,7 @@ def build_jockey():
     )
 
 async def run_jockey():
+    """This will easily construct a Jockey instance that we can interact with in the terminal for easy dev. work."""
     jockey = build_jockey()
 
     console = Console()
