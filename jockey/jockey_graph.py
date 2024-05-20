@@ -45,7 +45,7 @@ class Jockey(StateGraph):
 
         Args:
             planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
+                The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
             planner_prompt (str): 
                 String version of the system prompt for the planner.
@@ -57,7 +57,7 @@ class Jockey(StateGraph):
                 String version of the system prompt for the supervisor.
 
             worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+                The LLM used for the worker nodes. It is recommended this be a GPT-3.5 class LLM or better.
         """
         
         super().__init__(JockeyState)
