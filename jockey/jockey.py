@@ -15,17 +15,31 @@ load_dotenv()
 
 def build_jockey():
     if len(sys.argv) < 3:
-        prompt_filepath = os.path.join(os.path.curdir, "prompts", "jockey_base.md")
+        supervisor_filepath = os.path.join(os.path.curdir, "prompts", "supervisor.md")
+        planner_filepath = os.path.join(os.path.curdir, "prompts", "planner.md")
     elif os.path.isfile(os.path.join(os.path.curdir, "prompts", sys.argv[2])):
-        prompt_filepath = os.path.join(os.path.curdir, "prompts", sys.argv[2])
+        supervisor_filepath = os.path.join(os.path.curdir, "prompts", sys.argv[2])
+        planner_filepath = os.path.join(os.path.curdir, "prompts", sys.argv[3])
 
-    with open(prompt_filepath, "r") as prompt_file:
-        prompt = prompt_file.read()
+    with open(supervisor_filepath, "r") as supervisor_prompt_file:
+        supervisor_prompt = supervisor_prompt_file.read()
+
+    with open(planner_filepath, "r") as planner_prompt_file:
+        planner_prompt = planner_prompt_file.read()
+
+
+    planner_llm = supervisor_llm = AzureChatOpenAI(
+        deployment_name="gpt-4",
+        streaming=True,
+        temperature=0,
+        model_version="1106-preview",
+        tags=["planner"]
+    )
 
     supervisor_llm = AzureChatOpenAI(
         deployment_name="gpt-4",
         streaming=True,
-        temperature=0.01,
+        temperature=0,
         model_version="1106-preview",
         tags=["supervisor"]
     )
@@ -33,12 +47,18 @@ def build_jockey():
     worker_llm = AzureChatOpenAI(
         deployment_name="gpt-35-turbo-16k",
         streaming=True,
-        temperature=0.01,
+        temperature=0,
         model_version="0613",
         tags=["worker"]
     )
 
-    return build_jockey_graph(None, supervisor_llm, worker_llm, prompt)
+    return build_jockey_graph(
+        planner_llm=planner_llm,
+        planner_prompt=planner_prompt, 
+        supervisor_llm=supervisor_llm, 
+        supervisor_prompt=supervisor_prompt,
+        worker_llm=worker_llm
+    )
 
 async def run_jockey():
     jockey = build_jockey()
@@ -48,10 +68,12 @@ async def run_jockey():
     session_id = uuid.uuid4()
 
     while True:
+        console.print()
         user_input = console.input("[green]👤 Chat: ")
 
         user_input = [HumanMessage(content=user_input, name="user")]
-        async for event in jockey.astream_events({"chat_history": user_input}, {"configurable": {"thread_id": session_id}}, version="v1"):
+        async for event in jockey.astream_events({"chat_history": user_input, "made_plan": False, "next_worker": None}, 
+                                                 {"configurable": {"thread_id": session_id}}, version="v1"):
             parse_langserve_events(event)
 
         console.print()
