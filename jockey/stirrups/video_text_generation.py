@@ -17,32 +17,45 @@ SUMMARIZE_URL = urllib.parse.urljoin(TL_BASE_URL, "summarize/")
 GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
 
 
-class GistEndpointEnum(str, Enum):
+class GistEndpointsEnum(str, Enum):
+    """Helps to ensure the video-text-generation worker selects valid `endpoint` options for the gist tool."""
     TOPIC = "topic"
     HASHTAG = "hashtag"
     TITLE = "title"
 
 
 class SummarizeEndpointEnum(str, Enum):
+    """Helps to ensure the video-text-generation worker selects a valid `endpoint_option` for the summarize tool."""
     SUMMARY = "summary"
     HIGHLIGHT = "highlight"
     CHAPTER = "chapter"
 
 
-def _validate_prompt_length(prompt: str) -> bool:
+def _validate_prompt_length(prompt: str) -> str:
+    """Used as a Annotated AfterValidator to ensure any Pegasus prompt is <= 300 characters.
+
+    Args:
+        prompt (str): Prompt to be provided to a Pegasus API endpoints.
+
+    Returns:
+        bool: The prompt if it passes validation.
+    """
     assert prompt.strip(" ") <= 300
     return prompt
 
+# We create an Annotated type here to enable custom validation within Pydantic BaseModels.
 GeneratePrompt = Annotated[str, AfterValidator(_validate_prompt_length)]
 
 
 class PegasusGistInput(BaseModel):
+    """Help to ensure the video-text-generation worker provides valid arguments to any tool it calls."""
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    endpoint_options: List[GistEndpointEnum] = Field(description="Determines what outputs to generate.")
+    endpoint_options: List[GistEndpointsEnum] = Field(description="Determines what outputs to generate.")
     
 
 class PegasusSummarizeInput(BaseModel):
+    """Help to ensure the video-text-generation worker provides valid arguments to any tool it calls."""
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     endpoint_option: SummarizeEndpointEnum = Field(description="Determines what output to generate.")
@@ -50,13 +63,14 @@ class PegasusSummarizeInput(BaseModel):
     
 
 class PegasusFreeformInput(BaseModel):
+    """Help to ensure the video-text-generation worker provides valid arguments to any tool it calls."""
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     prompt: GeneratePrompt = Field(description="Any type of custom instructions to be used when generating any type of text output.")
 
 
 @tool("gist-text-generation", args_schema=PegasusGistInput)
-async def gist_text_generation(video_id: str, index_id: str, endpoint_options: List[GistEndpointEnum]) -> Dict:
+async def gist_text_generation(video_id: str, index_id: str, endpoint_options: List[GistEndpointsEnum]) -> Dict:
     """Generate `gist` output for a single video. This can include any combination of: topics, hashtags, and a title"""
 
     headers = {
@@ -143,6 +157,7 @@ async def free_text_generation(video_id: str, index_id: str, prompt: str) -> Dic
     return response
 
 
+# Construct a valid worker for a Jockey instance.
 video_text_generation_worker_config = {
     "tools": [gist_text_generation, summarize_text_generation, free_text_generation],
     "worker_prompt_file_path": os.path.join(os.path.curdir, "prompts", "video_text_generation.md"),

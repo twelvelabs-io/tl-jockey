@@ -15,16 +15,19 @@ SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
 
 
 class GroupByEnum(str, Enum):
+    """Helps to ensure the video-search worker selects a valid `group_by` option."""
     CLIP = "clip"
     VIDEO = "video"
 
 
 class SearchOptionsEnum(str, Enum):
+    """Helps to ensure the video-search worker selects valid `search_options`."""
     VISUAL = "visual"
     CONVERSATION = "conversation"
 
 
 class MarengoSearchInput(BaseModel):
+    """Help to ensure the video-search worker provides valid arguments to any tool it calls."""
     query: str | dict = Field(description="Search query to run on a collection of videos.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     top_n: int = Field(description="Get the top N clips or videos as search results.", gt=0, le=10, default=3)
@@ -35,7 +38,7 @@ class MarengoSearchInput(BaseModel):
                                            default=None)
 
 
-async def base_video_search(
+async def _base_video_search(
     query: str, 
     index_id: str, 
     top_n: int = 3, 
@@ -115,11 +118,12 @@ async def simple_video_search(
     """Run a simple search query against a collection of videos and get results. 
     Query Example: "a dog playing with a yellow and white tennis ball"""
 
-    search_results = await base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+    search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
 
     return search_results
 
 
+# Construct a valid worker for a Jockey instance.
 video_search_worker_config = {
     "tools": [simple_video_search],
     "worker_prompt_file_path": os.path.join(os.path.curdir, "prompts", "video_search.md"),
