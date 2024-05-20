@@ -1,66 +1,107 @@
 import functools
 import json
-from typing import Annotated, Type, Union, Sequence, Dict, TypedDict
+from typing import Annotated, Union, Sequence, Dict, TypedDict
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import ToolMessage, BaseMessage, AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
-from langchain_core.pydantic_v1 import BaseModel
-from langgraph.prebuilt.tool_executor import ToolExecutor
-from langgraph.prebuilt import ToolInvocation
-from langchain.tools import BaseTool, StructuredTool
-from langchain_core.pydantic_v1 import BaseModel, Field
 from langgraph.checkpoint.aiosqlite import AsyncSqliteSaver
-from stirrups.video_search import build_video_search_worker
-from stirrups.video_text_generation import build_video_text_generation_worker
-from stirrups.video_editing import build_video_editing_worker
+from stirrups.video_search import VideoSearchWorker
+from stirrups.video_text_generation import VideoTextGenerationWorker
+from stirrups.video_editing import VideoEditingWorker
+
 
 class JockeyState(TypedDict):
-    chat_history: Annotated[Sequence[Union[BaseMessage | AIMessage | HumanMessage | SystemMessage]], add_messages]
-    next_worker: str
+    """Used to track the state between nodes in the graph."""
+    chat_history: Annotated[Sequence[BaseMessage], add_messages]
+    next_worker: str | None = None
+    made_plan: bool = False
+    active_plan: str | None = None
 
 
 class Jockey(StateGraph):
+    """Conversational video agent designed to be modular and easily editable."""
     workers: Sequence[AgentExecutor]
     supervisor: Runnable
     router: Dict
-    base_prompt: str
+    planner_prompt: str
+    planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
+    supervisor_prompt: str
     supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
     worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
-    worker_instruction_generator: Runnable
+    worker_instructor: Runnable
 
-    def __init__(self, supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       prompt: str) -> None:
+    def __init__(self, 
+                 planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                 planner_prompt: str,
+                 supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
+                 supervisor_prompt: str,
+                 worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> None:
+        """Constructs and compiles Jockey as a StateGraph instance.
+
+        Args:
+            planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+                The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
+
+            planner_prompt (str): 
+                String version of the system prompt for the planner.
+
+            supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+                The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
+
+            supervisor_prompt (str): 
+                String version of the system prompt for the supervisor.
+
+            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+                The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+        """
         
         super().__init__(JockeyState)
-        self.base_prompt = prompt
+        self.planner_prompt = planner_prompt
+        self.planner_llm = planner_llm
+        self.supervisor_prompt = supervisor_prompt
         self.supervisor_llm = supervisor_llm
         self.worker_llm = worker_llm
-        core_workers = self.build_core_workers(worker_llm=worker_llm)
+        core_workers = self._build_core_workers()
         self.workers = core_workers
-        self.router = self.build_router()
-        self.supervisor = self.build_supervisor()
-        self.worker_instruction_generator = self.build_worker_instruction_generator()
+        self.router = self._build_router()
+        self.supervisor = self._build_supervisor()
+        self.worker_instructor = self._build_worker_instructor()
         self.construct_graph()
 
 
-    def build_core_workers(self, worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Sequence[AgentExecutor]:
-        if any(map(lambda x: isinstance(worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Worker LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(worker_llm).__name__}")
+    def _build_core_workers(self) -> Sequence[AgentExecutor]:
+        """Builds the core workers that are managed and called by the supervisor.
+
+        Args:
+            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+                The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+        Raises:
+            TypeError: If the worker_llm instance type isn't currently supported.
+
+        Returns:
+            Sequence[AgentExecutor]: The core workers of a Jockey instance.
+        """
+        if any(map(lambda x: isinstance(self.worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"Worker LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.worker_llm).__name__}")
         
-        video_search_worker = build_video_search_worker(worker_llm)
-        video_text_generation_worker = build_video_text_generation_worker(worker_llm)
-        video_editing_worker = build_video_editing_worker(worker_llm)
+        video_search_worker = VideoSearchWorker.build_worker(worker_llm=self.worker_llm)
+        video_text_generation_worker = VideoTextGenerationWorker.build_worker(worker_llm=self.worker_llm)
+        video_editing_worker = VideoEditingWorker.build_worker(worker_llm=self.worker_llm)
         core_workers = [video_search_worker, video_text_generation_worker, video_editing_worker]
         return core_workers
         
 
-    def build_router(self) -> Dict:
+    def _build_router(self) -> Dict:
+        """Builds the router that the supervisor uses to route to the appropriate node ina given state.
+
+        Returns:
+            Dict: The router definition adhering to the [OpenAI Assistants API](https://platform.openai.com/docs/assistants/overview).
+        """
         router_options = [worker.name for worker in self.workers] + ["REFLECT", "supervisor", "planner"]
         router = {
             "name": "route",
@@ -82,101 +123,135 @@ class Jockey(StateGraph):
         return router
     
 
-    def build_supervisor(self) -> Runnable:
+    def _build_supervisor(self) -> Runnable:
+        """Builds the supervisor which acts as the routing agent.
+
+        Raises:
+            TypeError: If the supervisor_llm instance type isn't currently supported.
+
+        Returns:
+            Runnable: The supervisor of the Jockey instance.
+        """
         if any(map(lambda x: isinstance(self.supervisor_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Worker LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.supervisor_llm).__name__}")
+            raise TypeError(f"Supervisor LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.supervisor_llm).__name__}")
 
         supervisor_prompt = ChatPromptTemplate.from_messages([
-            ("system", self.base_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("system", "Given the above conversation which worker should act next? "
-             "If you haven't called the planner worker for the current request(s) then heavily consider calling the planner worker. "
-             "Additional, if you are in the middle of executing a plan and something unexpected has happened, like an error, " 
-             "you can use the planner to create an updated plan and try again. "
-             "Alternatively you could choose to REFLECT to move on to reflect and provide a final response if all tasks have been completed.")
+            ("system", self.supervisor_prompt),
+            MessagesPlaceholder(variable_name="chat_history")
         ])
 
+        # This constructs the supervisor agent and determines the possible node routing.
+        # Note: The JsonOutputFunctionsParser forces the response from invoking this agent into the format of {"next_worker": ROUTER_ENUM}
         supervisor = supervisor_prompt | self.supervisor_llm.bind_functions(functions=[self.router], function_call="route") | JsonOutputFunctionsParser()
         return supervisor
     
 
-    def build_worker_instruction_generator(self) -> Runnable:
-        instructions_prompt = ChatPromptTemplate.from_messages([
-            ("system", self.base_prompt),
+    def _build_worker_instructor(self) -> Runnable:
+        """Constructs the worker_instructor which generates singular tasks for a given step in a plan generated by the planner node.
+
+        Returns:
+            Runnable: The worker_instructor of the Jockey instance.
+        """
+        with open("prompts/instructor.md", "r") as instructor_prompt_file:
+            instructor_system_prompt = instructor_prompt_file.read()
+
+        instructor_prompt = ChatPromptTemplate.from_messages([
+            ("system", instructor_system_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("system", "The worker: {next_worker} has been selected to act next. "
-             "Given the above context, what simple natural language instructions should be passed to this worker? "
-             "Remember a worker can only execute a single task per request. " 
-             "Your response should be a single task for {next_worker} to complete.")
         ])
-        worker_instruction_generator: Runnable = instructions_prompt | self.supervisor_llm
-        worker_instruction_generator = worker_instruction_generator.with_config({"tags": ["instructions_generator"]})
-        return worker_instruction_generator
+        worker_instructor: Runnable = instructor_prompt | self.planner_llm
+
+        # The tag here is used for parsing events to the console when running locally.
+        # We assign a separate tag since we are using the planner_llm which should already have a tag.
+        worker_instructor = worker_instructor.with_config({"tags": ["instructor"]})
+        return worker_instructor
     
 
-    async def planner_node(self, state: JockeyState) -> Runnable:
+    async def _planner_node(self, state: JockeyState) -> Dict:
+        """The planner_node in the StateGraph instance. The planner is responsible to generating a plan for a given user request.
+
+        Args:
+            state (JockeyState): Current state of the graph.
+
+        Raises:
+            TypeError: If the planner_llm instance type isn't currently supported.
+
+        Returns:
+            Dict: Updated state of the graph.
+        """
+        if any(map(lambda x: isinstance(self.planner_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"Planner LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
+
         planner_prompt = ChatPromptTemplate.from_messages([
-            ("system", self.base_prompt),
+            ("system", self.planner_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("system", "You are a dedicated and competent planner for complex workflows and tasks especially those related to video editing. "
-             "Considering the context above, devise a detailed step-by-step plan that will complete all parts of the request. "
-             "As you plan you should consider how the output of one step will or could be used as input to later steps. "
-             "You should construct your overall plan in natural language and think aloud about how and why you constructed this plan. "
-             "Then construct a numbered list of steps to complete the plan you just created. "
-             "Each step should consist of a single task and the correct worker to complete that task. "
-             "The final step in your plan should always be reflection to ensure the plan went accordingly. "
-             "If you are replanning after encountering an error adjust your approach accordingly. "
-             "Limit your replanning efforts to 3 times or less if you keep encountering the same error.")
         ])
-        planner_chain: Runnable = planner_prompt | self.supervisor_llm
-        planner_chain = planner_chain.with_config({"tags": ["planner"]})
+        planner_chain: Runnable = planner_prompt | self.planner_llm
         planner_response = await planner_chain.ainvoke(state)
+
+        # We return the response from the planner as a special human with the name of "planner".
+        # This helps with understanding historical context as the chat history grows.
         planner_response = HumanMessage(content=planner_response.content, name="planner")
-        return {"chat_history": [planner_response]}
+        return {"chat_history": [planner_response], "active_plan": planner_response.content, "next_worker": "supervisor", "made_plan": True}
 
 
-    async def worker_node(self, state: JockeyState, worker: AgentExecutor, name):
+    async def _worker_node(self, state: JockeyState, worker: Runnable):
+        """A worker_node in the StateGraph instance. Workers are responsible for directly calling tools in their domains.
+        This node isn't used directly but is wrapped with a functools.partial call.
+
+        Args:
+            state (JockeyState): Current state of the graph.
+            worker (Runnable): The actual worker Runnable.
+        """
         try:
-            worker_instructions = await self.worker_instruction_generator.ainvoke(state)
-            worker_instructions = HumanMessage(content=worker_instructions.content, name=f"{state['next_worker']}_instructions")
+            # Use the instructor to generate a single task for the current plan and selected worker.
+            worker_instructions = await self.worker_instructor.ainvoke(state)
+            # We return the response from the instructor as a special human with the name of the instructor.
+            # This helps with understanding historical context as the chat history grows.
+            worker_instructions = HumanMessage(content=worker_instructions.content, name="instructor")
         except Exception as error:
             return {"chat_history": HumanMessage(
                 content=f"Got the following error when generating {state['next_worker']} instructions: {error}", 
                 name="instruction_generation_error"
             )}
-        
+
         try:
-            worker_response = await worker.ainvoke({"chat_history": [worker_instructions]})
+            # This sends the single task generated by the instructor to the selected worker.
+            worker_response = await worker.ainvoke({"worker_task": [worker_instructions]})
         except Exception as error:
             return {"chat_history": HumanMessage(
                 content=f"Got the following error from the {state['next_worker']} worker when executing the following instructions: {worker_instructions.content}",
                 name="worker_error"
             )}
         
+        # Convert response to string first to ensure it can be used as content for a HumanMessage
         worker_response = json.dumps(worker_response, indent=2)
-        return {"chat_history": [worker_instructions, HumanMessage(content=worker_response, name=name)]}
+        # We return the response from the worker as a special human with the name of the worker.
+        # This helps with understanding historical context as the chat history grows.
+        worker_response = HumanMessage(content=worker_response, name=f"{state['next_worker']}")
+        return {"chat_history": [worker_instructions, worker_response]}
     
 
-    async def reflect_node(self, state: JockeyState):
+    async def _reflect_node(self, state: JockeyState):
         reflect_prompt = ChatPromptTemplate.from_messages([
-            ("system", self.base_prompt),
+            ("system", self.supervisor_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
             ("system", "Given the above context provide your final response.")
         ])
         reflect_chain = reflect_prompt | self.supervisor_llm
         reflect_chain = reflect_chain.with_config({"tags": ["reflect"]})
         reflect_response = await reflect_chain.ainvoke(state)
-        return {"chat_history": [reflect_response]}
+        return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
     
 
     def construct_graph(self):
         worker_nodes = [
-            functools.partial(self.worker_node, worker=worker, name=worker.name) for worker in self.workers   
+            functools.partial(self._worker_node, worker=worker) for worker in self.workers   
         ]
 
+        self.add_node("planner", self._planner_node)
         self.add_node("supervisor", self.supervisor)
-        self.add_node("planner", self.planner_node)
-        self.add_node("reflect", self.reflect_node)
+        self.add_node("reflect", self._reflect_node)
 
         for worker, node in zip(self.workers, worker_nodes):
             self.add_node(worker.name, node)
@@ -204,12 +279,18 @@ class Jockey(StateGraph):
         self.set_entry_point("supervisor")
 
     
-def build_jockey_graph(custom_tools: Sequence[BaseTool] | None,
+def build_jockey_graph(planner_prompt: str,
+                       planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                       supervisor_prompt: str,
                        supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       prompt: str):
+                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]):
 
-    jockey_graph = Jockey(supervisor_llm, worker_llm, prompt)
+    jockey_graph = Jockey(
+        planner_prompt=planner_prompt,
+        planner_llm=planner_llm,
+        supervisor_prompt=supervisor_prompt,
+        supervisor_llm=supervisor_llm, 
+        worker_llm=worker_llm)
 
     memory = AsyncSqliteSaver.from_conn_string(":memory:")
 
