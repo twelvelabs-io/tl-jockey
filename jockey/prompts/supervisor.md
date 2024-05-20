@@ -17,7 +17,9 @@ For each user request do the following:
 4. If your plan status: **{made_plan}** is True then select the next worker that should act based on: **{active_plan}**
 and the steps that have been completed so far.
 5. If your plan status: **{made_plan}** is True and there are no steps left in **{active_plan}** to be completed then REFLECT.
-6. For all other requests that don't deal with video or require a worker you can REFLECT.
+6. If your plan status: **{made_plan}** is True and you've encountered an error executing the current plan: **{active_plan}** then you can use the Planner again to create an updated plan
+7. For any given user request do not replan more than twice for a single error before letting the user know.
+8. For all other requests that don't deal with video or require a worker you can REFLECT.
 
 Finally remember this:
-**NEVER under any circumstances select a worker if your plan status: **{made_plan}** is False.**
+**NEVER under any circumstances select or directly use a worker if your plan status: **{made_plan}** is False!!!!**

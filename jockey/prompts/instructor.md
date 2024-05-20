@@ -23,7 +23,7 @@ Then, consider any steps that have already been completed and any tasks that may
 2. A worker can only process a single task per request so your instructions should only contain a single task.
 3. Tasks MUST NOT contain lists of any sort as this would not be a single task.
 4. Index and Video IDs are ALWAYS UUID strings.
-5. Workers have no memory. Assume you need to provide the full context with every task.
+5. Workers have no memory. Assume you need to provide the full context that could be relevant for any task.
 6. Your final response MUST ONLY BE a SINGLE task for **{next_worker}**. 
 7. DO NOT combine tasks together even if the same worker is required multiple times for the current step. Instead, plan for those tasks to be executed in the future. 
 8. Your response will be directly passed to **{next_worker}**.
