@@ -1,15 +1,14 @@
 import requests
+import json
 import urllib
 import os
 from langchain.pydantic_v1 import BaseModel, Field
+from pydantic.functional_validators import AfterValidator
 from langchain.tools import tool
-from langchain_openai.chat_models.base import BaseChatOpenAI
-from langchain_openai.chat_models.azure import AzureChatOpenAI
-from langchain_core.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import Runnable
-from langchain_core.messages import AIMessage
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Annotated
+from enum import Enum
 from util import get_video_metadata
+from .stirrup import Stirrup
 
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
@@ -18,29 +17,46 @@ SUMMARIZE_URL = urllib.parse.urljoin(TL_BASE_URL, "summarize/")
 GENERATE_URL = urllib.parse.urljoin(TL_BASE_URL, "generate/")
 
 
+class GistEndpointEnum(str, Enum):
+    TOPIC = "topic"
+    HASHTAG = "hashtag"
+    TITLE = "title"
+
+
+class SummarizeEndpointEnum(str, Enum):
+    SUMMARY = "summary"
+    HIGHLIGHT = "highlight"
+    CHAPTER = "chapter"
+
+
+def _validate_prompt_length(prompt: str) -> bool:
+    assert prompt.strip(" ") <= 300
+    return prompt
+
+GeneratePrompt = Annotated[str, AfterValidator(_validate_prompt_length)]
+
+
 class PegasusGistInput(BaseModel):
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    endpoint_options: List[str] = Field(description="""Determines what outputs to generate.
-                                                    Can be any combination of: ['topic', 'hashtag', 'title'].""")
+    endpoint_options: List[GistEndpointEnum] = Field(description="Determines what outputs to generate.")
     
 
 class PegasusSummarizeInput(BaseModel):
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    endpoint_option: str = Field(description="""Determines what outputs to generate.
-                                             Must be exactly one of of: ['summary', 'highlight', 'chapter'].""")
-    prompt: Union[str | None] = Field(description="Custom instructions that can influence how text is generated or structured.")
+    endpoint_option: SummarizeEndpointEnum = Field(description="Determines what output to generate.")
+    prompt: Union[GeneratePrompt | None] = Field(description="Custom instructions that can influence how text is generated or structured.")
     
 
 class PegasusFreeformInput(BaseModel):
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    prompt: str = Field(description="Any type of custom instructions to be used when generating any type of text output.")
+    prompt: GeneratePrompt = Field(description="Any type of custom instructions to be used when generating any type of text output.")
 
 
 @tool("gist-text-generation", args_schema=PegasusGistInput)
-async def gist_text_generation(video_id: str, index_id: str, endpoint_options: List[str]) -> Dict:
+async def gist_text_generation(video_id: str, index_id: str, endpoint_options: List[GistEndpointEnum]) -> Dict:
     """Generate `gist` output for a single video. This can include any combination of: topics, hashtags, and a title"""
 
     headers = {
@@ -62,11 +78,13 @@ async def gist_text_generation(video_id: str, index_id: str, endpoint_options: L
     video_metadata = get_video_metadata(video_id=video_id, index_id=index_id)
     response["video_url"] = video_metadata.json()["hls"]["video_url"]
 
+    response = json.dumps(response)
+
     return response
 
 
 @tool("summarize-text-generation", args_schema=PegasusSummarizeInput)
-async def summarize_text_generation(video_id: str, index_id: str, endpoint_option: str, prompt: Union[str | None] = None) -> Dict:
+async def summarize_text_generation(video_id: str, index_id: str, endpoint_option: SummarizeEndpointEnum, prompt: Union[str | None] = None) -> Dict:
     """Generate `summary` `highlight` or `chapter` for a single video. This can include any combination of: topics, hashtags, and a title"""
 
     headers = {
@@ -90,6 +108,8 @@ async def summarize_text_generation(video_id: str, index_id: str, endpoint_optio
 
     video_metadata = get_video_metadata(video_id=video_id, index_id=index_id)
     response["video_url"] = video_metadata.json()["hls"]["video_url"]
+
+    response = json.dumps(response)
 
     return response
 
@@ -118,41 +138,14 @@ async def free_text_generation(video_id: str, index_id: str, prompt: str) -> Dic
     video_metadata = get_video_metadata(video_id=video_id, index_id=index_id)
     response["video_url"] = video_metadata.json()["hls"]["video_url"]
 
+    response = json.dumps(response)
+
     return response
 
 
-async def call_tools(message: AIMessage) -> Runnable:
-    video_text_generation_tools = [gist_text_generation, summarize_text_generation, free_text_generation]
-    tool_map = {tool.name: tool for tool in video_text_generation_tools}
-    tool_calls = message.tool_calls.copy()
-
-    for tool_call in tool_calls:
-        tool_call["output"] = await tool_map[tool_call["name"]].ainvoke(tool_call["args"])
-    return tool_calls
-
-
-def build_video_text_generation_worker(worker_llm):
-    if any(map(lambda x: isinstance(worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-        raise TypeError(f"LLM type must be one of: [BaseChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
-    
-    prompt_filepath = os.path.join(os.path.curdir, "prompts", "video_text_generation.md")
-
-    with open(prompt_filepath, "r") as prompt_file:
-        system_prompt = prompt_file.read()
-        
-    video_text_generation_tools = [gist_text_generation, summarize_text_generation, free_text_generation]
-    
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system", system_prompt,
-            ),
-            MessagesPlaceholder("chat_history"),
-        ]
-    )
-
-    llm_with_tools = worker_llm.bind_tools(video_text_generation_tools)
-    video_text_generation_worker = prompt | llm_with_tools | call_tools
-    video_text_generation_worker.name = "video-text-generation"
-
-    return video_text_generation_worker
+video_text_generation_worker_config = {
+    "tools": [gist_text_generation, summarize_text_generation, free_text_generation],
+    "worker_prompt_file_path": os.path.join(os.path.curdir, "prompts", "video_text_generation.md"),
+    "worker_name": "video-text-generation"
+}
+VideoTextGenerationWorker = Stirrup(**video_text_generation_worker_config)
