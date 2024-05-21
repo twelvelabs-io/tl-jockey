@@ -11,7 +11,7 @@ const AutofillQuestions: React.FC<AutofillQuestionsProps> = ({ autofillQuestions
   }
 
   return (
-    <div className={'mb-2 flex w-full justify-center items-start flex-col gap-2'}>
+    <div className={'mb-2 flex w-full justify-center items-start flex-col gap-[12px]'}>
         {autofillQuestions.map((question, index) => (
             <AutofillQuestionsItem
                 key={index}

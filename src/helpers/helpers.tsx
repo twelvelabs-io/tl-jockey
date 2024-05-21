@@ -33,7 +33,7 @@ const helpersFunctions = {
             type: ActionType.SET_MODAL_TYPE,
             payload: ModalType.PANEL,
         });
-        dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: videoInfo._id });
+        dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: [ 0, videoInfo._id ] });
         dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
       },
 
@@ -50,6 +50,10 @@ const helpersFunctions = {
         handleClose()
       },
 
+     getVideoWordDynamic : (length: any): string => {
+        return length === 1 ? 'video' : 'videos';
+    },
+
     openClearModal: (
         dispatch: Dispatch<any>,
       ): void => {
@@ -62,11 +66,10 @@ const helpersFunctions = {
 
     openMessagesModal : (
         dispatch: Dispatch<any>,
-        question: string,
+        indexOfElementInArray: number,
         index: number | undefined
       ): void => {
-        dispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: question })
-        dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: index })
+        dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: [ indexOfElementInArray, index ] })
         dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
       },
 

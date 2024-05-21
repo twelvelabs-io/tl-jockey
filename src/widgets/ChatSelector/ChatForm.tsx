@@ -16,7 +16,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
   setShowAutofillQuestions
 }) => {
   const [ state, dispatch] = useChat()
-  const {inputBox, responseText, selectedFile } = state
+  const {inputBox, responseText, selectedFile, loading } = state
   const handleInputChange = (event: { target: { value: React.SetStateAction<string> } }): void => {
     dispatch({ type: ActionType.SET_INPUT_BOX, payload: event.target.value as string })
     setShowAutofillQuestions(false)
@@ -83,14 +83,14 @@ const ChatForm: React.FC<ChatFormProps> = ({
   }
 
   return (
-    <div className={`flex flex-row w-full  ${showAutofillQuestions ? 'mt-0' : 'pt-3'}`}>
+    <div className={'flex flex-row w-[656px] absolute bottom-[48px]'}>
       <Input
-        disabled={selectedFile === undefined}
+        disabled={selectedFile === undefined || loading}
         onChange={handleInputChange}
         placeholder='Type here'
         onClick={handleInputClick}
         value={inputBox}
-        className={'w-full shadow-sm ml-7 h-12 border-1 border-solid border-[#D4D5D2] pl-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none'}
+        className={'w-full shadow-sm h-[44px] border-1 border-solid border-[#D4D5D2] pl-3 pr-3 pt-2 pb-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none'}
       />
       <SubmitButton
         value={inputBox}

@@ -19,7 +19,8 @@ export enum ActionType {
     SET_AUTOFILL_API = 'SET_AUTOFILL_API',
     SET_SHOW_AUTOFILL_QUESTIONS = 'SET_SHOW_AUTOFILL_QUESTIONS',
     SET_PANEL_ARRAY_MESSAGES = 'SET_PANEL_ARRAY_MESSAGES',
-    SET_MODAL_TYPE = 'SET_MODAL_TYPE'
+    SET_MODAL_TYPE = 'SET_MODAL_TYPE',
+    CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE = 'CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE'
   }
   
   export interface State {
@@ -35,7 +36,7 @@ export enum ActionType {
     toolsData: any[],
     modalType: ModalType,
     autofill: {
-      choosedElement: undefined,
+      choosedElement: [number, number],
       autofillApi: false,
       showAutofillQuestions: false,
     },

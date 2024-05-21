@@ -10,8 +10,9 @@ export function formatTime(start:number, end?:number) {
     const seconds = start % 60;
   
     const formattedStart = `${formatTimeSegment(hours)}:${formatTimeSegment(minutes)}:${formatTimeSegment(seconds)}`;
-
-    if (!end) {
+    if (!end && isNaN(Number(formattedStart))) {
+      return ' - '
+    } else if (!end) {
       return `${formatTimeSegment(minutes)}:${formatTimeSegment(seconds)}`
     }
   
@@ -20,6 +21,5 @@ export function formatTime(start:number, end?:number) {
     const endSeconds = end % 60;
   
     const formattedEnd = `${formatTimeSegment(endHours)}:${formatTimeSegment(endMinutes)}:${formatTimeSegment(endSeconds)}`;
-  
     return `${formattedStart} - ${formattedEnd}`;
   }

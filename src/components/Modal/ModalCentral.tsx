@@ -14,23 +14,22 @@ import Loading from '../Loading/Loading'
 import ModalClear from './ModalClear'
 import StartNewGroup from '../../widgets/VideoAssistant/StartNewGroup'
 import helpersFunctions from '../../helpers/helpers'
+import useVideoElementEffect from './hooks/useVideoElementEffect'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   handleClose,
-  autofillApi
 }) => {
   const [ state, dispatch ] = useChat()
   const { autofill, modalType, panelVideosList, arrayMessages, showModal } = state;
   const { choosedElement } = autofill;
-  const [chosenIndex, setChosenIndex] = useState<number | string | undefined>(choosedElement)
+  const [chosenIndex, setChosenIndex] = useState<number | string | undefined>(choosedElement[1])
   const [loading, setLoading] = useState(false);
-
 
   const findElementById = (array: any[], id: string | number | undefined) => {
     return array?.find(item => item._id === id);
   };
-
-  let arrayOfChoosedElements = arrayMessages?.[arrayMessages.length - 1]?.toolsData
+  
+  let arrayOfChoosedElements = arrayMessages?.[choosedElement[0]]?.toolsData
 
   let fallbackImage = modalType === ModalType.MESSAGES ? 
 arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
@@ -42,12 +41,10 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
     arrayOfChoosedElements?.[chosenIndex as number]?.video_url as string : 
     findElementById(panelVideosList, chosenIndex)?.hls.video_url
 
-  let textForModal = modalType === ModalType.MESSAGES ?arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.video_title : findElementById(panelVideosList, chosenIndex)?.metadata.filename
-  let confidenceScore = modalType === ModalType.MESSAGES  ?arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.score ?? '' : ''
-  let confidenceName = modalType === ModalType.MESSAGES  ? arrayMessages?.[arrayMessages.length - 1]?.toolsData?.[chosenIndex as number]?.confidence ?? '' : ''
+  let textForModal = modalType === ModalType.MESSAGES ?arrayOfChoosedElements?.[chosenIndex as number]?.video_title : findElementById(panelVideosList, chosenIndex)?.metadata.filename
 
   useEffect(() => {
-    setChosenIndex(choosedElement);
+    setChosenIndex(choosedElement[1]);
   }, [choosedElement]);
 
   if (modalType === ModalType.CLEAR_CHAT) {
@@ -58,35 +55,6 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
       />
     )
   }
-
-  const renderConfidence = (score: number) => {
-    let confidenceText = '';
-    let confidenceColor = '';
-
-    if (score < 75) {
-      confidenceText = 'Low';
-      confidenceColor = '#929490';
-    } else if (score >= 75 && score < 85) {
-      confidenceText = 'Medium';
-      confidenceColor = '#FDC14E';
-    } else {
-      confidenceText = 'High';
-      confidenceColor = '#2EC29F';
-    }
-
-    return (
-      <div style={{ color: confidenceColor }} className={`flex flex-row gap-2 justify-center items-center`}>
-        <p className={'font-aeonikBold'}>
-          {confidenceName} 
-        </p>
-        <div style={{ color: confidenceColor }} className={`p`}>
-           <p className={`p-1  font-aeonikBold text-white rounded-md`} style={{ backgroundColor: confidenceColor }}>
-              {confidenceScore}
-           </p>
-        </div>
-      </div>
-    );
-  };
 
   const handlePageChange = (newIndex: number, totalIndexes: number): void => {
     setLoading(true); // Start loading when switching pages
@@ -110,43 +78,48 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
     helpersFunctions.openClearModal(dispatch)
   }
 
-  console.log(panelVideosList)
+  const startTime: number = ModalType.MESSAGES ? arrayOfChoosedElements?.[chosenIndex as number]?.start || 0 : 0
+  const endTime: number = ModalType.MESSAGES ? arrayOfChoosedElements?.[chosenIndex as number]?.end || 0 : 0
+
+  useVideoElementEffect({videoRef, startTime, endTime, videoUrl, showModal})
 
   return (
-    <Modal show={showModal} onHide={handleClose} centered className={modalType === ModalType.MESSAGES  ?'custom-modal-messages' :'custom-modal'} scrollable >
-    <Modal.Body>
-    <div className={'flex flex-col'}>
-        <div>
-          <QuestionHeader
-              handleClose={handleClose}
-              logo={union}
-              text={textForModal}
-          />
+    <Modal size="lg" show={showModal} onHide={handleClose} centered scrollable>
+    <Modal.Body className={'p-[24px]'}>
+      <div className={'flex flex-col'}>
+          <div>
+            <QuestionHeader
+                handleClose={handleClose}
+                logo={union}
+                text={textForModal}
+            />
+          </div>
+          <div>
+            <ReactHlsPlayer
+              poster={fallbackImage}
+              src={videoUrl}
+              width={'854px'}
+              controls={true}
+              height="520px"
+              playerRef={videoRef}
+              className={'rounded'}
+            />
+          </div>
         </div>
-        {loading && <Loading/> }
-        <div>
-          <ReactHlsPlayer
-            poster={fallbackImage}
-            src={videoUrl}
-            width={'auto'}
-            controls={true}
-            height="auto"
-            playerRef={videoRef}
-            className={'rounded'}
-          />
+        <div className="flex justify-between items-center flex-row mt-4">
+          <StartNewGroup clearChat={clearChat} colorOfIcon='#B7B9B4' width='14' height='18'/>
+          {totalIndexes > 1 && 
+            <Pagination 
+              chosenIndex={chosenIndex as number} 
+              totalIndexes={totalIndexes} 
+              handlePageChange={handlePageChange}
+            />
+          }
         </div>
-      </div>
-      <div className="flex justify-between items-center flex-row mt-4">
-        <StartNewGroup clearChat={clearChat} colorOfIcon='#B7B9B4' width='14' height='18'/>
-        <Pagination 
-        chosenIndex={chosenIndex as number} 
-        totalIndexes={totalIndexes} 
-        handlePageChange={handlePageChange}
-      />
-      </div>
     </Modal.Body>
   </Modal>
   )
 }
 
 export default ModalCentral
+

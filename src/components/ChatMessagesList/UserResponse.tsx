@@ -13,7 +13,7 @@ interface UserResponseProps {
 }
 const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, statusMessages, loading, lastElement }) => {
     return (
-    <div className={'ml-7'}>
+    <div className={'w-full max-w-[672px]'}>
         <div className={'flex flex-row gap-2 items-center'}>
              <div className={'w-7 h-7 bg-[#EDF6F1] rounded-2xl flex items-center justify-center'}>
                 <UserIcon/>
@@ -22,15 +22,15 @@ const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, sta
                 { isUserMessage && 'You'  }
               </div>
         </div>
-        <div className={`ml-7 whitespace-pre-line mr-[10px] ${isUserMessage ? 'userBubble' : 'aiBubble'}`}>
+        <div className={`ml-[40px] mr-[194px] whitespace-pre-line ${isUserMessage ? 'userBubble' : 'aiBubble'}`}>
                {message}
          </div>
-         <div className={`flex flex-row gap-2 items-center mt-3 `}>
+         <div className={`flex flex-row gap-2 items-center mt-3 relative `}>
             { lastElement && loading &&
               <Loading/>
             }
             { lastElement && statusMessages.map((statusMessage, index) => (
-              <p key={index} className={'text-[#6F706D] font-aeonik text-[12px]'}>
+              <p key={index} className={'text-[#6F706D] font-aeonik text-[12px] absolute left-[40px]'}>
                 {statusMessage}
               </p>
             ))}

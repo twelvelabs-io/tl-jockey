@@ -12,6 +12,7 @@ const VideoAssistant: React.FC = () => {
   const [state, dispatch] = useChat()
   const { valuesVideo, actionsVideo } = useVideo()
   const { valuesAutofillQuestions, actionsAutofillQuestions } = useAutofillQuestions()
+  const { loading } = state
 
   const {
     setChoosedElement,
@@ -52,9 +53,18 @@ const VideoAssistant: React.FC = () => {
     chatContainerRef
   }
 
+  const handleClickOnChat = () => {
+    if (!loading) {
+      dispatch({
+        type: ActionType.CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE,
+        payload: []
+      });
+  }
+  };
+
   return (
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
-      <VideoAssistantHeader/>
+      <VideoAssistantHeader handleClickOnChat={handleClickOnChat}/>
       <div className={'w-full'}>
         <ChatSelector {...chatSelectProps}/>
       </div>

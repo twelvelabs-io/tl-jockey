@@ -32,6 +32,7 @@
     "react-dropzone": "^14.2.3",
     "react-error-boundary": "^4.0.13",
     "react-hls-player": "^3.0.7",
+    "react-loading-skeleton": "^3.4.0",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.21.0",
     "react-scripts": "5.0.1",

@@ -26,7 +26,7 @@ export interface Message {
 
 interface AIResponseProps {
   message: Message;
-  handleShow: (index: number | undefined, question: string) => void
+  handleShow: (index: number | undefined, indexOfElementInArray: number) => void
 }
 
 const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
@@ -34,12 +34,15 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
   const [state, dispatch] = useChat()
   const [showAllVideos, setShowAllVideos] = useState(false)
 
+  const {arrayMessages} = state
+
   const handleVideoClick = (index: number | undefined) => {
+    const indexOfMessage = arrayMessages.findIndex(msg => msg === message)
     dispatch({
       type: ActionType.SET_MODAL_TYPE,
       payload: ModalType.MESSAGES,
     });
-    handleShow(index, "")
+    handleShow(index, indexOfMessage )
   };
 
   const formattedDurations =
@@ -51,11 +54,11 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
 
   return (
     <>
-        <div className={'relative ml-7'}>
+        <div className={'relative max-w-[672px]'}>
           {hasValidMessage && 
             <AIResponseHeader message={message}/>
           }
-          <div className={'mr-[5px] aiBubble ml-7 whitespace-pre-line gap-4'}>
+          <div className={'mr-[194px] aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
               <div>
                 {message?.toolsData && (
                     <AIResponseVideoSearch 

@@ -43,14 +43,14 @@ const Pagination: React.FC<PaginationProps> = ({ chosenIndex, handlePageChange, 
   };
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-cente gap-2">
         <LeftArrow 
-          className='cursor:pointer flex items-center justify-center gap-2 py-2 rounded-[32px]  text-gray-700'
+          className='cursor:pointer flex items-center justify-center gap-2 mr-[12px] py-2 rounded-[32px]  text-gray-700'
           onClick={handlePreviousPage}
         />
         <RightArrow
           onClick={handleNextPage}
-          className="cursor:pointer flex items-center justify-center gap-2 mx-3 py-2 rounded-[32px]  text-gray-700"
+          className="cursor:pointer flex items-center justify-center gap-2 py-2 rounded-[32px]  text-gray-700"
         />
     </div>
   );

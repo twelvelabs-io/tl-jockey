@@ -11,6 +11,7 @@ function Input<T> ({ disabled, onChange, placeholder, onClick, value, className 
         onClick={onClick}
         value={value as string}
         className={className}
+        maxLength={1000}
         >
     </input>
   )

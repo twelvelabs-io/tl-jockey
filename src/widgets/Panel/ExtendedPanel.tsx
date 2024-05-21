@@ -9,6 +9,7 @@ import PanelList from '../PanelList/PanelList';
 import { ErrorBoundary } from 'react-error-boundary';
 import PanelHeader from './PanelHeader';
 import PanelVideosSummary from './PanelVideosSummary';
+import SkeletonPanelVideoCard from '../../skeletons/SkeletonPanelVideoCard';
 
 interface ExtendedPanelProps {
     toggleWidth: () => void;
@@ -56,11 +57,14 @@ export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
                             </Suspense>
                         </>
                     ) : (
+                        <>
                         <div className="pt-[24px] pb-2 pl-5">
                             <p className="text-[#333431] font-aeonik text-sm font-medium">
-                                No videos available
+                                Loading videos...
                             </p>
-                    </div>
+                        </div>
+                        <SkeletonPanelVideoCard/>
+                        </>
                     )}
             </ErrorBoundary>
         </div>

@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import os
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -20,9 +21,13 @@ from langchain.pydantic_v1 import BaseModel, Field
 from typing import Any
 from langserve import add_routes
 
-
 load_dotenv()
-
+port = int(os.environ.get("PORT", 8000))
+app = FastAPI(
+    title="Jockey Server",
+    version="0.1",
+    description="Server for interacting with Jockey via API.",
+)
 def build_jockey():
     tools = [video_search, download_video, combine_clips, remove_segment]
     
@@ -143,6 +148,7 @@ if __name__ == "__main__":
 
         import uvicorn
 
+        # uvicorn.run("jockey:app", host="0.0.0.0", port=port)
         uvicorn.run(app, host="localhost", port=8000)
     else:
         print("Use one of: 'server', 'local' as argument when launching.")

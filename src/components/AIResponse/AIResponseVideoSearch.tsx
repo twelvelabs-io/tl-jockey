@@ -18,11 +18,11 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message
 
     return (
         <div>
-        <ul className={'flex flex-wrap pb-3 gap-2'}>
+        <ul className={'flex flex-wrap pb-3 gap-[12px]'}>
         {message.toolsData && message.toolsData.slice(0, showAllVideos ? undefined : 3).map((video, index) => {
           return (
             <li key={index} className=" ">
-              <div className="flex flex-row justify-between items-start gap-2">
+              <div className="flex flex-row justify-between items-start gap-[12px]">
                 { video  ?  
                 <Suspense fallback={<FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}>
                   <VideoThumbnail

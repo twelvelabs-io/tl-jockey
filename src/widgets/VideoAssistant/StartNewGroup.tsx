@@ -12,7 +12,7 @@ interface StartNewGroupProps {
 
 const StartNewGroup: React.FC<StartNewGroupProps> = ({ clearChat, text, colorOfIcon, width, height }) => {
   return (
-      <div className={'text-center justify-end flex'}>
+      <div className={'text-center justify-end flex pr-[20px] pt-[20px]'}>
           <div 
             tabIndex={0}
             className={'flex-row gap-[4px] justify-center items-center flex cursor-pointer focus:border-2 p-1 focus:border-[#9AED59] focus:outline-none'}

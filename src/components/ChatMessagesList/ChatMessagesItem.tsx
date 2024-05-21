@@ -31,7 +31,7 @@ const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message,  index,  h
 
   const isUserMessage = message.sender === 'user'
   const initialMessage = message.sender === 'initial'
-  
+
   return (
         <div className={'flex flex-col'} key={index}>
           <ErrorBoundary FallbackComponent={ErrorFallback}>

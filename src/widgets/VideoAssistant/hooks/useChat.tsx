@@ -26,7 +26,7 @@ const initialState: State = {
   modalType: ModalType.MESSAGES,
   toolsData: [],
   autofill: {
-    choosedElement: undefined,
+    choosedElement: [ 0, 0 ],
     autofillApi: false,
     showAutofillQuestions: false,
   },
@@ -70,6 +70,9 @@ function reducer (state: State, action: Action): State {
         }
     case ActionType.SET_ARRAY_MESSAGES_CLEAN:
       return { ...state, arrayMessages: [] }
+    case ActionType.CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE:
+      const initialMessage = initialState.arrayMessages[0]; 
+      return { ...state, arrayMessages: [initialMessage] };
     case ActionType.SET_SHOW_MODAL:
       return { ...state, showModal: action.payload }
     case ActionType.SET_MODAL_TYPE:
@@ -117,11 +120,5 @@ export const useChat = (): [State, React.Dispatch<Action>] => {
   }
   return context;
 };
-
-// function useChat (): [State, React.Dispatch<Action>] {
-//   const [state, dispatch] = useReducer(reducer, initialState)
-
-//   return [state, dispatch]
-// }
 
 export { ActionType }

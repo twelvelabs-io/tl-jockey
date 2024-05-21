@@ -82,10 +82,10 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
           include_types: includeTypes,
           include_names: includeNames,
         };
-        fetch('http://0.0.0.0:8080/stream_events', {
+        fetch('https://twelve-fast-6e09a0ec0080.herokuapp.com/stream_events', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'text/event-stream',
   },
   body: JSON.stringify(requestData),
 })
@@ -266,45 +266,45 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
 
   const isInitialMessage = arrayMessages[0]?.sender === 'initial'
 
-  const handleShow = (index: number | undefined, question: string): void => {
-    helpersFunctions.openMessagesModal(dispatch, question, index)
+  const handleShow = (index: number | undefined, indexOfElementInArray: number): void => {
+    helpersFunctions.openMessagesModal(dispatch, indexOfElementInArray, index)
   }
-
+              //ml-[154px] flex-col flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]
   return (
     <div className='flex flex-row  border-[#E5E6E4]'>
        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <div className=" bg-[#F9FAF9]  h-[100vh] border-r-[#E5E6E4]"><PanelWrapper/></div>
-          <div className=" w-full">
-            <div className={'pl-[10vw] pr-[10vw] pt-6 flex-col  flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]'} ref={chatContainerRef} >
-              { !isInitialMessage && 
-                <StartNewGroup 
-                  clearChat={clearChat} 
-                  text={ButtonTypes.CLEAR} 
-                  colorOfIcon='#929490' 
-                  width={'11.67'} 
-                  height={'15'}
+          <div className=" bg-[#F9FAF9]  border-r-[#E5E6E4] flex flex-col justify-between h-full"><PanelWrapper/></div>
+            <div className="w-full">
+              <div className={'ml-[154px] flex-col flex h-[100vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh] overflow-y-auto'} ref={chatContainerRef} >
+                { !isInitialMessage && 
+                  <StartNewGroup 
+                    clearChat={clearChat} 
+                    text={ButtonTypes.CLEAR} 
+                    colorOfIcon='#929490' 
+                    width={'11.67'} 
+                    height={'15'}
+                  />
+                }
+                <ChatMessagesList
+                    arrayMessages={arrayMessages}
+                    handleShow={handleShow}
+                    videoRef={videoRef}
+                    setChoosedElement={setChoosedElement}
                 />
-              }
-              <ChatMessagesList
-                  arrayMessages={arrayMessages}
-                  handleShow={handleShow}
-                  videoRef={videoRef}
-                  setChoosedElement={setChoosedElement}
-              />
+              </div>
+              <div className={'pl-[194px] pr-[194px]'}>
+                <ChatForm
+                  setShowAutofillQuestions={setShowAutofillQuestions}
+                  submitButtonRef={submitButtonRef}
+                  autofillQuestions={autofillQuestions}
+                  setAutofillApi={setAutofillApi}
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                  handleChatApi={handleChatApi}
+                  showAutofillQuestions={showAutofillQuestions}
+                />
+              </div>
             </div>
-            <div className={'pl-[10vw] pr-[10vw]'}>
-              <ChatForm
-                setShowAutofillQuestions={setShowAutofillQuestions}
-                submitButtonRef={submitButtonRef}
-                autofillQuestions={autofillQuestions}
-                setAutofillApi={setAutofillApi}
-                // eslint-disable-next-line @typescript-eslint/no-misused-promises
-                // eslint-disable-next-line @typescript-eslint/no-misused-promises
-                handleChatApi={handleChatApi}
-                showAutofillQuestions={showAutofillQuestions}
-              />
-            </div>
-          </div>
           </ErrorBoundary>
         </div>
   )
