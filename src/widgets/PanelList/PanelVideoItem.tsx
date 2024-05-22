@@ -18,14 +18,15 @@ interface PanelVideoItemProps {
 export const PanelVideoItem:React.FC<PanelVideoItemProps> = ({videoID}) => {
     const queryClient = useQueryClient()
     const [state, dispatch] = useChat()
+    const indexID = process.env.REACT_APP_API_INDEX_ID
     const {
         data: videoInfo,
         refetch: refetchVideos,
-      } = useRetrieveVideoInfo('659f2e829aba4f0b402f6488', videoID);
+      } = useRetrieveVideoInfo(indexID, videoID);
 
       useEffect(() => {
         queryClient.invalidateQueries({
-          queryKey: [keys.VIDEOS, '659f2e829aba4f0b402f6488', videoID],
+          queryKey: [keys.VIDEOS, indexID, videoID],
         });
       }, []);
 

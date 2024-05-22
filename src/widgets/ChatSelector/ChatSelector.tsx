@@ -59,18 +59,10 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
 
       const includeTypes = ["chat_model"];
       const includeNames = ["AzureChatOpenAI", "video-search", "download-video", "combine-clips", "remove-segment"];
-  
-      const requestBody = {
-          input: "Use index id 659f2e829aba4f0b402f6488 to find the top clip of a touchdown",
-          configurable: { session_id: Date.now() },
-          version: "v1",
-          include_types: includeTypes,
-          include_names: includeNames,
-      };
-
+      const indexID = process.env.REACT_APP_API_INDEX_ID
       try {
         const requestData = {
-          input: `Use index id 659f2e829aba4f0b402f6488 ${inputBox}`,
+          input: `Use index id ${indexID} ${inputBox}`,
           tool_descriptions: {
             "video-search": " Run a search query against a collection of videos and get results.",
             "download-video": " Download a video for a given video in a given index and get the filepath. \n    Should only be used when the user explicitly requests video editing functionalities.",
@@ -269,7 +261,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
   const handleShow = (index: number | undefined, indexOfElementInArray: number): void => {
     helpersFunctions.openMessagesModal(dispatch, indexOfElementInArray, index)
   }
-              //ml-[154px] flex-col flex h-[70vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh]
+  
   return (
     <div className='flex flex-row  border-[#E5E6E4]'>
        <ErrorBoundary FallbackComponent={ErrorFallback}>

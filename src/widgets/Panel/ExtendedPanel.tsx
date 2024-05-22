@@ -30,16 +30,17 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary
 export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
 
     const queryClient = useQueryClient()
+    const indexID = process.env.REACT_APP_API_INDEX_ID
     const {
         data: videosData,
         refetch: refetchVideos,
         isPreviousData,
-      } = useGetVideos('659f2e829aba4f0b402f6488', 1, 50);
+      } = useGetVideos(indexID, 1, 50);
       const videos = videosData?.data;
       
       useEffect(() => {
         queryClient.invalidateQueries({
-          queryKey: [keys.VIDEOS, '659f2e829aba4f0b402f6488', 1],
+          queryKey: [keys.VIDEOS, indexID, 1],
         });
       }, []);
 

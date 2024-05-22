@@ -36,7 +36,7 @@ app.use(errorLogger, errorHandler);
 app.get("/indexes/:indexId/videos", async (request, response, next) => {
   const headers = {
     "Content-Type": "application/json",
-    "x-api-key": "tlk_324NHPB3VDEH9T2EED3BH35794EE"
+    "x-api-key": TWELVE_LABS_API_KEY
   };
   const params = {
     page: request.query.page,
@@ -66,7 +66,7 @@ app.get(
 
     const headers = {
       "Content-Type": "application/json",
-      "x-api-key": "tlk_324NHPB3VDEH9T2EED3BH35794EE",
+      "x-api-key": TWELVE_LABS_API_KEY,
     };
 
     try {
