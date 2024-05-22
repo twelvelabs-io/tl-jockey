@@ -55,6 +55,8 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio
+            clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
+            clip_audio_input_stream = clip_audio_input_stream.filter("asetpts", "PTS-STARTPTS")
             
             input_streams.append(clip_video_input_stream)
             input_streams.append(clip_audio_input_stream)
