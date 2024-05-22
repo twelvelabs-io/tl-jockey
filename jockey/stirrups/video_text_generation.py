@@ -59,14 +59,16 @@ class PegasusSummarizeInput(BaseModel):
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     endpoint_option: SummarizeEndpointEnum = Field(description="Determines what output to generate.")
-    prompt: Union[GeneratePrompt | None] = Field(description="Custom instructions that can influence how text is generated or structured.")
+    prompt: Union[GeneratePrompt | None] = Field(description="Instructions on how summaries, highlights, and chapters are generated. "
+                                                 "Always use when additional context is provided.")
     
 
 class PegasusFreeformInput(BaseModel):
     """Help to ensure the video-text-generation worker provides valid arguments to any tool it calls."""
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    prompt: GeneratePrompt = Field(description="Any type of custom instructions to be used when generating any type of text output.")
+    prompt: GeneratePrompt = Field(description="Instructions on what text output to generate. Can be anything. "
+                                   "Always use when additional context is provided.")
 
 
 @tool("gist-text-generation", args_schema=PegasusGistInput)
