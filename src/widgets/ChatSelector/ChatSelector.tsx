@@ -266,8 +266,8 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
     <div className='flex flex-row  border-[#E5E6E4]'>
        <ErrorBoundary FallbackComponent={ErrorFallback}>
           <div className=" bg-[#F9FAF9]  border-r-[#E5E6E4] flex flex-col justify-between h-full"><PanelWrapper/></div>
-            <div className="w-full">
-              <div className={'ml-[154px] flex-col flex h-[100vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh] overflow-y-auto'} ref={chatContainerRef} >
+            <div className="w-full flex flex-col">
+              <div className={'flex-col flex h-[100vh] lg:h-[70vh] md:h-[70vh] xl:h-[80vh] overflow-y-auto'} ref={chatContainerRef} >
                 { !isInitialMessage && 
                   <StartNewGroup 
                     clearChat={clearChat} 
@@ -277,14 +277,16 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
                     height={'15'}
                   />
                 }
-                <ChatMessagesList
-                    arrayMessages={arrayMessages}
-                    handleShow={handleShow}
-                    videoRef={videoRef}
-                    setChoosedElement={setChoosedElement}
-                />
+                <div className="w-full flex justify-center items-center">
+                  <ChatMessagesList
+                      arrayMessages={arrayMessages}
+                      handleShow={handleShow}
+                      videoRef={videoRef}
+                      setChoosedElement={setChoosedElement}
+                  />
+                </div>
               </div>
-              <div className={'pl-[194px] pr-[194px]'}>
+              <div className={'w-full flex justify-center items-center'}>
                 <ChatForm
                   setShowAutofillQuestions={setShowAutofillQuestions}
                   submitButtonRef={submitButtonRef}
