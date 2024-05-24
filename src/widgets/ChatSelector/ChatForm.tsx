@@ -83,7 +83,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
   }
 
   return (
-    <div className={'flex flex-row w-[656px] absolute bottom-[48px]'}>
+    <div className={'flex flex-row w-[680px] absolute bottom-[48px]'}>
       <Input
         disabled={selectedFile === undefined || loading}
         onChange={handleInputChange}
