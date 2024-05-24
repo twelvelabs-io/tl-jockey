@@ -1,13 +1,12 @@
 import React from 'react';
 import { ReactComponent as LogoIcon } from '../../icons/logo.svg';
-import { Link } from 'react-router-dom';
 
-const VideoAssistantHeader = () => {
+const VideoAssistantHeader = ({ handleClickOnChat }: { handleClickOnChat: () => void }) => {
   return (
-    <div className="pl-[70px] pr-[70px] text-center justify-between flex p-6 border-b-[1px] border-[#E5E6E4]">
-      <Link to="/Chat">
-        <LogoIcon />
-      </Link>
+    <div className=" text-center pl-[20px] border-b-[1px] border-[#E5E6E4]">
+      <div className='h-[56px] flex items-center hover:cursor-pointer' onClick={handleClickOnChat}>
+          <LogoIcon />
+      </div>
     </div>
   );
 };

@@ -9,16 +9,12 @@ export enum VideoSelectState {
   CHOOSE_VIDEO = 'Choose video'
 }
 
-export enum ChatSelectQuestions {
-  TOP_QUESTIONS = 'Try this'
-}
-
-export enum ChatCompareResults {
-  COMPARE_RESULTS = 'Compare results'
-}
-
 export enum HeaderTexts {
   START_NEW_CHAT = 'Start new'
+}
+
+export enum DeleteButtonText {
+  CLEAR_CHAT = "Clear"
 }
 
 export enum ButtonTexts {

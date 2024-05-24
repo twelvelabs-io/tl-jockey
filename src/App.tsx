@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { CommonProvider } from './widgets/IndexVideo/WrapperPage';
+import { ChatProvider } from './widgets/VideoAssistant/hooks/useChat';
 
 const queryClient = new QueryClient();
 
@@ -15,10 +16,12 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <CommonProvider>
         <Router>
+        <ChatProvider>
           <Routes>
-            <Route path="/" element={<VideoAssistant />} />
-            <Route path="/Chat" element={<VideoAssistant />} />
+              <Route path="/" element={<VideoAssistant />} />
+              <Route path="/Chat" element={<VideoAssistant />} />
           </Routes>
+          </ChatProvider>
         </Router>
       </CommonProvider>
     </QueryClientProvider>

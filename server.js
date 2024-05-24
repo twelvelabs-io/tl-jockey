@@ -5,128 +5,159 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const app = express();
-const port = process.env.PORT || 3000;
 const cors = require('cors');
 
-// Middleware for parsing JSON data
-app.use(bodyParser.json({ limit: '50mb' }));
+const TWELVE_LABS_API_KEY = process.env.TWELVE_LABS_API_KEY;
+const TWELVE_LABS_API = axios.create({
+  baseURL: "https://api.twelvelabs.io/v1.1",
+})
+
+const PORT_NUMBER = process.env.PORT || 4000;
+const PAGE_LIMIT_MAX = 50;
+
 app.use(cors());
-app.use(express.json())
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
-}
-const { INDEXES_URL, CREATE_TASK_URL  } = require('./src/apis/apiEndpoints')
-const { API_KEY  } = require('./src/apis/apiKeys')
-const { serverConfig } = require('./src/server/serverConfig')
+const errorLogger = (error, request, response, next) => {
+  console.error(error.stack);
+  next(error);
+};
 
-const storage = multer.memoryStorage();
-var upload = multer({ storage: storage }).single('video_file')
-const apiKey = API_KEY.MAIN
+const errorHandler = (error, request, response, next) => {
+  return response
+    .status(error.status || 500)
+    .json(error || "Something Went Wrong...");
+};
 
-app.post('/worker_generate_stream', upload, async (req, res) => {
+app.use(errorLogger, errorHandler);
+
+/** Get videos */
+app.get("/indexes/:indexId/videos", async (request, response, next) => {
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": TWELVE_LABS_API_KEY
+  };
+  const params = {
+    page: request.query.page,
+    page_limit: request.query.page_limit,
+  };
   try {
+    const apiResponse = await TWELVE_LABS_API.get(
+      `/indexes/${request.params.indexId}/videos`,
+      {
+        headers,
+        params,
+      }
+    );
+    response.json(apiResponse.data);
+  } catch (error) {
+    console.error("Error getting videos:", error);
+    response.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+/** Get a video of an index */
+app.get(
+  "/indexes/:indexId/videos/:videoId",
+  async (request, response, next) => {
+    const indexId = request.params.indexId;
+    const videoId = request.params.videoId;
+
     const headers = {
-    'x-api-key': apiKey,
-    'Content-Type': 'multipart/form-data',
+      "Content-Type": "application/json",
+      "x-api-key": TWELVE_LABS_API_KEY,
+    };
+
+    try {
+      const apiResponse = await TWELVE_LABS_API.get(
+        `/indexes/${indexId}/videos/${videoId}`,
+        {
+          headers,
+        }
+      );
+      response.json(apiResponse.data);
+    } catch (error) {
+      return next(error);
+    }
+  }
+);
+
+app.post("/stream_events", async (req, res) => {
+  const inputData = req.body.input;
+
+  if (!inputData) {
+      res.status(400).json({ error: "Input data is missing" });
+      return;
+  }
+
+  const sessionId = Date.now();
+
+  // Set the headers for Server-Sent Events (SSE)
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  // Use Axios to interact with the remote service
+  const externalServiceUrl = "https://twelve-jockey-b8564d2f3502.herokuapp.com/jockey/astream_events";
+
+  // Send request to external service with appropriate data
+  const response = axios.post(externalServiceUrl, {
+      input: inputData,
+      configurable: { session_id: sessionId },
+      version: "v1",
+      include_types: ["chat_model"],
+      include_names: ["AzureChatOpenAI", "video-search", "download-video", "combine-clips", "remove-segment"]
+  });
+
+  // Using EventSource to handle the stream of events
+  const eventSource = new EventSource(externalServiceUrl, { method: "POST", body: JSON.stringify(response) })
+
+  eventSource.onmessage = (event) => {
+      // Parse the event data
+      const eventData = JSON.parse(event.data);
+
+      // Process different event types
+      switch (eventData.event) {
+          case "on_chat_model_start":
+              res.write(`data: Start processing chat model\n\n`);
+              break;
+
+          case "on_chat_model_end":
+              res.write(`data: End processing chat model\n\n`);
+              break;
+
+          case "on_tool_start":
+              res.write(`data: Running => ${eventData.name}\n\n`);
+              break;
+
+          case "on_tool_end":
+              res.write(`data: Finish => ${eventData.name}\n\n`);
+              break;
+
+          case "on_chat_model_stream":
+              const content = eventData.data.chunk.content;
+              if (content) {
+                  res.write(`data: ${content}\n\n`);
+              }
+              break;
+      }
   };
 
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file(s) provided' });
-  }
-    const url = CREATE_TASK_URL
-    const requestData = req.body
-    const options = { index_id: requestData.index_id, language: requestData.language, video_file: req.file.buffer }
-    const response = await axios.post(url, options, { headers: headers })
-    const responseData = response.data;
+  eventSource.onerror = (err) => {
+      console.error("Error in event stream:", err);
+      res.write(`data: Error in event stream\n\n`);
+      eventSource.close();
+      res.end();
+  };
 
-    res.json(responseData);
-  } catch (error) {
-    console.error('Error sending POST request:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  // Keep the connection alive
+  req.on("close", () => {
+      eventSource.close();
+  });
+});
+/** Set up Express server to listen on port */
+app.listen(PORT_NUMBER, () => {
+  console.log(`Server Running. Listening on port ${PORT_NUMBER}`);
 });
 
-app.post('/worker_generate_stream3', async (req, res) => {
-  try {
-    const requestData = req.body.options 
-    const headers = {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-    };
-    // Make a POST request to the external service
-    const response = await axios.post(
-      serverConfig.ServerForTwelveML, // Update this URL as needed
-      requestData,
-      { headers: headers }
-    );
-
-    // Handle the response from the external service
-    const responseData = response.data;
-
-    // Send the response back to your React app
-    res.json(responseData);
-  } catch (error) {
-    console.error('Error sending POST request:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.post('/worker_generate_stream2', async (req, res) => {
-  try {
-    const url = INDEXES_URL
-    const headers = {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-    };
-
-    const requestData = req.body.options
-  
-    const response = await axios.post(url, requestData, { headers: headers });
-
-    // Handle the response from the external service
-    const responseData = response.data;
-
-    // Send the response back to your React app
-    res.json(responseData);
-  } catch (error) {
-    console.error('Error sending POST request:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-
-app.post('/asr', async (req, res) => {
-  try {
-    const requestData = {
-      videos: req.body.videos,
-      prompt: req.body.prompt,
-      agent_history: req.body.agent_history,
-      duration: req.body.duration,
-      asr: req.body.asr,
-      description: req.body.description,
-    };
-
-    const response = await axios.post(
-      serverConfig.ServerForASR, // Update this URL as needed
-      requestData
-    );
-
-
-    const responseData = response.data;
-
-
-    res.json(responseData);
-  } catch (error) {
-    console.error('Error sending POST request:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});

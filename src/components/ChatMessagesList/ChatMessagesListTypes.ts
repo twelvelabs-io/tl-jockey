@@ -1,8 +1,9 @@
-import { type State } from '../../widgets/VideoAssistant/hooks/useChatTypes'
+import { QuestionMessage } from "../../types/messageTypes"
+
 
 export interface ChatMessagesListProps {
-    chatState: State
-    chatDispatch: React.Dispatch<any>
     videoRef: React.RefObject<HTMLVideoElement>
-    setChoosedElement: (file: number | undefined) => void
+    setChoosedElement: (file: number | undefined) => void,
+    arrayMessages: QuestionMessage[],
+    handleShow: (index: number | undefined, indexOfElementInArray: number) => void
 }

@@ -1,6 +1,5 @@
 export interface PaginationProps {
-    currentPage: number;
-    totalPages: number;
-    showArrows: boolean;
-    handlePageChange: (newPage: number) => void;
+    chosenIndex: number;
+    totalIndexes: number;
+    handlePageChange: (newPage: number, totalIndexes: number) => void;
 }

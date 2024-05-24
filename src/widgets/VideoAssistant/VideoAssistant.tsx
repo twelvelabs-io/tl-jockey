@@ -9,9 +9,10 @@ import useVideo from './hooks/useVideo'
 import VideoAssistantHeader from './VideoAssistantHeader'
 
 const VideoAssistant: React.FC = () => {
-  const [chatState, chatDispatch] = useChat()
+  const [state, dispatch] = useChat()
   const { valuesVideo, actionsVideo } = useVideo()
   const { valuesAutofillQuestions, actionsAutofillQuestions } = useAutofillQuestions()
+  const { loading } = state
 
   const {
     setChoosedElement,
@@ -37,11 +38,9 @@ const VideoAssistant: React.FC = () => {
     setCurrentVideoFile
   } = actionsVideo
 
-  const handleClose = (): void => { chatDispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
+  const handleClose = (): void => { dispatch({ type: ActionType.SET_SHOW_MODAL, payload: false }) }
 
   const chatSelectProps: ChatSelectProps = {
-    chatState,
-    chatDispatch,
     submitButtonRef,
     setCurrentVideoFile,
     setShowAutofillQuestions,
@@ -54,15 +53,22 @@ const VideoAssistant: React.FC = () => {
     chatContainerRef
   }
 
+  const handleClickOnChat = () => {
+    if (!loading) {
+      dispatch({
+        type: ActionType.CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE,
+        payload: []
+      });
+  }
+  };
+
   return (
     <div className={'fixed top-0 left-0 right-0 bottom-0'}>
-      <VideoAssistantHeader/>
+      <VideoAssistantHeader handleClickOnChat={handleClickOnChat}/>
       <div className={'w-full'}>
         <ChatSelector {...chatSelectProps}/>
       </div>
       <ModalCentral
-        chatState={chatState}
-        chatDispatch={chatDispatch}
         handleClose={handleClose}
         choosedElement={choosedElement}
         autofillApi={autofillApi} />

@@ -2,31 +2,56 @@ import React from 'react';
 import { PaginationProps } from './PaginationTypes';
 import LeftArrow from './LeftArrow';
 import RightArrow from './RightArrow';
-import CentralPoints from './CentralPoints';
+import { ModalType } from '../../types/messageTypes';
+import { useChat } from '../../widgets/VideoAssistant/hooks/useChat';
 
-const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, showArrows, handlePageChange }) => {
+const Pagination: React.FC<PaginationProps> = ({ chosenIndex, handlePageChange, totalIndexes }) => {
+  const [state, dispatch] = useChat()
+  const { modalType, panelVideosList } = state
+
+  const findCurrentPosition = (array: any[], chosenIndex: number): number => {
+    return array.findIndex((item) => item._id === chosenIndex);
+  };
+
+  const handlePreviousPage = () => {
+    if (modalType === ModalType.MESSAGES) {
+      let newIndex = chosenIndex - 1;
+      if (newIndex < 0) {
+        newIndex = totalIndexes - 1; 
+      }
+      handlePageChange(newIndex, totalIndexes);
+
+    } else {
+      const currentPos = findCurrentPosition(panelVideosList, chosenIndex)
+      let newPos = currentPos - 1;
+      if (newPos < 0) {
+        newPos = panelVideosList.length - 1;
+      }
+      handlePageChange(newPos, totalIndexes)
+    }
+  };
+
+  const handleNextPage = () => {
+    if (modalType === ModalType.MESSAGES) {
+      handlePageChange(chosenIndex + 1, totalIndexes);
+    } else {
+      const currentPos = findCurrentPosition(panelVideosList, chosenIndex)
+      let newPos = currentPos + 1
+      handlePageChange(newPos, totalIndexes)
+    }
+
+  };
+
   return (
-    <div className="flex items-center justify-center mt-4">
-
-      {showArrows && currentPage > 1 && (
+    <div className="flex items-cente gap-2">
         <LeftArrow 
-        className='mx-2 px-4 py-2 rounded-[32px] bg-gray-300 text-gray-700'
-        onClick={() => handlePageChange(currentPage - 1)}/>
-      )}
-
-      <CentralPoints
-        currentPage={currentPage}
-        totalPages={totalPages}
-        handlePageChange={handlePageChange}
-      />
-
-      {showArrows && currentPage < totalPages && (
-        <RightArrow
-          onClick={() => handlePageChange(currentPage + 1)}
-          className="mx-2 px-4 py-2 rounded-[32px] bg-gray-300 text-gray-700"
+          className='cursor:pointer flex items-center justify-center gap-2 mr-[12px] py-2 rounded-[32px]  text-gray-700'
+          onClick={handlePreviousPage}
         />
-      )}
-      
+        <RightArrow
+          onClick={handleNextPage}
+          className="cursor:pointer flex items-center justify-center gap-2 py-2 rounded-[32px]  text-gray-700"
+        />
     </div>
   );
 };
