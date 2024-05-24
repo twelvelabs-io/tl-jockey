@@ -21,11 +21,11 @@ export const VideoThumbnail: React.FC<VideoThumbnailProps> = ({ thumbnailUrl, in
   return (
     <>
       <div className='relative cursor-pointer' onClick={onClick}>
-        <div className={oneThumbnail ? 'w-[404px] h-[224px]' : 'w-[220px] h-[122px]'}>
+        <div className={oneThumbnail ? 'w-[404px] h-[224px]' : 'w-[202px] h-[112px]'}>
           <img
             src={thumbnailUrl}
             key={index}
-            className={"rounded p-[0.5px]"}
+            className={`rounded p-[0.5px] ${oneThumbnail ? 'w-[404px] h-[224px]' : 'w-[202px] h-[112px]'}`}
             onLoad={handleImageLoad}
           />
         </div>
