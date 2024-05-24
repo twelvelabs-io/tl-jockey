@@ -34,7 +34,7 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message
                   />  
                 </Suspense>
                 : <FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}
-                <div className="flex-grow-0 w-[466px]">
+                <div className="flex-grow-0">
                   {/* Apply the streaming effect to the text */}
                   { video && <StreamingTextEffect text={video.video_title} />}
                 </div>
