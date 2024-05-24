@@ -43,10 +43,25 @@ import keys from "./keys";
     });
   }
 
-/**
- * @important This mutation doesn't execute invalidation itself.
- */
-// export function useDeleteTask(): UseMutationResult<{ taskId: string }, unknown, string> {
-// 	return useMutation((taskId: string) =>
-// 		twelveLabsAPI.delete<undefined>(`/indexes/tasks/${taskId}`).then(() => ({ taskId }))
-// 	)
+  export function useStreamEvents(requestData) {
+    return useQuery({
+      queryKey: "streamEvents",
+      queryFn: async () => {
+        try {
+          const response = await fetch(apiConfig.PROXY_SERVER, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/event-stream',
+            },
+            body: JSON.stringify(requestData),
+          });
+          if (!response.ok) {
+            throw new Error(response.statusText);
+          }
+          return response.json();
+        } catch (error) {
+          throw error;
+        }
+      },
+    });
+  }

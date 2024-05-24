@@ -6,6 +6,7 @@ const apiConfig = {
   TWELVE_LABS_API: axios.create({
     baseURL: SERVER_BASE_URL.toString(),
   }),
+  PROXY_SERVER: "https://twelve-fast-6e09a0ec0080.herokuapp.com/stream_events",
   INDEXES_URL: "/indexes",
   SEARCH_URL: "/search",
   TASKS_URL: "/tasks",

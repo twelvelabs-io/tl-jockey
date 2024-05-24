@@ -54,7 +54,7 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
 
   return (
     <>
-        <div className={'relative max-w-[672px]'}>
+        <div className={'relative max-w-[680px]'}>
           {hasValidMessage && 
             <AIResponseHeader message={message}/>
           }

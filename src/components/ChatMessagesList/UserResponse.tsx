@@ -13,7 +13,7 @@ interface UserResponseProps {
 }
 const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, statusMessages, loading, lastElement }) => {
     return (
-    <div className={'w-full max-w-[672px]'}>
+    <div className={'w-full max-w-[680px]'}>
         <div className={'flex flex-row gap-2 items-center'}>
              <div className={'w-7 h-7 bg-[#EDF6F1] rounded-2xl flex items-center justify-center'}>
                 <UserIcon/>

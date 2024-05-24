@@ -11,13 +11,14 @@ import ChatForm from './ChatForm'
 import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
 import StartNewGroup from '../VideoAssistant/StartNewGroup'
 
-import { ChatSelectProps, DefaultVideo } from './ChatSelectorTypes';
+import { ChatSelectProps } from './ChatSelectorTypes';
 import PanelWrapper from '../Panel/PanelWrapper'
 import { useChat } from '../VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
 import { ButtonTypes } from '../../types/buttonTypes'
 import { ErrorBoundary } from 'react-error-boundary'
 import helpersFunctions from '../../helpers/helpers'
+import { useStreamEvents } from '../../apis/hooks'
 
 interface ErrorFallbackProps {
   error: Error
@@ -159,26 +160,16 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
     } 
     console.log("Received chunk:", chunkValue);
     console.log("Accumulated content:", accumulatedContent);
-    // await new Promise(resolve => setTimeout(resolve, 100))
   }
   
   while (!done) {
     const { value, done: doneReading } = await reader.read();
     if (done) {
-      break; // Exit the loop if done reading
+      break;
     }
     done = doneReading;
       const chunkValue = decoder.decode(value, { stream: true });
       await processChunk(chunkValue)
-      // if (chunkValue === '```' || chunkValue === '`' || chunkValue === '``' || chunkValue === '```') {
-      //   stopUpdatingMessage = true
-      // }
-      // const SchemaVideoFiles = JSON.parse(streamData[0])
-      // const hasVideoUrl = SchemaVideoFiles.some((item: { video_url: any }) => item.video_url);
-      
-      // if (hasVideoUrl) {
-      //   streamData.shift()
-      // }
 
       console.log("Received chunk:", chunkValue);
       console.log("Accumulated content:", accumulatedContent);
@@ -234,19 +225,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
     }
   })
 
-  useEffect(() => {
-    dispatch({ type: ActionType.SET_SELECTED_FILE, payload: DefaultVideo.FILE_NAME })
-    setCurrentVideoFile(DefaultVideo.FILE_PATH)
-  }, [])
-
-  useEffect(() => {
-    if (autofillQuestions?.some((question) => question === responseText)) {
-      setAutofillApi(true)
-    } else {
-      setAutofillApi(false)
-    }
-  }, [arrayMessages, autofillQuestions, responseText, setAutofillApi])
-
   const clearChat = (): void => {
     dispatch({
         type: ActionType.SET_MODAL_TYPE,
@@ -254,7 +232,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
     });
     dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true });
   }
-  console.log(arrayMessages)
 
   const isInitialMessage = arrayMessages[0]?.sender === 'initial'
 
