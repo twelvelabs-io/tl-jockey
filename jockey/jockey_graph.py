@@ -14,13 +14,13 @@ from stirrups.video_search import VideoSearchWorker
 from stirrups.video_text_generation import VideoTextGenerationWorker
 from stirrups.video_editing import VideoEditingWorker
 
-
+# TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
 class JockeyState(TypedDict):
     """Used to track the state between nodes in the graph."""
     chat_history: Annotated[Sequence[BaseMessage], add_messages]
-    next_worker: str | None = None
+    next_worker: str | None
     made_plan: bool = False
-    active_plan: str | None = None
+    active_plan: str | None
 
 
 class Jockey(StateGraph):
@@ -300,14 +300,6 @@ class Jockey(StateGraph):
             "supervisor",
             lambda x: x["next_worker"],
             node_map,
-        )
-
-        # We add a special conditional edge to ensure that the supervisor node is always called next after the planner node.
-        # This is a redundancy as the planner node also updates the graph state so that `next_worker` is always "supervisor" after it runs.
-        self.add_conditional_edges(
-            "planner",
-            lambda _: "supervisor",
-            {"supervisor": "supervisor"}
         )
 
         # Need to ensure that at the start of every agent execution, the supervisor node receives the input first.
