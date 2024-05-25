@@ -8,7 +8,7 @@ from .stirrup import Stirrup
 
 
 class Clip(BaseModel):
-    """Define what constitutes a clip in teh context of the video-editing worker."""
+    """Define what constitutes a clip in the context of the video-editing worker."""
     index_id: str = Field(description="A UUID for the index a video belongs to. This is different from the video_id.")
     video_id: str = Field(description="A UUID for the video a clip belongs to.")
     start: float = Field(description="The start time of the clip in seconds.")
