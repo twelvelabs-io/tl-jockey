@@ -77,7 +77,7 @@ async def run_jockey():
         user_input = console.input("[green]👤 Chat: ")
 
         user_input = [HumanMessage(content=user_input, name="user")]
-        async for event in jockey.astream_events({"chat_history": user_input, "made_plan": False, "next_worker": None}, 
+        async for event in jockey.astream_events({"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}, 
                                                  {"configurable": {"thread_id": session_id}}, version="v1"):
             parse_langserve_events(event)
 
