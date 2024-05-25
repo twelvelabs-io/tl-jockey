@@ -54,11 +54,11 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
 
   return (
     <>
-        <div className={'relative max-w-[680px]'}>
+        <div className={'relative w-[680px]'}>
           {hasValidMessage && 
             <AIResponseHeader message={message}/>
           }
-          <div className={'mr-[194px] aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
+          <div className={'aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
               <div>
                 {message?.toolsData && (
                     <AIResponseVideoSearch 

@@ -225,6 +225,19 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
     }
   })
 
+  useEffect(() => {
+    dispatch({ type: ActionType.SET_SELECTED_FILE, payload: '' })
+    setCurrentVideoFile('')
+  }, [])
+
+  useEffect(() => {
+    if (autofillQuestions?.some((question) => question === responseText)) {
+      setAutofillApi(true)
+    } else {
+      setAutofillApi(false)
+    }
+  }, [arrayMessages, autofillQuestions, responseText, setAutofillApi])
+
   const clearChat = (): void => {
     dispatch({
         type: ActionType.SET_MODAL_TYPE,

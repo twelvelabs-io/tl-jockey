@@ -12,7 +12,7 @@ enum initialTexts {
 
 const InitialResponse: React.FC<{ message: string }> = ({ message }) => {
     return (
-        <div className={'ml-[40px] pt-[95px] max-w-[680px]'}>
+        <div className={'ml-[40px] pt-[95px] w-[680px]'}>
             <Link to="/Chat">
                 <div className={'flex flex-row gap-2 items-center'}>
                     <div className={'h-10 flex items-center justify-center border-1 rounded-full'}>

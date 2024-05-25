@@ -17,7 +17,7 @@ interface AIResponseVideoSearch {
 export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message, showAllVideos, setShowAllVideos, videosLengthMoreThan3, formattedDurations, handleVideoClick }) => {
 
     return (
-        <div>
+        <div className=''>
         <ul className={'flex flex-wrap pb-3 gap-[12px]'}>
         {message.toolsData && message.toolsData.slice(0, showAllVideos ? undefined : 3).map((video, index) => {
           return (
@@ -34,7 +34,7 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message
                   />  
                 </Suspense>
                 : <FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}
-                <div className="flex-grow-0">
+                <div className="flex-grow">
                   {/* Apply the streaming effect to the text */}
                   { video && <StreamingTextEffect text={video.video_title} />}
                 </div>
