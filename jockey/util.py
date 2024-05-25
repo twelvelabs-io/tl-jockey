@@ -57,6 +57,16 @@ def get_video_metadata(index_id: str, video_id: str) -> dict:
 
     response = requests.get(video_url, headers=headers)
 
+    try:
+        assert response.status_code == 200
+    except AssertionError:
+        error_response = {
+                "message": f"There was an error getting the metadata for Video ID: {video_id} in Index ID: {index_id}. "
+                "Double check that the Video ID and Index ID are valid and correct.",
+                "error": response.text
+            }
+        return error_response
+
     return response
 
 
