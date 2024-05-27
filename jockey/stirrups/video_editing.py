@@ -4,7 +4,7 @@ from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict
 from util import download_video
-from .stirrup import Stirrup
+from stirrups.stirrup import Stirrup
 
 
 class Clip(BaseModel):
@@ -94,7 +94,7 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
 # Construct a valid worker for a Jockey instance.
 video_editing_worker_config = {
     "tools": [combine_clips, remove_segment],
-    "worker_prompt_file_path": os.path.join(os.path.curdir, "prompts", "video_editing.md"),
+    "worker_prompt_file_path": os.path.join(os.path.dirname(__file__), "..", "prompts", "video_editing.md"),
     "worker_name": "video-editing"
 }
 VideoEditingWorker = Stirrup(**video_editing_worker_config)

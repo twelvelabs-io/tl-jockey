@@ -1,5 +1,6 @@
 import functools
 import json
+import os
 from typing import Annotated, Union, Sequence, Dict, TypedDict
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
@@ -152,7 +153,7 @@ class Jockey(StateGraph):
         Returns:
             Runnable: The worker_instructor of the Jockey instance.
         """
-        with open("prompts/instructor.md", "r") as instructor_prompt_file:
+        with open(os.path.join(os.path.dirname(__file__), "prompts", "instructor.md"), "r") as instructor_prompt_file:
             instructor_system_prompt = instructor_prompt_file.read()
 
         instructor_prompt = ChatPromptTemplate.from_messages([

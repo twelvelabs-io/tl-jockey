@@ -7,8 +7,7 @@ from langchain.tools import tool
 from typing import Dict, List, Union
 from enum import Enum
 from util import get_video_metadata
-from .stirrup import Stirrup
-
+from stirrups.stirrup import Stirrup
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
@@ -126,7 +125,7 @@ async def simple_video_search(
 # Construct a valid worker for a Jockey instance.
 video_search_worker_config = {
     "tools": [simple_video_search],
-    "worker_prompt_file_path": os.path.join(os.path.curdir, "prompts", "video_search.md"),
+    "worker_prompt_file_path": os.path.join(os.path.dirname(__file__), "..", "prompts", "video_search.md"),
     "worker_name": "video-search"
 }
 VideoSearchWorker = Stirrup(**video_search_worker_config)
