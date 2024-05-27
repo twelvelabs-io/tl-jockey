@@ -7,7 +7,6 @@ interface AIResponseHeaderProps {
 }
 
 export const AIResponseHeader:React.FC<AIResponseHeaderProps> = ({message}) => {
-
     return (
             <div className={'flex flex-row gap-2 items-center'}>
               <div className={'w-7 h-7 flex items-center justify-center border-1 rounded-2xl'}>
