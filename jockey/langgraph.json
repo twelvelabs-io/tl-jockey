@@ -1,0 +1,7 @@
+{
+    "graphs": {
+        "jockey": "./jockey_default_server.py:jockey"
+    },
+    "env": "../.env",
+    "dependencies": ["."]
+}
