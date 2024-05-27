@@ -8,6 +8,7 @@ venv/*
 __pycache__
 testing.ipynb
 *.langgraph-data
+*.ipynb_checkpoints
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
