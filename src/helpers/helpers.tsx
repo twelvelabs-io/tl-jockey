@@ -72,34 +72,6 @@ const helpersFunctions = {
         dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: [ indexOfElementInArray, index ] })
         dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
       },
-
-    //   getNewPageIndex : (
-    //     modalType: ModalType,
-    //     chosenIndex: number,
-    //     totalIndexes: number,
-    //     panelVideosList: any[],
-    //     direction: 'previous' | 'next'
-    //   ): number => {
-    //     const findCurrentPosition = (array: any[], chosenIndex: any): number => {
-    //         return array.findIndex((item) => item._id === chosenIndex);
-    //       };
-    //     if (modalType === ModalType.MESSAGES) {
-    //       if (direction === 'previous') {
-    //         return chosenIndex === 0 ? totalIndexes - 1 : chosenIndex - 1;
-    //       } else {
-    //         return chosenIndex === totalIndexes - 1 ? 0 : chosenIndex + 1;
-    //       }
-    //     } else if (modalType === ModalType.PANEL) {
-    //       const currentPos = findCurrentPosition(panelVideosList, chosenIndex);
-    //       if (direction === 'previous') {
-    //         return currentPos === 0 ? panelVideosList.length - 1 : currentPos - 1;
-    //       } else {
-    //         return currentPos === panelVideosList.length - 1 ? 0 : currentPos + 1;
-    //       }
-    //     }
-    //     // Default case if no modal type matches, returning -1 for safety
-    //     return -1;
-    //   },
   };
   
 export default helpersFunctions;
