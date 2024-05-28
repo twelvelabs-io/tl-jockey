@@ -35,14 +35,15 @@ This is an easy and lightweight way to run an instance of Jockey in your termina
 This approach is more suitable for building and testing end-to-end user applications although it is a bit more involved on the configuration side.
 
 1. Modify [langgraph.json](langgraph.json) so that it points to your `.env` file and includes any other dependencies you may need.
-2. Run the following command:
+2. Modify [compose.yaml](compose.yaml) if needed as well.
+3. Run the following command:
 
     ```bash
-    langgraph up -c langgraph.json
+    langgraph up -c langgraph.json -d compose.yaml
     ```
-3. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png)
-4. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
-5. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
+4. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png)
+5. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
+6. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
 
 ## Jockey Agent Architecture
 
