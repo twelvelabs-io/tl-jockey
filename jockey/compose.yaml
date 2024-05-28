@@ -1,0 +1,5 @@
+services:
+  langgraph-api:
+    build: .
+    volumes:
+      - ./public:/api/public
