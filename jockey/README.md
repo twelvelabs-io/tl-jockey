@@ -27,7 +27,7 @@ This is an easy and lightweight way to run an instance of Jockey in your termina
 2. Run the following command:
    
    ```bash
-   python3 jockey_dev_example.py local
+   python3 jockey_dev_example.py
    ```
 
 ### Deploying with the LangGraph API Server
