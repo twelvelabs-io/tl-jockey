@@ -1,36 +1,60 @@
-Certainly! Here's a refined version of the README with improved formatting, structure, and additional clarity:
-
 # Jockey
 
-Jockey is a conversational video agent built on top of [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction) and [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/).
+Jockey is a conversational video agent built on top of the [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction) and [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/).
 
 ## Description
 
 **ATTENTION**: Jockey is in alpha development and may break or behave unexpectedly!
 
-Jockey combines the capabilities of existing Large Language Models (LLMs) with [Twelve Labs' APIs](https://docs.twelvelabs.io/docs/introduction) using [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/). This allows workloads to be allocated to the appropriate foundation models for handling complex video workflows. LLMs are used to logically plan execution steps and interact with users, while video-related tasks are passed to [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction), powered by video-language models (VLMs), to work with video natively, without the need for intermediary representations like pre-generated captions.
+Jockey combines the capabilities of existing Large Language Models (LLMs) with the [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction) using [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/). This allows workloads to be allocated to the appropriate foundation models for handling complex video workflows. LLMs are used to logically plan execution steps and interact with users, while video-related tasks are passed to [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction), powered by video-language models (VLMs), to work with video natively, without the need for intermediary representations like pre-generated captions.
 
 ## Quickstart
 
 ### Dependencies
 
 - [FFMPEG](https://ffmpeg.org/): Must have `ffmpeg` accessible in `$PATH` for the Video Editing worker.
+- [Docker](https://www.docker.com/): Required for running the Jockey API server.
+- [Docker Compose](https://docs.docker.com/compose/): Required for running the Jockey API server.
 - Library Requirements: [requirements.txt](../requirements.txt)
 - Twelve Labs API Key: [Twelve Labs Dashboard](https://dashboard.twelvelabs.io/)
 - LLM Provider API Key
 
-### Running Locally for Development
+### Deploying in the Terminal
 
-1. Modify [jockey.py](jockey.py) with your desired configuration.
+This is an easy and lightweight way to run an instance of Jockey in your terminal. Great for quick testing or validation.
+
+1. Modify [jockey_default_server.py](jockey_default_server.py) with your desired configuration.
 2. Run the following command:
    
    ```bash
-   python3 jockey.py local
+   python3 jockey_dev_example.py local
    ```
+
+### Deploying with the LangGraph API Server
+
+This approach is more suitable for building and testing end-to-end user applications although it is a bit more involved on the configuration side.
+
+1. Modify [langgraph.json](langgraph.json) so that it points to your `.env` file and includes any other dependencies you may need.
+2. Run the following command:
+
+    ```bash
+    langgraph up -c langgraph.json
+    ```
+3. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png)
+4. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
+5. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
 
 ## Jockey Agent Architecture
 
 ![Jockey Architecture](assets/Jockey%20Architecture.jpg)
+
+Jockey consists of three main parts.
+
+1. **Supervisor**: This is the main agent that is responsible for node routing.
+2. **Planner**: The primary purpose of the planner is to created step-by-step plans for complex user requests to to adjust/replan when things don't go as expected.
+3. **Workers**: The worker nodes consist of two components.
+   1. **Instructor**: The goal of the instructor is to generate exact and complete task instructions for a single worker based of the plan created by the Planner.
+   2. **Actual Workers**: The actual workers are agents that ingest the instructions from the instructor and execute them using the tools they have available.
 
 ## Customizing Jockey
 
