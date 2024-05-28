@@ -17,7 +17,7 @@ The selected worker: **{next_worker}** will be one of the following:
 
 3. **video-editing**:
    - Combines provided list of clips together 
-     - Clips are video segments with provided video IDs, start, and end times.
+     - Clips are video segments with provided index IDs, video IDs, start, and end times.
    - Remove segments of already edited video (not raw clips)
    - Cannot perform any other video editing tasks
    - Output is always a filepath of the edited video.
