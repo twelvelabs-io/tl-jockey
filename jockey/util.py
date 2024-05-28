@@ -10,40 +10,45 @@ from rich.json import JSON
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
-CONSOLE = Console()
 
 
-def parse_langserve_events(event: dict):
+def parse_langchain_events_terminal(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
+    console = Console()
+
     if event["event"] == "on_chat_model_stream":
-        content = event["data"]["chunk"].content
+        if isinstance(event["data"]["chunk"], dict):
+            content = event["data"]["chunk"]["content"]
+        else:
+            content = event["data"]["chunk"].content 
+        
         if content and "instructor" in event["tags"]:
-            CONSOLE.print(f"[red]{content}", end="")
+            console.print(f"[red]{content}", end="")
         elif content and "planner" in event["tags"]:
-            CONSOLE.print(f"[yellow]{content}", end="")
+            console.print(f"[yellow]{content}", end="")
         elif content and "supervisor" in event["tags"]:
-            CONSOLE.print(f"[white]{content}", end="")
+            console.print(f"[white]{content}", end="")
     elif event["event"] == "on_tool_start":
         tool = event["name"]
-        CONSOLE.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
-        CONSOLE.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
-        CONSOLE.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
+        console.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
+        console.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
+        console.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
     elif event["event"] == "on_tool_end":
         tool = event["name"]
-        CONSOLE.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
-        CONSOLE.print(Padding(f"[cyan]🏇 Outputs:", (0, 2)))
+        console.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
+        console.print(Padding(f"[cyan]🏇 Outputs:", (0, 2)))
         try:
-            CONSOLE.print(Padding(JSON(event["data"]["output"], indent=2), (1, 6)))
+            console.print(Padding(JSON(event["data"]["output"], indent=2), (1, 6)))
         except (json.decoder.JSONDecodeError, TypeError):
-            CONSOLE.print(Padding(str(event["data"]["output"]), (0, 6)))
+            console.print(Padding(str(event["data"]["output"]), (0, 6)))
     elif event["event"] == "on_chat_model_start":
         if "instructor" in event["tags"]:
-            CONSOLE.print(Padding(f"[red]🏇 Instructor: ", (1, 0)), end="")
+            console.print(Padding(f"[red]🏇 Instructor: ", (1, 0)), end="")
         elif "planner" in event["tags"]:
-            CONSOLE.print(Padding(f"[yellow]🏇 Planner: ", (1, 0)), end="")
+            console.print(Padding(f"[yellow]🏇 Planner: ", (1, 0)), end="")
         elif "reflect" in event["tags"]:
-            CONSOLE.print()
-            CONSOLE.print(f"[cyan]🏇 Jockey: ", end="")
+            console.print()
+            console.print(f"[cyan]🏇 Jockey: ", end="")
 
 
 def get_video_metadata(index_id: str, video_id: str) -> dict:
