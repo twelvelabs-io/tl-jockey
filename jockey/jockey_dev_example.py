@@ -11,6 +11,8 @@ load_dotenv()
 
 async def run_jockey():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
+    # NOTE: The LLMs here are imported from the default server. You should change them there so that
+    # it propagates when using the LangGraph API server.
     jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
 
     console = Console()
