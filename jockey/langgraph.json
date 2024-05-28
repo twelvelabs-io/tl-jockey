@@ -3,5 +3,9 @@
         "jockey": "./jockey_default_server.py:jockey"
     },
     "env": "../.env",
-    "dependencies": ["."]
+    "dependencies": ["."],
+    "dockerfile_lines": [
+        "RUN apt-get update",
+        "RUN apt-get install ffmpeg -y"
+    ]
 }
