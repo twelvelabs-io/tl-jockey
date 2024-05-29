@@ -1,11 +1,8 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import React, { useEffect, useState } from 'react'
-import axios from 'axios'
 import answers from '../../info/answers.json'
 
-import Loading from '../../components/Loading/Loading'
-import AutofillQuestions from '../../components/AutofillQuestions/AutofillQuestions'
 import ChatMessagesList from '../../components/ChatMessagesList/ChatMessagesList'
 import ChatForm from './ChatForm'
 import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
@@ -18,8 +15,7 @@ import { ModalType } from '../../types/messageTypes'
 import { ButtonTypes } from '../../types/buttonTypes'
 import { ErrorBoundary } from 'react-error-boundary'
 import helpersFunctions from '../../helpers/helpers'
-import { useStreamEvents } from '../../apis/hooks'
-import StreamHandler from './StreamHandler'
+import { streamEvents } from '../../apis/streamEventsApis'
 
 interface ErrorFallbackProps {
   error: Error
@@ -35,6 +31,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
   const [state, dispatch] = useChat()
   const {selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = state
   const [streamData, setStreamData] = useState(['']);
+  
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
       dispatch({ type: ActionType.SET_LOADING, payload: true })
@@ -58,45 +55,9 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
           }
         ]
       })
-
-      const includeTypes = ["chat_model"];
-      const includeNames = ["AzureChatOpenAI", "video-search", "download-video", "combine-clips", "remove-segment"];
-      const indexID = process.env.REACT_APP_API_INDEX_ID
       try {
-        const requestData = {
-          input: `Use index id ${indexID} ${inputBox}`,
-          tool_descriptions: {
-            "video-search": " Run a search query against a collection of videos and get results.",
-            "download-video": " Download a video for a given video in a given index and get the filepath. \n    Should only be used when the user explicitly requests video editing functionalities.",
-            "combine-clips": "search tool. The full filepath for the combined clips is returned.",
-            "remove-segment": " Remove a segment from a video at specified start and end times The full filepath for the edited video is returned."
-          },
-          configurable: { session_id: Date.now() },
-          version: "v1",
-          include_types: includeTypes,
-          include_names: includeNames,
-        };
-        fetch('https://twelve-fast-6e09a0ec0080.herokuapp.com/stream_events', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'text/event-stream',
-  },
-  body: JSON.stringify(requestData),
-})
-.then(async response => {
-  StreamHandler({response, ActionType, dispatch, inputBox, setStreamData, arrayMessages})
-})
-.catch(error => {
-  console.error('Error:', error);
-});
-        
-        let jsonObject = JSON.stringify(Response)
-        jsonObject = JSON.parse(jsonObject)
+        streamEvents(ActionType, dispatch, inputBox, setStreamData, arrayMessages)
         dispatch({ type: ActionType.SET_LOADING, payload: false })
-
-        const startIndex = jsonObject.indexOf('text')
-        const endIndex = jsonObject.indexOf('error_code')
-        const extractedText = jsonObject.slice(startIndex + 8, endIndex - 4).trim()
         console.log('here')
       } catch (error) {
         dispatch({ type: ActionType.SET_LOADING, payload: false })

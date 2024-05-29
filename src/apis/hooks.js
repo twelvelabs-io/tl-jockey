@@ -1,7 +1,6 @@
-import axios, { AxiosProgressEvent } from "axios"
-import { UseMutationResult, useMutation, useQuery } from "react-query"
-import API_KEYS from "./apiKeys"
-import { PLAYGROUND_API_URL, CREATE_TASK_URL, CREATE_TASK_WITH_YOUTUBE_URL, API_VERSION } from "./apiEndpoints"
+import axios from "axios"
+import { useQuery } from "react-query"
+import { PLAYGROUND_API_URL, API_VERSION } from "./apiEndpoints"
 import apiConfig from "./apiConfig"
 export const twelveLabsAPI = axios.create({
 	baseURL: `${PLAYGROUND_API_URL}/${API_VERSION}`
@@ -43,25 +42,3 @@ import keys from "./keys";
     });
   }
 
-  export function useStreamEvents(requestData) {
-    return useQuery({
-      queryKey: "streamEvents",
-      queryFn: async () => {
-        try {
-          const response = await fetch(apiConfig.PROXY_SERVER, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/event-stream',
-            },
-            body: JSON.stringify(requestData),
-          });
-          if (!response.ok) {
-            throw new Error(response.statusText);
-          }
-          return response.json();
-        } catch (error) {
-          throw error;
-        }
-      },
-    });
-  }
