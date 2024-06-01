@@ -6,8 +6,8 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import tool
 from typing import Dict, List, Union
 from enum import Enum
-from util import get_video_metadata
-from stirrups.stirrup import Stirrup
+from jockey.util import get_video_metadata
+from jockey.stirrups.stirrup import Stirrup
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 GIST_URL = urllib.parse.urljoin(TL_BASE_URL, "gist/")

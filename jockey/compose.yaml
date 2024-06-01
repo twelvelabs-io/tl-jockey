@@ -1,5 +1,6 @@
 services:
   langgraph-api:
-    build: .
+    working_dir: /deps/__outer_jockey
     volumes:
-      - ./public:/api/public
+      - /Users/traviscouture/Documents/tl-jockey/jockey/public:/deps/jockey/jockey/public
+      - /Users/traviscouture/Documents/tl-jockey/jockey/local_vector_db:/deps/jockey/jockey/local_vector_db

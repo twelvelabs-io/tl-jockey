@@ -1,6 +1,6 @@
 {
     "graphs": {
-        "jockey": "./jockey_default_server.py:jockey"
+        "jockey": "jockey.jockey_default_server:jockey"
     },
     "env": "../.env",
     "dependencies": ["."],

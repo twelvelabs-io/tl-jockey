@@ -3,8 +3,8 @@ import ffmpeg
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict
-from util import download_video
-from stirrups.stirrup import Stirrup
+from jockey.util import download_video
+from jockey.stirrups.stirrup import Stirrup
 
 
 class Clip(BaseModel):

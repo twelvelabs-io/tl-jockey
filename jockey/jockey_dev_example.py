@@ -2,9 +2,9 @@ import uuid
 import asyncio
 from dotenv import load_dotenv
 from rich.console import Console
-from util import parse_langchain_events_terminal
+from jockey.util import parse_langchain_events_terminal
 from langchain_core.messages import HumanMessage
-from jockey_default_server import build_jockey, planner_llm, supervisor_llm, worker_llm
+from jockey.jockey_default_server import build_jockey, planner_llm, supervisor_llm, worker_llm
 
 
 load_dotenv()

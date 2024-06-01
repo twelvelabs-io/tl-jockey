@@ -2,8 +2,8 @@ import os
 from typing import Union
 from langchain_openai import AzureChatOpenAI
 from langchain_openai import ChatOpenAI
-from jockey_graph import build_jockey_graph
-from jockey_graph import Jockey
+from jockey.jockey_graph import build_jockey_graph
+from jockey.jockey_graph import Jockey
 
 
 def build_jockey(

@@ -11,9 +11,9 @@ from langchain_core.runnables import Runnable
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.aiosqlite import AsyncSqliteSaver
-from stirrups.video_search import VideoSearchWorker
-from stirrups.video_text_generation import VideoTextGenerationWorker
-from stirrups.video_editing import VideoEditingWorker
+from jockey.stirrups.video_search import VideoSearchWorker
+from jockey.stirrups.video_text_generation import VideoTextGenerationWorker
+from jockey.stirrups.video_editing import VideoEditingWorker
 
 # TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
 class JockeyState(TypedDict):

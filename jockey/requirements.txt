@@ -10,7 +10,7 @@ httpx-sse==0.4.0
 aiosqlite==0.20.0
 langchain-openai==0.1.7
 langchain==0.2.1
-langgraph==0.0.55
+langgraph==0.0.60
 langgraph-cli==0.1.23
 langgraph-sdk==0.1.11
 openai==1.30.3
