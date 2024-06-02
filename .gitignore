@@ -7,10 +7,6 @@ venv
 *.pyc
 *.langgraph-data
 *.ipynb_checkpoints
-jockey/public
-jockey/vector_db
-jockey/langgraph.json
-jockey/compose.yaml
 jockey/dist
 jockey/build
 *.egg-info

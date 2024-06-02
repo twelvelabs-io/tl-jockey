@@ -1,8 +1,8 @@
 {
     "graphs": {
-        "jockey": "jockey.jockey_default_server:jockey"
+        "jockey": "jockey.app:jockey"
     },
-    "env": "../.env",
+    "env": ".env",
     "dependencies": ["."],
     "dockerfile_lines": [
         "RUN apt-get update && apt-get install -y wget xz-utils",
