@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69.5.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jockey"
+version = "0.0.1"
+description = "Jockey is a conversational video agent."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Travis Couture", email = "travis@twelvelabs.io" }
+]
+urls = { "Homepage" = "https://github.com/twelvelabs-io/tl-jockey/" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "ffmpeg-python==0.2.0",
+    "grequests==0.7.0",
+    "tabulate==0.9.0",
+    "python-dotenv==1.0.1",
+    "rich==13.7.0",
+    "aiosqlite==0.20.0",
+    "langchain-openai==0.1.7",
+    "langchain==0.2.1",
+    "langgraph==0.0.60",
+    "langgraph-cli==0.1.35",
+    "langgraph-sdk==0.1.11",
+    "openai==1.30.3"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["langgraph.json", "compose.yaml", "requirements.txt", "client.ipynb"]
+
+[project.scripts]
+jockey-terminal = "jockey.cli:main"
+# jockey-server = ""

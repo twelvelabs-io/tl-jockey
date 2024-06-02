@@ -7,6 +7,7 @@ from langchain.tools import tool
 from typing import Dict, List, Union
 from enum import Enum
 from jockey.util import get_video_metadata
+from jockey.prompts import DEFAULT_VIDEO_TEXT_GENERATION_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
@@ -144,7 +145,7 @@ async def free_text_generation(video_id: str, index_id: str, prompt: str) -> Dic
 # Construct a valid worker for a Jockey instance.
 video_text_generation_worker_config = {
     "tools": [gist_text_generation, summarize_text_generation, free_text_generation],
-    "worker_prompt_file_path": os.path.join(os.path.dirname(__file__), "..", "prompts", "video_text_generation.md"),
+    "worker_prompt_file_path": DEFAULT_VIDEO_TEXT_GENERATION_FILE_PATH,
     "worker_name": "video-text-generation"
 }
 VideoTextGenerationWorker = Stirrup(**video_text_generation_worker_config)

@@ -1,20 +1,19 @@
 import uuid
 import asyncio
+import sys
+import os
 from dotenv import load_dotenv
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
 from langchain_core.messages import HumanMessage
-from jockey.jockey_default_server import build_jockey, planner_llm, supervisor_llm, worker_llm
+from jockey.app import jockey
 
 
 load_dotenv()
 
-async def run_jockey():
-    """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
-    # NOTE: The LLMs here are imported from the default server. You should change them there so that
-    # it propagates when using the LangGraph API server.
-    jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
-
+async def run_jockey_terminal():
+    """Quickstart function to create a Jockey instance in the terminal for easy dev work.
+    We use the default version of Jockey for this."""
     console = Console()
 
     session_id = uuid.uuid4()
@@ -38,5 +37,5 @@ async def run_jockey():
         console.print()
 
 
-if __name__ == "__main__":
-    asyncio.run(run_jockey())
+def main():
+    asyncio.run(run_jockey_terminal())
