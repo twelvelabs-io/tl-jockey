@@ -35,8 +35,8 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-exclude = ["langgraph.json", "compose.yaml", "requirements.txt", "client.ipynb"]
+exclude = ["requirements.txt", "client.ipynb", ".env"]
 
-[project.scripts]
-jockey-terminal = "jockey.cli:main"
-# jockey-server = ""
+[tool.setuptools.package-data]
+"*" = ["assets/*"]
+jockey = ["prompts/*.md", "config/*", "pyproject.toml"]
