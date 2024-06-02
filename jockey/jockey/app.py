@@ -4,6 +4,7 @@ from langchain_openai import AzureChatOpenAI
 from langchain_openai import ChatOpenAI
 from jockey.jockey_graph import build_jockey_graph
 from jockey.jockey_graph import Jockey
+from jockey.util import check_environment_variables
 
 
 def build_jockey(
@@ -49,6 +50,8 @@ def build_jockey(
 # Also note the class of LLM used for each component.
 # When implementing your own server you can import build_jockey separately or modify this file directly.
 # This allows you to choose your own LLMs.
+check_environment_variables()
+
 planner_llm = supervisor_llm = AzureChatOpenAI(
     deployment_name="gpt-4",
     streaming=True,

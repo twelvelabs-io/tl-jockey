@@ -1,8 +1,10 @@
 import os
+import sys
 import json
 import requests
 import urllib
 import ffmpeg
+from dotenv import find_dotenv, load_dotenv
 from typing import TYPE_CHECKING, Any, Dict, List
 from rich.padding import Padding
 from rich.console import Console
@@ -10,6 +12,20 @@ from rich.json import JSON
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
+REQUIRED_ENVIRONMENT_VARIABLES = set([
+    "TWELVE_LABS_API_KEY",
+    "HOST_PUBLIC_DIR",
+    "HOST_VECTOR_DB_DIR"
+])
+AZURE_ENVIRONMENT_VARIABLES = set([
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_OPENAI_API_KEY",
+    "OPENAI_API_VERSION"
+])
+OPENAI_ENVIRONMENT_VARIABLES = set([
+    "OPENAI_API_KEY"
+])
+ALL_JOCKEY_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES | AZURE_ENVIRONMENT_VARIABLES | OPENAI_ENVIRONMENT_VARIABLES
 
 
 def parse_langchain_events_terminal(event: dict):
@@ -113,3 +129,27 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
             return error_response
 
     return video_path
+
+
+def check_environment_variables():
+    """Check that a .env file contains the required environment variables.
+    Uses the current working directory tree to search for a .env file."""
+    # Assume the .env file is someone on the current working directory tree.
+    load_dotenv(find_dotenv(usecwd=True))
+
+    if len(REQUIRED_ENVIRONMENT_VARIABLES & os.environ.keys()) != 3:
+        missing_environment_variables = REQUIRED_ENVIRONMENT_VARIABLES - os.environ.keys()
+        print(f"Expected the following environment variables:\n\t{str.join(', ', REQUIRED_ENVIRONMENT_VARIABLES)}")
+        print(f"Missing:\n\t{str.join(', ', missing_environment_variables)}")
+        sys.exit("Missing required environment variables.")
+
+    if len(AZURE_ENVIRONMENT_VARIABLES & os.environ.keys()) != 3 and len(OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys()) != 1:
+        missing_azure_environment_variables = AZURE_ENVIRONMENT_VARIABLES - os.environ.keys()
+        missing_openai_environment_variables = OPENAI_ENVIRONMENT_VARIABLES - os.environ.keys()
+        print(f"If using Azure, Expected the following environment variables:\n\t{str.join(', ', AZURE_ENVIRONMENT_VARIABLES)}")
+        print(f"Missing:\n\t{str.join(', ', missing_azure_environment_variables)}")
+
+        print(f"If using Open AI, Expected the following environment variables:\n\t{str.join(', ', OPENAI_ENVIRONMENT_VARIABLES)}")
+        print(f"Missing:\n\t{str.join(', ', missing_openai_environment_variables)}")
+        sys.exit("Missing Azure or Open AI environment variables.")
+

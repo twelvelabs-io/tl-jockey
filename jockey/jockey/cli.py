@@ -1,15 +1,11 @@
 import uuid
-import asyncio
-import sys
 import os
-from dotenv import load_dotenv
+import subprocess
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
 from langchain_core.messages import HumanMessage
 from jockey.app import jockey
 
-
-load_dotenv()
 
 async def run_jockey_terminal():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work.
@@ -36,6 +32,28 @@ async def run_jockey_terminal():
 
         console.print()
 
+def run_jockey_server():
+    """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
+    We use the default version of Jockey for this."""
+    jockey_package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+    langgraph_json_file_path = os.path.join(jockey_package_dir, "langgraph.json")
+    compose_file_path = os.path.join(jockey_package_dir, "compose.yaml")
 
-def main():
-    asyncio.run(run_jockey_terminal())
+    langgraph_cli_command = [
+        "langgraph", 
+        "up", 
+        "-c", langgraph_json_file_path, 
+        "-d", compose_file_path, 
+        "--recreate", 
+        "--verbose"
+    ]
+
+    print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
+
+    with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as process:
+        for line in process.stdout:
+            print(line, end='')
+
+        process.wait()
+        if process.returncode != 0:
+            print(f"Command exited with non-zero status {process.returncode}.")

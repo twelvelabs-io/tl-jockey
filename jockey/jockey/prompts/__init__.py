@@ -1,6 +1,6 @@
 import os
-from jockey import DEFAULT_PROMPTS_DIR
 
+DEFAULT_PROMPTS_DIR = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_INSTRUCTOR_FILE_PATH = os.path.abspath(os.path.join(DEFAULT_PROMPTS_DIR, "instructor.md"))
 DEFAULT_PLANNER_FILE_PATH = os.path.abspath(os.path.join(DEFAULT_PROMPTS_DIR, "planner.md"))
 DEFAULT_SUPERVISOR_FILE_PATH = os.path.abspath(os.path.join(DEFAULT_PROMPTS_DIR, "supervisor.md"))
