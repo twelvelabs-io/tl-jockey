@@ -47,7 +47,7 @@ export const ExtendedPanel:React.FC<ExtendedPanelProps> = ({ toggleWidth }) => {
       const videosLength = videos?.length
 
     return (
-        <div className={`w-[380px] bg-[#F9FAF9] relative overflow-y-auto h-[100vh] border-r-2 border-r-[#E5E6E4] transition-width duration-500 ease-in-out`}>
+        <div className={`w-[380px] bg-[#F9FAF9] relative h-[100vh] border-r-2 border-r-[#E5E6E4] transition-width duration-500 ease-in-out`}>
             <PanelHeader toggleWidth={toggleWidth}/>
             <ErrorBoundary FallbackComponent={ErrorFallback} >
                 {videos ? (

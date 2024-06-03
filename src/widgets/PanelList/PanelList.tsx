@@ -11,7 +11,7 @@ interface PanelListProps {
 
 const PanelList: React.FC<PanelListProps> = ({ videos, refetchVideos }) => {
     return (
-        <div className="overflow-y-auto h-full pl-5 pr-5 flex flex-col gap-4">
+        <div className="overflow-y-auto h-[100vh] pl-5 pr-5 flex flex-col gap-4">
             {videos.map((video: any, index: any) => (
                 <ErrorBoundary FallbackComponent={ErrorFallBack} onReset={refetchVideos}>
                     <Suspense fallback={<FallBackVideoPlaceholder size='small'/>}>
