@@ -2,6 +2,8 @@
 
 Jockey is a conversational video agent built on top of the [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction) and [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/).
 
+Join Twelve Labs' [Multimodal Minds Discord](https://discord.gg/4p9QaBvT6r) server if you have questions or encounter issues when working with Jockey!
+
 ## Description
 
 **ATTENTION**: Jockey is in alpha development and may break or behave unexpectedly!
