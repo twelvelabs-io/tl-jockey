@@ -38,3 +38,7 @@ export enum textsClearModal {
     header = 'Would you like to delete the chat history?',
     body = 'Clearing the chat thread will remove all messages.'
 }
+
+export enum textsModalCentral {
+    linksForNfl = "Credits to the NFL YouTube Channel"
+}

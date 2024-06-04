@@ -5,7 +5,7 @@ import Modal from 'react-bootstrap/Modal'
 import union from '../../../src/icons/union.svg'
 
 import QuestionHeader from './QuestionHeader'
-import { ModalCentralProps } from './ModalTypes'
+import { ModalCentralProps, textsModalCentral } from './ModalTypes'
 import ReactHlsPlayer from 'react-hls-player/dist'
 import Pagination from '../Pagination/Pagination'
 import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
@@ -15,6 +15,8 @@ import ModalClear from './ModalClear'
 import StartNewGroup from '../../widgets/VideoAssistant/StartNewGroup'
 import helpersFunctions from '../../helpers/helpers'
 import useVideoElementEffect from './hooks/useVideoElementEffect'
+import { linksForYoutube } from './helpers/links'
+import ModalLinks from './ModalLinks'
 
 const ModalCentral: React.FC<ModalCentralProps> = ({
   handleClose,
@@ -83,6 +85,8 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
 
   useVideoElementEffect({videoRef, startTime, endTime, videoUrl, showModal})
 
+  const youtubeLinkForClip = modalType === ModalType.PANEL && linksForYoutube[textForModal as keyof typeof linksForYoutube]
+
   return (
     <Modal size="lg" show={showModal} onHide={handleClose} centered scrollable>
     <Modal.Body className={'p-[24px]'}>
@@ -107,7 +111,7 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
           </div>
         </div>
         <div className="flex justify-between items-center flex-row mt-4">
-          <StartNewGroup clearChat={clearChat} colorOfIcon='#B7B9B4' width='14' height='18'/>
+          <ModalLinks className=" flex flex-row gap-2 justify-center items-center cursor-pointer" youtubeLinkForClip={youtubeLinkForClip} />
           {totalIndexes > 1 && 
             <Pagination 
               chosenIndex={chosenIndex as number} 
