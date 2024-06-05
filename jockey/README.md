@@ -17,6 +17,20 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
 - [FFMPEG](https://ffmpeg.org/): Must have `ffmpeg` accessible in `$PATH` for the Video Editing worker.
 - [Docker](https://www.docker.com/): Required for running the Jockey API server.
 - [Docker Compose](https://docs.docker.com/compose/): Required for running the Jockey API server.
+  - Needs to accessible via:
+    
+    ```bash
+    docker compose
+    ```
+
+    Depending on your install method it may only be accessible via:
+
+    ```bash
+    docker-compose
+    ```
+
+    Which can cause issues with the `langgraph-cli`. In such a case, you can install [Docker Desktop](https://www.docker.com/products/docker-desktop/) to easily make the above a valid system command.
+
 - Required Python Packages (For Local Dev): [requirements.txt](requirements.txt)
 - Twelve Labs API Key: [Twelve Labs Dashboard](https://dashboard.twelvelabs.io/)
 - LLM Provider API Key (Currently Azure or Open AI only)
@@ -47,7 +61,13 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
     source venv/bin/activate
     ```
 
-6. Create your `.env` file and add the correct variables:
+6. Install Python package requirements:
+
+    ```bash
+    pip3 install -r requirements.txt
+    ```
+
+7. Create your `.env` file and add the correct variables:
 
     ```toml
     AZURE_OPENAI_ENDPOINT=<IF USING AZURE GPTs>
@@ -59,7 +79,7 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
     HOST_VECTOR_DB_DIR=<VOLUME MOUNTED TO LANGGRAPH API SERVER CONTAINER WHERE VECTOR DB GOES>
     ```
 
-    Make sure you `.env` file is in the directory tree of the outer `jockey` directory.
+    Make sure your `.env` file is in the directory tree of the outer `jockey` directory.
 
 ### Deploying in the Terminal
 
