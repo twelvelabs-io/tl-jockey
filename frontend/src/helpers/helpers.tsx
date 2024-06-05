@@ -72,6 +72,54 @@ const helpersFunctions = {
         dispatch({ type: ActionType.SET_CHOOSED_ELEMENT, payload: [ indexOfElementInArray, index ] })
         dispatch({ type: ActionType.SET_SHOW_MODAL, payload: true })
       },
+
+    processChunk: async (chunkValue: string, accumulatedContent: string, dispatch: Dispatch<any>, inputBox: string, setStreamData:any, jsonData:any, arrayMessages:any) =>  {
+        if (!chunkValue.startsWith('Running =>')) {
+          accumulatedContent += chunkValue
+        }
+        console.log(accumulatedContent)
+        const jsonStartIndex =accumulatedContent.indexOf('[');
+        const jsonEndIndex = accumulatedContent.lastIndexOf(']');
+        let accumulatedContentWithoutJSON = accumulatedContent.replace(/\[.*\]/s, '')
+        if (chunkValue.startsWith('Running =>')) {
+          dispatch({
+            type: ActionType.SET_STATUS_MESSAGES,
+            payload: [chunkValue],
+          });
+        }
+        dispatch({
+          type: ActionType.CHANGE_ARRAY_MESSAGE,
+          payload: [
+            {
+              sender: 'ai',
+              text: accumulatedContentWithoutJSON,
+              link: '',
+              linkText: '',
+              twelveText: accumulatedContentWithoutJSON,
+              asrTest: '',
+              lameText: '',
+              question: inputBox
+            }
+          ]
+        });
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonStartIndex < jsonEndIndex) {
+          const jsonChunk = accumulatedContent.substring(jsonStartIndex, jsonEndIndex + 1);
+          try {
+            setStreamData((prevData: any) => [...prevData, chunkValue]);
+            jsonData = JSON.parse(jsonChunk);
+            console.log(arrayMessages)
+            console.log('Parsed JSON data:', jsonData);
+            dispatch({
+              type: ActionType.ADD_TOOLS_DATA_TO_LAST_ELEMENT,
+              payload: jsonData
+            });
+          } catch (error) {
+            console.error('Error parsing JSON:', error);
+          }
+        } 
+        console.log("Received chunk:", chunkValue);
+        console.log("Accumulated content:", accumulatedContent);
+      }
   };
   
 export default helpersFunctions;
