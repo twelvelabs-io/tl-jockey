@@ -108,7 +108,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
 
     hls_uri = response.json()["hls"]["video_url"]
 
-    video_dir = os.path.join(os.getcwd(), "public", index_id)
+    video_dir = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id)
 
     if os.path.isdir(video_dir) is False:
         os.mkdir(video_dir)

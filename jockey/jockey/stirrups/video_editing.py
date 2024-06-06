@@ -41,7 +41,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             video_id = clip.video_id
             start = clip.start
             end = clip.end
-            video_filepath = os.path.join(os.getcwd(), "public", index_id, f"{video_id}_{start}_{end}.mp4")
+            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
 
             if os.path.isfile(video_filepath) is False:
                 try:
@@ -62,7 +62,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             input_streams.append(clip_video_input_stream)
             input_streams.append(clip_audio_input_stream)
 
-        output_filepath = os.path.join(os.getcwd(), "public", index_id, output_filename)
+        output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
         ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, acodec="libmp3lame").overwrite_output().run()
 
         return output_filepath

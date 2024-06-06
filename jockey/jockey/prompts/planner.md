@@ -33,3 +33,4 @@ There are the workers that the supervisor has access to:
 5. Steps must be complete will all relevant context for the worker.
 6. An instructor will processor your plan to send targeted instructions to each worker.
 7. DO NOT add extra steps
+8. Make your response as short as possible.
