@@ -1,13 +1,16 @@
-*venv/*
-*.vscode/*
+
+*venv
 *.mp4
 *.mp3
-.env
-.vscode
-.DS_Store
-__pycache__
-testing.ipynb
+*.vscode
+*.DS_Store
+*/__pycache__
 *.pyc
+*.langgraph-data
+*.ipynb_checkpoints
+jockey/dist
+jockey/build
+*.egg-info
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
@@ -28,7 +31,7 @@ testing.ipynb
 /build
 
 # misc
-*.DS_Store
+.DS_Store
 .env.local
 .env.development.local
 .env.test.local

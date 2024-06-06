@@ -1,0 +1,5 @@
+services:
+  langgraph-api:
+    volumes:
+      - ${HOST_PUBLIC_DIR}:/var/www/jockey/public
+      - ${HOST_VECTOR_DB_DIR}:/var/lib/jockey/vector_db
