@@ -1,0 +1,85 @@
+{
+  "name": "chat",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@magicul/react-chat-stream": "^0.3.1",
+    "@mui/icons-material": "^5.15.1",
+    "@mui/material": "^5.15.2",
+    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/react": "^13.0.0",
+    "@testing-library/user-event": "^13.2.1",
+    "@types/jest": "^27.0.1",
+    "@types/node": "^16.7.13",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.0.0",
+    "axios": "^1.6.2",
+    "bootstrap": "^5.3.2",
+    "browserify-zlib": "^0.2.0",
+    "cors": "^2.8.5",
+    "eslint": "^8.0.1",
+    "firebase": "^10.5.2",
+    "framer-motion": "^10.16.16",
+    "lodash": "^4.17.21",
+    "material-icons": "^1.13.12",
+    "multer": "^1.4.5-lts.1",
+    "node-polyfill-webpack-plugin": "^3.0.0",
+    "react": "18.0.0",
+    "react-bootstrap": "^2.9.1",
+    "react-dom": "18.0.0",
+    "react-dropzone": "^14.2.3",
+    "react-error-boundary": "^4.0.13",
+    "react-hls-player": "^3.0.7",
+    "react-loading-skeleton": "^3.4.0",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.21.0",
+    "react-scripts": "5.0.1",
+    "react-select": "^5.8.0",
+    "recoil": "^0.7.7",
+    "rxjs": "^7.8.1",
+    "typescript": "^5.3.3",
+    "web-vitals": "^2.1.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.202",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "autoprefixer": "^10.4.16",
+    "buffer": "^6.0.3",
+    "eslint-config-standard-with-typescript": "^39.1.1",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^15.0.0 || ^16.0.0 ",
+    "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-react": "^7.33.2",
+    "postcss": "^8.4.31",
+    "process": "^0.11.10",
+    "react-app-rewired": "^2.2.1",
+    "tailwindcss": "^3.3.5"
+  }
+}

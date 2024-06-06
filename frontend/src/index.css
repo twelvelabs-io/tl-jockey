@@ -1,0 +1,333 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.btn-primary-new {
+    @apply bg-none border-0 p-0 font-bold text-sm text-[#006F33] cursor-pointer font-aeonikBold disabled:pointer-events-none;
+  }
+
+.btn-primary-submit {
+    @apply overflow-hidden cursor-pointer bg-[#9AED59] h-12 border-0 shadow-sm font-medium text-[16px] w-32 font-aeonikBold;
+  }
+
+  
+
+@font-face {
+  font-family: 'Aeonik'; /* Choose a name for your font family */
+  src: url('./fonts/AeonikTRIAL-Regular.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'AeonikBold'; /* Choose a name for your font family */
+  src: url('./fonts/AeonikTRIAL-Bold.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'DentonBold'; /* Choose a name for your font family */
+  src: url('./fonts/Denton-Bold.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'DentonLight'; /* Choose a name for your font family */
+  src: url('./fonts/Denton-Light.otf') format('opentype');
+}
+
+.aeonik-font {
+  font-family: 'Aeonik', sans-serif; /* Use your custom font or a fallback font */
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+:root {
+  --TL-Grey-300: #D4D5D2 ;
+  --TL-Green-300: #C3F49C;
+}
+
+.userBubble {
+  padding-top: 12px;
+  align-self: flex-end; 
+  max-width: 40vw;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  font-family: 'Aeonik';
+}
+
+/* AI chat bubble style */
+.aiBubble {
+  color: #333; 
+  font-weight: 400;
+  font-size: 16px;
+  padding-top: 12px;
+  align-self: flex-start; 
+  max-width: 40vw;
+  line-height: 24px;
+  font-family: 'Aeonik';
+}
+
+.bouncing-loader {
+  display: flex;
+  justify-content: center;
+}
+
+.bouncing-loader > div {
+  width: 12px;
+  height: 12px;
+  margin: 3px 6px;
+  border-radius: 50%;
+  background-color: 
+  #9AED59;
+  opacity: 1;
+  animation: bouncing-loader 0.6s infinite alternate;
+}
+
+.disappearing-loader {
+  display: flex;
+  justify-content: center;
+}
+
+.disappearing-loader > div {
+  width: 12px;
+  height: 12px;
+  margin: 3px 6px;
+  border-radius: 50%;
+  background-color: #9AED59;
+  opacity: 0; /* Initially set opacity to 0 */
+  animation: disappearing-loader 1.2s infinite; /* Remove 'alternate' for simple disappearance and appearance */
+}
+
+.dot-pulse {
+  position: relative;
+  left: -9999px;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color:   #9AED59;
+  color:  #9AED59;
+  box-shadow: 9999px 0 0 -5px;
+  animation: dot-pulse 1.5s infinite linear;
+  animation-delay: 0.25s;
+}
+.dot-pulse::before, .dot-pulse::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 5px;
+  background-color:  #9AED59;
+  color:  #9AED59;
+}
+.dot-pulse::before {
+  box-shadow: 9984px 0 0 -5px;
+  animation: dot-pulse-before 1.5s infinite linear;
+  animation-delay: 0s;
+}
+.dot-pulse::after {
+  box-shadow: 10014px 0 0 -5px;
+  animation: dot-pulse-after 1.5s infinite linear;
+  animation-delay: 0.5s;
+}
+
+@keyframes dot-pulse-before {
+  0% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9984px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 9984px 0 0 -5px;
+  }
+}
+@keyframes dot-pulse {
+  0% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 9999px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 9999px 0 0 -5px;
+  }
+}
+@keyframes dot-pulse-after {
+  0% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+  30% {
+    box-shadow: 10014px 0 0 2px;
+  }
+  60%, 100% {
+    box-shadow: 10014px 0 0 -5px;
+  }
+}
+
+@keyframes disappearing-loader {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.disappearing-loader > div:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.disappearing-loader > div:nth-child(3) {
+  animation-delay: 0.8s;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+@keyframes bouncing-loader {
+  to {
+    opacity: 0.1;
+    transform: translateY(-16px);
+  }
+}
+
+.bouncing-loader > div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.bouncing-loader > div:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.custom-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.custom-selector option:checked {
+  background-color: green;
+  color: white; 
+}
+
+.custom-arrow {
+  position: relative;
+  right: 24px; 
+  transform: translateX(-50%); 
+  pointer-events: none;
+  border: 1px solid #D4D5D2
+}
+
+.custom-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.custom-modal-messages {
+  overflow: auto; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-modal .modal-dialog {
+  max-width: 60%;
+  max-height: 60%;
+}
+
+.custom-modal-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.custom-modal-clear .modal-dialog {
+  max-width: 470px;
+  max-height: 190px;
+}
+
+.clear-button {
+  width: 69px;
+  height: 40px
+}
+
+.error-button {
+  background-color: #F44336;
+  width: 72px;
+  height: 40px;
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease-in-out;
+}
+
+.truncate-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
