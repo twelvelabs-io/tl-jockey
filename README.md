@@ -23,13 +23,13 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
     docker compose
     ```
 
-    Depending on your install method it may only be accessible via:
+    Depending on your install method it may only be accessible with:
 
     ```bash
     docker-compose
     ```
 
-    Which can cause issues with the `langgraph-cli`. In such a case, you can install [Docker Desktop](https://www.docker.com/products/docker-desktop/) to easily make the above a valid system command.
+    which can cause issues with the `langgraph-cli`. In such a case, you can install [Docker Desktop](https://www.docker.com/products/docker-desktop/) to easily make the above a valid system command.
 
 - Required Python Packages (For Local Dev): [requirements.txt](requirements.txt)
 - Twelve Labs API Key: [Twelve Labs Dashboard](https://dashboard.twelvelabs.io/)
@@ -44,10 +44,10 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
     git clone https://github.com/twelvelabs-io/tl-jockey.git
     ```
 
-3. Go into the outer jockey directory: 
+3. Enter the `tl-jockey` directory: 
 
     ```bash
-    cd tl-jockey/jockey
+    cd tl-jockey
     ```
 4. Create a virtual environment: 
 
@@ -74,37 +74,63 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
     AZURE_OPENAI_API_KEY=<IF USING AZURE GPTs>
     OPENAI_API_VERSION=<IF USING AZURE GPTs>
     OPENAI_API_KEY=<IF USING OPEN AI GPTs>
+    # Determines which Langchain classes are used to construct Jockey LLM instances.
+    LLM_PROVIDER=<MUST BE ONE OF [AZURE, OPENAI]>
     TWELVE_LABS_API_KEY=<YOUR TWELVE LABS API KEY>
+    # This variable is used to persist and make rendered video servable from within the LangGraph API container.
+    # Please make sure this directory exists on the host machine.
+    # Please make sure this directory is available as a File Sharing resource in Docker For Mac.
     HOST_PUBLIC_DIR=<VOLUME MOUNTED TO LANGGRAPH API SERVER CONTAINER WHERE RENDERED VIDEOS GO>
+    # This variable is a placeholder that will be used by an upcoming Jockey core worker it currently doesn't impact anything.
+    # Please make sure this directory exists on the host machine.
+    # Please make sure this directory is available as a File Sharing resource in Docker For Mac.
     HOST_VECTOR_DB_DIR=<VOLUME MOUNTED TO LANGGRAPH API SERVER CONTAINER WHERE VECTOR DB GOES>
     ```
 
-    Make sure your `.env` file is in the directory tree of the outer `jockey` directory.
+    Make sure your `.env` file is somewhere in the directory tree of the `tl-jockey` directory.
 
 ### Deploying in the Terminal
 
 This is an easy and lightweight way to run an instance of Jockey in your terminal. Great for quick testing or validation during local dev work.
 
-1. Modify [app.py](jockey/app.py) with your desired configuration.
-2. Run the following command from the outer `jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
+1. Modify [app.py](jockey/app.py) with your desired configuration. By default it is set up with `AzureChatOpenAI` instances but you MUST change them to `ChatOpenAI` instances if you want to use your API key from Open AI.
+2. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
    
    ```bash
    python3 -m jockey terminal
    ```
 
+![Jockey Terminal Startup](assets/jockey_terminal_startup.png)
+3. Currently, Jockey requires an Index ID (and in some cases a Video ID) are supplied as part of the conversation history. You are free to modify how this is handled. An example of an initial prompt might be something like:
+
+    Use index 65f747a50db0463b8996bde2. I'm trying to create a funny video focusing on Gordon Ramsay. Can you find 3 clips of Gordon yelling at his chefs about scrambled eggs and then a final clip where Gordon bangs his head on a table. After you find all those clips, lets edit them together into one video.
+
+Since the Index ID is now stored as part of the conversation history, subsequent requests utilizing the same Index ID do not need to explicitly include it as part of the prompt (assuming some reference to the Index ID is still within the context window. For example we could now use the following as a prompt:
+
+    This is awesome but the last clip is too long. Lets shorten the last clip where Gordon hits his head on the table by making it start one second later. Then combine all the clips into a single video again.
+
+### Debugging In The Terminal
+
+The terminal version of Jockey is designed to be a lightweight way to do dev work and have fairly decent access to useful levels of information for debugging. For example, if we take the Gordon Ramsay prompt we used earlier we would see this intermediary output:
+
+![Jockey Terminal Debugging Example](assets/jockey_terminal_debugging_example.png)
+
+As you can see we get the output from all of the individual components of Jockey even including the inputs and outputs to tool calls. This debugging is handled by the [parse_langchain_events_terminal()](jockey/util.py#L31) function and relies on event names and component tags to decide how to parse incoming events. You can modify this code to suite your needs if you need additional information exposed in the terminal. Please note that the tags for the individual components are set in [app.py](jockey/app.py).
+
 ### Deploying with the LangGraph API Server
 
 This approach is more suitable for building and testing end-to-end user applications although it takes longer to build.
 
-1. Run the following command from the outer `jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
+1. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
 
     ```bash
     python3 -m jockey server
     ```
 
 2. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png) `jockey` should appear under "Assistants"
-3. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
-4. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
+3. If you click on `jockey` another panel will open and you can click `New Thread` to step into your running Jockey instance!
+4. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
+5. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
 
 ## Jockey Agent Architecture
 
