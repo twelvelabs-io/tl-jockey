@@ -15,7 +15,7 @@ INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 REQUIRED_ENVIRONMENT_VARIABLES = set([
     "TWELVE_LABS_API_KEY",
     "HOST_PUBLIC_DIR",
-    "HOST_VECTOR_DB_DIR"
+    "LLM_PROVIDER"
 ])
 AZURE_ENVIRONMENT_VARIABLES = set([
     "AZURE_OPENAI_ENDPOINT",
@@ -137,13 +137,14 @@ def check_environment_variables():
     # Assume the .env file is someone on the current working directory tree.
     load_dotenv(find_dotenv(usecwd=True))
 
-    if len(REQUIRED_ENVIRONMENT_VARIABLES & os.environ.keys()) != 3:
+    if REQUIRED_ENVIRONMENT_VARIABLES & os.environ.keys() != REQUIRED_ENVIRONMENT_VARIABLES:
         missing_environment_variables = REQUIRED_ENVIRONMENT_VARIABLES - os.environ.keys()
         print(f"Expected the following environment variables:\n\t{str.join(', ', REQUIRED_ENVIRONMENT_VARIABLES)}")
         print(f"Missing:\n\t{str.join(', ', missing_environment_variables)}")
         sys.exit("Missing required environment variables.")
 
-    if len(AZURE_ENVIRONMENT_VARIABLES & os.environ.keys()) != 3 and len(OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys()) != 1:
+    if AZURE_ENVIRONMENT_VARIABLES & os.environ.keys() != AZURE_ENVIRONMENT_VARIABLES and \
+        OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys() != OPENAI_ENVIRONMENT_VARIABLES:
         missing_azure_environment_variables = AZURE_ENVIRONMENT_VARIABLES - os.environ.keys()
         missing_openai_environment_variables = OPENAI_ENVIRONMENT_VARIABLES - os.environ.keys()
         print(f"If using Azure, Expected the following environment variables:\n\t{str.join(', ', AZURE_ENVIRONMENT_VARIABLES)}")

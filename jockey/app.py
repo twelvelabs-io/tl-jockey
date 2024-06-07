@@ -1,9 +1,8 @@
 import os
+import sys
 from typing import Union
-from langchain_openai import AzureChatOpenAI
-from langchain_openai import ChatOpenAI
-from jockey.jockey_graph import build_jockey_graph
-from jockey.jockey_graph import Jockey
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
+from jockey.jockey_graph import Jockey, build_jockey_graph
 from jockey.util import check_environment_variables
 
 
@@ -52,29 +51,55 @@ def build_jockey(
 # This allows you to choose your own LLMs.
 check_environment_variables()
 
-planner_llm = supervisor_llm = AzureChatOpenAI(
-    deployment_name="gpt-4",
-    streaming=True,
-    temperature=0,
-    model_version="1106-preview",
-    tags=["planner"]
-)
 
-supervisor_llm = AzureChatOpenAI(
-    deployment_name="gpt-4",
-    streaming=True,
-    temperature=0,
-    model_version="1106-preview",
-    tags=["supervisor"]
-)
+if os.environ["LLM_PROVIDER"] == "AZURE":
+    planner_llm = AzureChatOpenAI(
+        deployment_name="gpt-4",
+        streaming=True,
+        temperature=0,
+        model_version="1106-preview",
+        tags=["planner"]
+    )
 
-worker_llm = AzureChatOpenAI(
-    deployment_name="gpt-35-turbo-16k",
-    streaming=True,
-    temperature=0,
-    model_version="0613",
-    tags=["worker"]
-)
+    supervisor_llm = AzureChatOpenAI(
+        deployment_name="gpt-4",
+        streaming=True,
+        temperature=0,
+        model_version="1106-preview",
+        tags=["supervisor"]
+    )
+
+    worker_llm = AzureChatOpenAI(
+        deployment_name="gpt-35-turbo-16k",
+        streaming=True,
+        temperature=0,
+        model_version="0613",
+        tags=["worker"]
+    )
+elif os.environ["LLM_PROVIDER"] == "OPENAI":
+    planner_llm = ChatOpenAI(
+        model="gpt-4o",
+        streaming=True,
+        temperature=0,
+        tags=["planner"]
+    )
+
+    supervisor_llm = ChatOpenAI(
+        model="gpt-4o",
+        streaming=True,
+        temperature=0,
+        tags=["supervisor"]
+    )
+
+    worker_llm = ChatOpenAI(
+        model="gpt-3.5-turbo-0125",
+        streaming=True,
+        temperature=0,
+        tags=["worker"]
+    )
+else:
+    print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
+    sys.exit("Incorrect LLM_PROVIDER environment variable.")
 
 # This variable is what is used by the LangGraph API server.
 jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
