@@ -107,6 +107,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     assert response.status_code == 200
 
     hls_uri = response.json()["hls"]["video_url"]
+    video_duration = response.json()["metadata"]["duration"]
 
     video_dir = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id)
 
@@ -119,7 +120,18 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     if os.path.isfile(video_path) is False:
         try:
             duration = end - start
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="verbose", ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
+            # Account for issues in seeking and downloading HLS.
+            if duration <= 5:
+                temp_start = max(0, (start - 5))
+                temp_duration = min(video_duration, duration + 10)
+                temp_start_seek = start - temp_start
+                temp_file = video_filename = f"{video_id}_temp.mp4"
+                temp_path = os.path.join(video_dir, temp_file)
+                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="verbose", ss=temp_start).output(temp_path, vcodec="copy", acodec="copy", reset_timestamps=1, t=temp_duration).run()
+                # Re-encode to avoid issues.
+                ffmpeg.input(filename=temp_path, strict="experimental", loglevel="verbose", ss=temp_start_seek).output(video_path, vcodec="libx264", acodec="libmp3lame", t=duration, strict="experimental", movflags='+faststart').run()
+            else: 
+                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="verbose", ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
         except Exception as error:
             error_response = {
                 "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
