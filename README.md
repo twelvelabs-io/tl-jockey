@@ -93,7 +93,7 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
 
 This is an easy and lightweight way to run an instance of Jockey in your terminal. Great for quick testing or validation during local dev work.
 
-[Terminal Example Jockey Video Walkthrough](https://www.loom.com/share/72c64749c3ca473eaeaf6e4643ca2621?sid=2da9db70-d1f8-4778-a8c9-f9eb65b6693d)
+[Terminal Example Jockey Video Walkthrough](https://www.loom.com/share/91f9745affbc4967b0f0d502c073d6a7?sid=344ad4e3-809f-489f-aaea-4798e30ccc50)
 
 1. Modify your `.env` file with your desired configuration for an LLM provider.
 2. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
@@ -138,7 +138,7 @@ This approach is more suitable for building and testing end-to-end user applicat
 
 ![Jockey Architecture](assets/jockey_architecture.jpg)
 
-[Jockey Architecture Walkthrough Video](https://www.loom.com/share/91f9745affbc4967b0f0d502c073d6a7?sid=aedd1601-f072-4ba0-b4c2-2331050ffb41)
+[Jockey Architecture Walkthrough Video](https://www.loom.com/share/72c64749c3ca473eaeaf6e4643ca2621?sid=57dca306-35a3-4a04-9576-ceb9ddbc7c60)
 
 Jockey consists of three main parts.
 
