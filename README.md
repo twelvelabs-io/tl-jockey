@@ -93,7 +93,9 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
 
 This is an easy and lightweight way to run an instance of Jockey in your terminal. Great for quick testing or validation during local dev work.
 
-1. Modify [app.py](jockey/app.py) with your desired configuration. By default it is set up with `AzureChatOpenAI` instances but you MUST change them to `ChatOpenAI` instances if you want to use your API key from Open AI.
+[Terminal Example Jockey Video Walkthrough](https://www.loom.com/share/72c64749c3ca473eaeaf6e4643ca2621?sid=2da9db70-d1f8-4778-a8c9-f9eb65b6693d)
+
+1. Modify your `.env` file with your desired configuration for an LLM provider.
 2. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
    
    ```bash
@@ -135,6 +137,8 @@ This approach is more suitable for building and testing end-to-end user applicat
 ## Jockey Agent Architecture
 
 ![Jockey Architecture](assets/jockey_architecture.jpg)
+
+[Jockey Architecture Walkthrough Video](https://www.loom.com/share/91f9745affbc4967b0f0d502c073d6a7?sid=aedd1601-f072-4ba0-b4c2-2331050ffb41)
 
 Jockey consists of three main parts.
 
