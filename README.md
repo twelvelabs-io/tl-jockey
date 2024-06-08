@@ -129,6 +129,8 @@ This approach is more suitable for building and testing end-to-end user applicat
     python3 -m jockey server
     ```
 
+[LangGraph Debugger UI Walkthrough](https://www.loom.com/share/9b7594df37294edcaed31a4b2d901d7b?sid=28a9019d-0ac4-4ca6-a874-d334e2ab1221)
+
 2. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png) `jockey` should appear under "Assistants"
 3. If you click on `jockey` another panel will open and you can click `New Thread` to step into your running Jockey instance!
 4. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
