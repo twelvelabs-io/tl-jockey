@@ -7,19 +7,19 @@ from jockey.util import check_environment_variables
 
 
 def build_jockey(
-        planner_llm: Union[AzureChatOpenAI | ChatOpenAI], 
-        supervisor_llm: Union[AzureChatOpenAI | ChatOpenAI], 
-        worker_llm: Union[AzureChatOpenAI | ChatOpenAI]) -> Jockey:
+        planner_llm: Union[AzureChatOpenAI, ChatOpenAI], 
+        supervisor_llm: Union[AzureChatOpenAI, ChatOpenAI], 
+        worker_llm: Union[AzureChatOpenAI, ChatOpenAI]) -> Jockey:
     """Convenience function for standing up a local Jockey instance for dev work. 
 
     Args:
-        planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        planner_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
 
-        supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        supervisor_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
-        worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        worker_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
 
     Returns:

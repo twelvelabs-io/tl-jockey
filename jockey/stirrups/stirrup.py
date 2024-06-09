@@ -49,11 +49,11 @@ class Stirrup(BaseModel):
 
         return tool_calls
    
-    def build_worker(self, worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Runnable:
+    def build_worker(self, worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Runnable:
         """Build a useable worker for a Jockey instance.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            worker_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
                 The LLM used for the worker node. It is recommended this be a GPT-3.5 class LLM or better. 
 
         Raises:

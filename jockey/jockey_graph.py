@@ -30,34 +30,34 @@ class Jockey(StateGraph):
     supervisor: Runnable
     router: Dict
     planner_prompt: str
-    planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
+    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
     supervisor_prompt: str
-    supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
-    worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
+    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
+    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
     worker_instructor: Runnable
 
     def __init__(self, 
-                 planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                 planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
                  planner_prompt: str,
-                 supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
+                 supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI], 
                  supervisor_prompt: str,
-                 worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> None:
+                 worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
         Args:
-            planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            planner_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
                 The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
             planner_prompt (str): 
                 String version of the system prompt for the planner.
 
-            supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            supervisor_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
                 The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
             supervisor_prompt (str): 
                 String version of the system prompt for the supervisor.
 
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+            worker_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
                 The LLM used for the worker nodes. It is recommended this be a GPT-3.5 class LLM or better.
         """
         
@@ -79,7 +79,7 @@ class Jockey(StateGraph):
         """Builds the core workers that are managed and called by the supervisor.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            worker_llm (Union[BaseChatOpenAI, AzureChatOpenAI]):
                 The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.
@@ -308,26 +308,26 @@ class Jockey(StateGraph):
 
     
 def build_jockey_graph(planner_prompt: str,
-                       planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                       planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
                        supervisor_prompt: str,
-                       supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Jockey:
+                       supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI], 
+                       worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Jockey:
     """Convenience function for creating an instance of Jockey.
 
     Args:
         planner_prompt (str): 
             String version of the system prompt for the planner.
 
-        planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        planner_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
 
         supervisor_prompt (str): 
             String version of the system prompt for the supervisor.
 
-        supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        supervisor_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
-        worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
+        worker_llm (Union[BaseChatOpenAI, AzureChatOpenAI]): 
             The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
 
     Returns:
