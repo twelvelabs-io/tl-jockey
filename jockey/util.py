@@ -116,7 +116,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
 
     video_filename = f"{video_id}_{start}_{end}.mp4"
     video_path = os.path.join(video_dir, video_filename)
-
+    log_level='error'
     if os.path.isfile(video_path) is False:
         try:
             duration = end - start
@@ -127,11 +127,12 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
                 temp_start_seek = start - temp_start
                 temp_file = video_filename = f"{video_id}_temp.mp4"
                 temp_path = os.path.join(video_dir, temp_file)
-                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="verbose", ss=temp_start).output(temp_path, vcodec="copy", acodec="copy", reset_timestamps=1, t=temp_duration).run()
+                
+                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel=log_level, ss=temp_start).output(temp_path, vcodec="copy", acodec="copy", reset_timestamps=1, t=temp_duration).run()
                 # Re-encode to avoid issues.
-                ffmpeg.input(filename=temp_path, strict="experimental", loglevel="verbose", ss=temp_start_seek).output(video_path, vcodec="libx264", acodec="libmp3lame", t=duration, strict="experimental", movflags='+faststart').run()
+                ffmpeg.input(filename=temp_path, strict="experimental", loglevel=log_level, ss=temp_start_seek).output(video_path, vcodec="libx264", acodec="libmp3lame", t=duration, strict="experimental", movflags='+faststart').run()
             else: 
-                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="verbose", ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
+                ffmpeg.input(filename=hls_uri, strict="experimental", loglevel=log_level, ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
         except Exception as error:
             error_response = {
                 "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "

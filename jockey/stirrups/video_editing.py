@@ -29,18 +29,18 @@ class RemoveSegmentInput(BaseModel):
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
-
-@tool("combine-clips", args_schema=CombineClipsInput)
-def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str:
+'''
+#@tool("combine-clips", args_schema=CombineClipsInput)
+async def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str:
     """Combine or edit multiple clips together based on their start and end times and video IDs. 
     The full filepath for the combined clips is returned."""
     try:
         input_streams = []
-
+        log_level="error"
         for clip in clips:
-            video_id = clip.video_id
-            start = clip.start
-            end = clip.end
+            video_id = clip['video_id']
+            start = clip['start']
+            end = clip['end']
             video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
 
             if os.path.isfile(video_filepath) is False:
@@ -54,8 +54,10 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
                     }
                     return error_response
 
-            clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="verbose").video
-            clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="verbose").audio
+            #clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="verbose").video
+            #clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="verbose").audio
+            clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).video
+            clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).audio
             clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
             clip_audio_input_stream = clip_audio_input_stream.filter("asetpts", "PTS-STARTPTS")
             
@@ -63,7 +65,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             input_streams.append(clip_audio_input_stream)
 
         output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
-        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, acodec="libmp3lame", loglevel="verbose").overwrite_output().run()
+        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, vcodec="libx264", acodec="libmp3lame", loglevel=log_level).overwrite_output().run()
 
         return output_filepath
     except Exception as error:
@@ -74,6 +76,57 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
         }
         return error_response
 
+'''
+async def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str:
+    """Combine or edit multiple clips together based on their start and end times and video IDs.
+    The full filepath for the combined clips is returned."""
+    try:
+        log_level="error"
+        input_streams = []
+        target_resolution = (1280, 720)
+
+        for clip in clips:
+            video_id = clip['video_id']
+            start = clip['start']
+            end = clip['end']
+            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
+
+            if not os.path.isfile(video_filepath):
+                try:
+                    download_video(video_id=video_id, index_id=index_id, start=start, end=end)
+                except AssertionError as error:
+                    error_response = {
+                        "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
+                                   "Double check that the Video ID and Index ID are valid and correct.",
+                        "error": str(error)
+                    }
+                    return error_response
+
+            video_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).video
+            audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).audio
+            video_input_stream = (
+                video_input_stream
+                .filter("scale", target_resolution[0], target_resolution[1])
+                .filter("setsar", "1/1")
+                .filter("setpts", "PTS-STARTPTS")
+            )
+            #
+            audio_input_stream = audio_input_stream.filter("asetpts", "PTS-STARTPTS")
+
+            input_streams.append(video_input_stream)
+            input_streams.append(audio_input_stream)
+
+        output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
+        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, vcodec="libx264", acodec="libmp3lame", loglevel=log_level).overwrite_output().run()
+
+        return output_filepath
+    except Exception as error:
+        print(error)
+        error_response = {
+            "message": "There was a video editing error.",
+            "error": str(error)
+        }
+        return error_response
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
 def remove_segment(video_filepath: str, start: float, end: float) -> str:
@@ -94,7 +147,8 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
 
 # Construct a valid worker for a Jockey instance.
 video_editing_worker_config = {
-    "tools": [combine_clips, remove_segment],
+    #"tools": [combine_clips, remove_segment],
+    "tools": [ remove_segment],
     "worker_prompt_file_path": DEFAULT_VIDEO_EDITING_FILE_PATH,
     "worker_name": "video-editing"
 }
