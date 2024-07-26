@@ -30,7 +30,7 @@ class MarengoSearchInput(BaseModel):
     """Help to ensure the video-search worker provides valid arguments to any tool it calls."""
     query: str | dict = Field(description="Search query to run on a collection of videos.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    top_n: int = Field(description="Get the top N clips or videos as search results.", gt=0, le=10, default=3)
+    top_n: int = Field(description="Get the top N clips or videos as search results.", default=3)
     group_by: GroupByEnum = Field(description="Search for clips or videos.", default=GroupByEnum.CLIP)
     search_options: List[SearchOptionsEnum] = Field(description="Which modalities to consider when running a query on a collections of videos.", 
                                                 default=[SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION])
