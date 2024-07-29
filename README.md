@@ -70,6 +70,8 @@ Jockey combines the capabilities of existing Large Language Models (LLMs) with [
 7. Create your `.env` file and add the correct variables:
 
     ```toml
+    # This variable is important to include in order to use the most recent version of LangGraph.
+    LANGSMITH_API_KEY=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
     AZURE_OPENAI_ENDPOINT=<IF USING AZURE GPTs>
     AZURE_OPENAI_API_KEY=<IF USING AZURE GPTs>
     OPENAI_API_VERSION=<IF USING AZURE GPTs>
