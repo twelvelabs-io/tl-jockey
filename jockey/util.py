@@ -119,7 +119,9 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     if os.path.isfile(video_path) is False:
         try:
             duration = end - start
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
+            # Use the environment variable if set, otherwise default to "quiet"
+            log_level = os.environ.get("FFMPEG_LOG_LEVEL", "quiet")
+            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel=log_level, ss=start, t=duration).output(video_path, vcodec="copy", acodec="copy").run()
         except Exception as error:
             error_response = {
                 "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
