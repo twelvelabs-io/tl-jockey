@@ -20,7 +20,7 @@ def build_jockey(
             The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
         worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-            The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+            The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
     Returns:
         Jockey: A local Jockey instance.
@@ -57,7 +57,7 @@ if os.environ["LLM_PROVIDER"] == "AZURE":
         deployment_name="gpt-4",
         streaming=True,
         temperature=0,
-        model_version="1106-preview",
+        model_version="turbo-2024-04-09",
         tags=["planner"]
     )
 
@@ -65,15 +65,15 @@ if os.environ["LLM_PROVIDER"] == "AZURE":
         deployment_name="gpt-4",
         streaming=True,
         temperature=0,
-        model_version="1106-preview",
+        model_version="turbo-2024-04-09",
         tags=["supervisor"]
     )
 
     worker_llm = AzureChatOpenAI(
-        deployment_name="gpt-35-turbo-16k",
+        deployment_name="gpt-4",
         streaming=True,
         temperature=0,
-        model_version="0613",
+        model_version="turbo-2024-04-09",
         tags=["worker"]
     )
 elif os.environ["LLM_PROVIDER"] == "OPENAI":
@@ -92,7 +92,7 @@ elif os.environ["LLM_PROVIDER"] == "OPENAI":
     )
 
     worker_llm = ChatOpenAI(
-        model="gpt-3.5-turbo-0125",
+        model="gpt-4o",
         streaming=True,
         temperature=0,
         tags=["worker"]

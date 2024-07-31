@@ -25,6 +25,7 @@ class Stirrup(BaseModel):
     Returns:
         Runnable: A Runnable which consists of a worker LLM bound with tools and a tool routing coroutine.
     """
+    
     tools: List[BaseTool]
     worker_prompt_file_path: str
     worker_name: str
@@ -54,7 +55,7 @@ class Stirrup(BaseModel):
 
         Args:
             worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the worker node. It is recommended this be a GPT-3.5 class LLM or better. 
+                The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better. 
 
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.

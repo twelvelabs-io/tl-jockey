@@ -58,7 +58,7 @@ class Jockey(StateGraph):
                 String version of the system prompt for the supervisor.
 
             worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the worker nodes. It is recommended this be a GPT-3.5 class LLM or better.
+                The LLM used for the worker nodes. It is recommended this be a GPT-4 class LLM or better.
         """
         
         super().__init__(JockeyState)
@@ -80,7 +80,7 @@ class Jockey(StateGraph):
 
         Args:
             worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
-                The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+                The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.
 
@@ -328,7 +328,7 @@ def build_jockey_graph(planner_prompt: str,
             The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
         worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-            The LLM used for the planner node. It is recommended this be a GPT-3.5 class LLM or better.
+            The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
     Returns:
         Jockey: An instance of Jockey a video agent.
