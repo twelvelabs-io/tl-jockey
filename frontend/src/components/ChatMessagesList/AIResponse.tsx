@@ -6,6 +6,7 @@ import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
 import { AIResponseVideoSearch } from '../AIResponse/AIResponseVideoSearch';
 import AIResponseHeader from '../AIResponse/AIResponseHeader';
 import SkeletonChatVideoCard from '../../skeletons/SkeletonChatVideoCard';
+import ExtendMessage from './helpers/ExtendMessage';
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 
 export interface Message {
@@ -62,21 +63,19 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
           <div className={'aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
               <div>
                 {message?.toolsData ? (
-                    <AIResponseVideoSearch 
-                      videosLengthMoreThan3={videosLengthMoreThan3}
-                      message={message}
-                      formattedDurations={formattedDurations}
-                      handleVideoClick={handleVideoClick}
-                      showAllVideos={showAllVideos}
-                      setShowAllVideos={setShowAllVideos}
-                      />
-                ) : <SkeletonChatVideoCard/>}
+                      <AIResponseVideoSearch 
+                        videosLengthMoreThan3={videosLengthMoreThan3}
+                        message={message}
+                        formattedDurations={formattedDurations}
+                        handleVideoClick={handleVideoClick}
+                        showAllVideos={showAllVideos}
+                        setShowAllVideos={setShowAllVideos}
+                        />
+                  // ) : <SkeletonChatVideoCard/>}
+                  ) : ''}
               </div>
               {message && (
-              <div>
-                {/* {!hasValidMessage && message.text} */}
-                {!message?.toolsData && message.text}
-              </div>
+                <ExtendMessage agent={message.linkText} message={message.text}/>
             )}
           </div>
         </div>
