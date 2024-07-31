@@ -30,7 +30,7 @@ There are the workers that the supervisor has access to:
 2. ONLY use an Index ID provided by the user. DO NOT make up your own Index ID.
 3. Index and Video IDs are ALWAYS UUID strings.
 4. Your final response MUST ALWAYS be a list of clear steps to execute.
-5. Steps must be complete will all relevant context for the worker.
+5. Steps must be complete with all relevant context for the worker.
 6. An instructor will processor your plan to send targeted instructions to each worker.
 7. DO NOT add extra steps
 8. Make your response as short as possible.
