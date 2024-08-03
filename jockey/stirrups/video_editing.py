@@ -54,8 +54,10 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
                     }
                     return error_response
 
-            clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
-            clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
+            # Use the environment variable if set, otherwise default to "quiet"
+            log_level = os.environ.get("FFMPEG_LOG_LEVEL", "error")
+            clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).video
+            clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).audio
             clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
             clip_audio_input_stream = clip_audio_input_stream.filter("asetpts", "PTS-STARTPTS")
             
@@ -80,10 +82,12 @@ def remove_segment(video_filepath: str, start: float, end: float) -> str:
     """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned."""
     output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
 
-    left_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
-    left_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
-    right_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
-    right_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
+    # Use the environment variable if set, otherwise default to "quiet"
+    log_level = os.environ.get("FFMPEG_LOG_LEVEL", "quiet")
+    left_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
+    left_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
+    right_cut_video_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
+    right_cut_audio_stream = ffmpeg.input(filename=video_filepath, loglevel=log_level).audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
 
     streams = [left_cut_video_stream, left_cut_audio_stream, right_cut_video_stream, right_cut_audio_stream]
 
