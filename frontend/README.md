@@ -62,23 +62,28 @@ To start the project
 
 ## Navigation
 ### Servers
-The structure of the project is divided into several key components: the frontend, the proxy server, and the LangGraph server. The goal is to provide a seamless interaction between the user interface and the LangGraph server, facilitated by the proxy server for better manageability
+The structure of the project is divided into several key components: the frontend with LangGraph SDK, the proxy server, and the LangGraph server. The goal is to provide a seamless interaction between the user interface and the LangGraph server, facilitated by the proxy server for better manageability
 
 Frontend
-The frontend is responsible for the user interface and user interactions. It communicates with the LangChain server via a proxy server.
+The frontend is responsible for the user interface and user interactions. It communicates with the LangGraph server via using LangGraph SDK
+
+SDK
+The main purpose of this SDK is for interacting with the LangGraph REST API. You will need a running LangGraph API server. If you're running a server locally using langgraph-cli, the SDK will automatically point to http://localhost:8123. Otherwise, you will need to specify the server URL when creating a client like this:
+### const client = new Client({ apiUrl: "ApiUrlString" }) 
+in the streamEventsAPis component inside the apis folder
 
 Proxy Server
-The proxy server acts as an intermediary between the frontend and the LangGraph server. It ensures secure and efficient communication, handles requests from the frontend, and forwards them to the LangGraph server. The proxy server is initially set up in the apiConfig => ProxyServer file. If you need to create a new proxy server or modernize the existing one, you can refer to the 'launch' component inside the Jockey folder and 'server' component in the source. These components includes all the streaming functionality required for communication with the LangGraph server. 
+The proxy server acts as an intermediary between the frontend and twelve labs API. It ensures secure and efficient communication, handles requests from the frontend, and forwards them to the twelve labs API. The proxy server is initially set up in the server file. If you need to create a new proxy server or modernize the existing one, you can refer to the 'server' component in the source. 
 
 LangGraph Server 
-The LangGraph server is the backend component that processes the logic and data required for the application. It receives requests from the proxy server, processes them, and returns the necessary responses. All of the components related to this functionality located into the Jockey folder with a solid README regarding how to launch, test and modernise the functianality  
+The LangGraph server is the backend component that processes the logic and data required for the application. It receives requests from the Langgraph SDK, processes them, and returns the necessary responses. All of the components related to this functionality located into the Jockey folder with a solid README regarding how to launch, test and modernise the functianality  
 
 ###Main_components 
 All API calls related to these components are defined in the api folder, where the hooks file is located. 
 - api/: Contains API-related files. 
 - hooks.js: Defines hooks for making API calls (for the TwelveLabs api's) 
 - apiConfig.js: Defines or creates URL paths and keys for React Query. 
-- streamEventsApis.js: Contains all APIs for making calls to the proxy server. 
+- streamEventsApis.js: Contains LangGrap SDK to interect with LangGraph backend
 
 ###Build and deploy 
 Build and deploy 
