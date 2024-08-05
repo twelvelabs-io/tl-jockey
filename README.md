@@ -66,7 +66,6 @@ Ensure the following prerequisites are met before installing and using Jockey.
     - Jockey supports Azure OpenAI and OpenAI. Retrieve the following based on your chosen provider:
 	    - For Azure: Azure OpenAI endpoint, API key, and API version. For instructions, see the [Retrieve key and endpoint](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#retrieve-key-and-endpoint) section of the official Azure OpenAI documentation.
 	    - For OpenAI: OpenAI API key. For instructions, see the [Account setup](https://platform.openai.com/docs/quickstart/account-setup) section of the official OpenAI documentation.
-- **LangSmith API Key**: Required for running the Jockey API server. For instructions, see the [Create an API key](https://docs.smith.langchain.com/#2-create-an-api-key) section of the official LangSmith documentation.
  
 ### Additional Prerequisites
 
