@@ -11,7 +11,7 @@ from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
-SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search/")
+SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
 
 
 class GroupByEnum(str, Enum):
