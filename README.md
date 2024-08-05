@@ -64,9 +64,8 @@ Ensure the following prerequisites are met before installing and using Jockey.
     - If you don't have an account, please [sign up](https://playground.twelvelabs.io/) for a free account. Then, to retrieve your API key, go to the [API Key](https://playground.twelvelabs.io/dashboard/api-key) page, and select the **Copy** icon to the right of the key to copy it to your clipboard.
 - **LLM Provider API Key**:
     - Jockey supports Azure OpenAI and OpenAI. Retrieve the following based on your chosen provider:
-	    - For Azure: Azure OpenAI endpoint, API key, and API version. 
-	    - For OpenAI: OpenAI API key.
-- **LangGraph API Key**: Required for running the Jockey API server.
+	    - For Azure: Azure OpenAI endpoint, API key, and API version. For instructions, see the [Retrieve key and endpoint](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#retrieve-key-and-endpoint) section of the official Azure OpenAI documentation.
+	    - For OpenAI: OpenAI API key. For instructions, see the [Account setup](https://platform.openai.com/docs/quickstart/account-setup) section of the official OpenAI documentation.
  
 ### Additional Prerequisites
 
