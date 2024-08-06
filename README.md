@@ -41,9 +41,9 @@ Ensure the following prerequisites are met before installing and using Jockey.
 
 ### Software Prerequisites
 
-- **Git**: Any recent version.
-    - **Installation instructions**: [Git Downloads](https://git-scm.com/downloads).
-    - **Verify the installation**: Run the `git --version` command.
+- **Git**: Any recent version.
+    - **Installation instructions**: [Git Downloads](https://git-scm.com/downloads).
+    - **Verify the installation**: Run the `git --version` command.
 - **Python**: Version 3.11 or higher.
     - **Installation instructions**: [Python Releases for macOS](https://www.python.org/downloads/macos/).
     - **Verify the installation**: Run the `python3 --version` command.
@@ -135,17 +135,17 @@ Jockey uses environment variables for configuration, and comes with an `example
 
 For Azure OpenAI:
 
-| Variable                   | Description                    | Example                                        |
-| -------------------------- | ------------------------------ | ---------------------------------------------- |
-| AZURE_OPENAI_ENDPOINT      | Your Azure OpenAI endpoint URL | `https://your-resource-name.openai.azure.com/` |
-| AZURE_OPENAI_API_KEY       | Your Azure OpenAI API key      | `987654321`                                    |
-| `AZURE_OPENAI_API_VERSION` | The API version you're using   | `2023-12-01-preview`                           |
+| Variable                   | Description                      | Example                                        |
+| -------------------------- | -------------------------------- | ---------------------------------------------- |
+| `AZURE_OPENAI_ENDPOINT`      | Your Azure OpenAI endpoint URL | `https://your-resource-name.openai.azure.com/` |
+| `AZURE_OPENAI_API_KEY`       | Your Azure OpenAI API key      | `987654321`                                    |
+| `AZURE_OPENAI_API_VERSION` | The API version you're using     | `2023-12-01-preview`                           |
 
 For OpenAI:
 
-| Variable       | Description         | Example     |
-| -------------- | ------------------- | ----------- |
-| OPENAI_API_KEY | Your OpenAI API key | `987654321` |
+| Variable         | Description         | Example     |
+| ---------------- | ------------------- | ----------- |
+| `OPENAI_API_KEY` | Your OpenAI API key | `987654321` |
 
 
 ## Usage
