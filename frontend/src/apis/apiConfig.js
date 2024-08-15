@@ -6,7 +6,7 @@ const apiConfig = {
   TWELVE_LABS_API: axios.create({
     baseURL: SERVER_BASE_URL.toString(),
   }),
-  PROXY_SERVER: process.env.PROXY_SERVER,
+  PROXY_SERVER: "http://0.0.0.0:8000/stream_events",
   INDEXES_URL: "/indexes",
   SEARCH_URL: "/search",
   TASKS_URL: "/tasks",
