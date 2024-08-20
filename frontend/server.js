@@ -99,8 +99,8 @@ app.post("/stream_events", async (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   // Use Axios to interact with the remote service
-  const externalServiceUrl = "https://twelve-jockey-b8564d2f3502.herokuapp.com/jockey/astream_events";
-
+  const externalServiceUrl = "";
+  // Add externalURL if using stream events without SDK 
   // Send request to external service with appropriate data
   const response = axios.post(externalServiceUrl, {
       input: inputData,
