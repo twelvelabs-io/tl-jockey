@@ -7,7 +7,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
   const indexID = process.env.REACT_APP_API_INDEX_ID
   // List available assistants
   const assistants = await client.assistants.search();
-  console.log("List available assistants", assistants);
+  // console.log("List available assistants", assistants);
   function formatToolCalls(toolCalls) {
     if (toolCalls && toolCalls.length > 0) {
       console.log(toolCalls)
@@ -21,11 +21,11 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
   }
   // Get the first assistant, we will use this one
   const assistant = assistants[0];
-  console.log("Get first assistant", assistant);
+  // console.log("Get first assistant", assistant);
 
   // Create a new thread
   const thread = await client.threads.create();
-  console.log("Create new thread", thread);
+  // console.log("Create new thread", thread);
 
   // If we list runs on this thread, we can see it is empty
   const runs = await client.runs.list(thread.thread_id);
@@ -58,10 +58,9 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     { input, streamMode: "messages" }
   )) {
 
-    console.log(event)
+
     if (event.event === "metadata") {
       const data = event.data
-      console.log(`Metadata: Run ID - ${data["run_id"]}`);
     } else if (event.event === "on_tool_start") {
       console.log("START X")
      }
@@ -74,10 +73,6 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
         } else {
           const content = dataItem.content || "";
           const responseMetadata = dataItem.response_metadata || {};
-
-          if (content) {
-            console.log(`AI: ${content}`);
-          }
 
           if (responseMetadata) {
             const finishReason = responseMetadata.finish_reason || "N/A";
