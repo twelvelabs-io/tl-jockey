@@ -70,7 +70,7 @@ if os.environ["LLM_PROVIDER"] == "AZURE":
     )
 
     worker_llm = AzureChatOpenAI(
-        deployment_name="gpt-4o-mini-2024-07-18",
+        deployment_name="gpt-35-turbo-16k",
         streaming=True,
         temperature=0,
         model_version="0613",
@@ -92,7 +92,7 @@ elif os.environ["LLM_PROVIDER"] == "OPENAI":
     )
 
     worker_llm = ChatOpenAI(
-        model="gpt-3.5-turbo-0125",
+        model="gpt-4o-mini-2024-07-18",
         streaming=True,
         temperature=0,
         tags=["worker"]
