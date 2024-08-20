@@ -36,7 +36,7 @@ def parse_langchain_events_terminal(event: dict):
         if isinstance(event["data"]["chunk"], dict):
             content = event["data"]["chunk"]["content"]
         else:
-            content = event["data"]["chunk"].content 
+            content = event["data"]["chunk"].content
         
         if content and "instructor" in event["tags"]:
             console.print(f"[red]{content}", end="")

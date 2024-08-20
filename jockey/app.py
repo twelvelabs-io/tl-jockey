@@ -7,9 +7,9 @@ from jockey.util import check_environment_variables
 
 
 def build_jockey(
-        planner_llm: Union[AzureChatOpenAI | ChatOpenAI], 
-        supervisor_llm: Union[AzureChatOpenAI | ChatOpenAI], 
-        worker_llm: Union[AzureChatOpenAI | ChatOpenAI]) -> Jockey:
+        planner_llm: Union[AzureChatOpenAI, ChatOpenAI], 
+        supervisor_llm: Union[AzureChatOpenAI, ChatOpenAI], 
+        worker_llm: Union[AzureChatOpenAI, ChatOpenAI]) -> Jockey:
     """Convenience function for standing up a local Jockey instance for dev work. 
 
     Args:
@@ -70,7 +70,7 @@ if os.environ["LLM_PROVIDER"] == "AZURE":
     )
 
     worker_llm = AzureChatOpenAI(
-        deployment_name="gpt-35-turbo-16k",
+        deployment_name="gpt-4o-mini-2024-07-18",
         streaming=True,
         temperature=0,
         model_version="0613",

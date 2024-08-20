@@ -27,7 +27,7 @@ async def run_jockey_terminal():
             "next_worker": None,
             "active_plan": None
         }
-        async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v1"):
+        async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
             parse_langchain_events_terminal(event)
 
         console.print()
