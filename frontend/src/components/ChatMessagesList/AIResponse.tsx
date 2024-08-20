@@ -32,7 +32,8 @@ interface AIResponseProps {
 }
 
 const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
-  const hasValidMessage = message && message.text
+  const hasTextMessage = message && message.text
+  const hasValidMessage = message && message.text && message.linkText
   const [state, dispatch] = useChat()
   const [showAllVideos, setShowAllVideos] = useState(false)
 
@@ -57,7 +58,7 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
   return (
     <>
         <div className={'relative w-[680px]'}>
-          {hasValidMessage && 
+          { hasTextMessage && 
             <AIResponseHeader message={message}/>
           }
           <div className={'aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
@@ -74,9 +75,9 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
                   // ) : <SkeletonChatVideoCard/>}
                   ) : ''}
               </div>
-              {message && (
+              { hasValidMessage ? (
                 <ExtendMessage agent={message.linkText} message={message.text}/>
-            )}
+            ) : <ExtendMessage agent='error' message={message.text}/>}
           </div>
         </div>
       
