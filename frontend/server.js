@@ -8,12 +8,13 @@ const fs = require('fs');
 const app = express();
 const cors = require('cors');
 
-const TWELVE_LABS_API_KEY = process.env.TWELVE_LABS_API_KEY;
+const REACT_APP_API_MAIN_KEY = process.env.REACT_APP_API_MAIN_KEY;
+const TWELVE_LABS_API_KEY = REACT_APP_API_MAIN_KEY;
 const TWELVE_LABS_API = axios.create({
   baseURL: "https://api.twelvelabs.io/v1.2",
 })
 
-const PORT_NUMBER = process.env.PORT || 4000;
+const PORT_NUMBER = process.env.REACT_APP_BASE_PORT || 4000;
 const PAGE_LIMIT_MAX = 50;
 
 app.use(cors());
