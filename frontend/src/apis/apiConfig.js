@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const SERVER_BASE_URL = new URL(process.env.REACT_APP_BASE_SERVER)
+const SERVER_BASE_URL = new URL(
+  `${process.env.REACT_APP_BASE_SERVER}:${process.env.REACT_APP_BASE_PORT}`
+);
 
 const apiConfig = {
   TWELVE_LABS_API: axios.create({
