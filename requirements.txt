@@ -6,6 +6,6 @@ rich==13.7.0
 langchain-openai==0.1.22
 langchain==0.2.14
 langgraph==0.2.4
-langgraph-cli==0.1.35
+langgraph-cli==0.1.52
 langgraph-sdk==0.1.11
 openai==1.41.1
