@@ -50,7 +50,7 @@ class Stirrup(BaseModel):
 
         return tool_calls
    
-    def build_worker(self, worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Runnable:
+    def build_worker(self, worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Runnable:
         """Build a useable worker for a Jockey instance.
 
         Args:

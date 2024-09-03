@@ -58,7 +58,6 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
       try {
         streamEvents(ActionType, dispatch, inputBox, setStreamData, arrayMessages)
         dispatch({ type: ActionType.SET_LOADING, payload: false })
-        console.log('here')
       } catch (error) {
         dispatch({ type: ActionType.SET_LOADING, payload: false })
       }

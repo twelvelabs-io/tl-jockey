@@ -42,7 +42,7 @@ class PegasusSummarizeInput(BaseModel):
     video_id: str = Field(description="The ID of the video to generate text from.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
     endpoint_option: SummarizeEndpointEnum = Field(description="Determines what output to generate.")
-    prompt: Union[str | None] = Field(description="Instructions on how summaries, highlights, and chapters are generated. "
+    prompt: Union[str, None] = Field(description="Instructions on how summaries, highlights, and chapters are generated. "
                                                  "Always use when additional context is provided.", max_length=300)
     
 
@@ -83,7 +83,7 @@ async def gist_text_generation(video_id: str, index_id: str, endpoint_options: L
 
 
 @tool("summarize-text-generation", args_schema=PegasusSummarizeInput)
-async def summarize_text_generation(video_id: str, index_id: str, endpoint_option: SummarizeEndpointEnum, prompt: Union[str | None] = None) -> Dict:
+async def summarize_text_generation(video_id: str, index_id: str, endpoint_option: SummarizeEndpointEnum, prompt: Union[str, None] = None) -> Dict:
     """Generate `summary` `highlight` or `chapter` for a single video. This can include any combination of: topics, hashtags, and a title"""
 
     headers = {

@@ -1,219 +1,212 @@
 # Jockey
 
-Jockey is a conversational video agent built on top of the [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction) and [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/).
+Jockey is a conversational video agent designed for complex video workflows. It combines the following technologies:
 
-Join Twelve Labs' [Multimodal Minds Discord](https://discord.gg/4p9QaBvT6r) server if you have questions or encounter issues when working with Jockey!
+- **Twelve Labs Video Understanding Platform**: Offers an [API suite](https://docs.twelvelabs.io/docs/introduction) for integrating  state-of-the-art (“SOTA”) video foundation models (VFMs) that understand contextual information from your videos. The platform works with video natively without the need for intermediary representations like pre-generated captions.
+- **Large Language Models (LLMs)**: Logically plan execution steps, interact with users, and pass video-related tasks to the Twelve Labs Video Understanding Platform. LLMs interpret natural language instructions and translate them into actionable tasks.
+- **LangGraph**: Orchestrates the interaction between the Twelve Labs API suite and LLMs. [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/) enables the creation of stateful, multi-step applications, allowing for complex video processing workflows.
 
-## Description
 
-**ATTENTION**: Jockey is in alpha development and may break or behave unexpectedly!
+This allows Jockey to perform accurate video operations based on natural language instructions.
 
-Jockey combines the capabilities of existing Large Language Models (LLMs) with [Twelve Labs' APIs](https://docs.twelvelabs.io/docs/introduction) using [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/). This allows workloads to be allocated to the appropriate foundation models for handling complex video workflows. LLMs are used to logically plan execution steps and interact with users, while video-related tasks are passed to [Twelve Labs APIs](https://docs.twelvelabs.io/docs/introduction), powered by video-foundation models (VFMs), to work with video natively, without the need for intermediary representations like pre-generated captions.
+**NOTE**: Jockey is currently in alpha development. It may be unstable or behave unexpectedly. Use caution when implementing Jockey in production environments.
 
-## Quickstart
+## Key Features
 
-### Dependencies
+- **Intelligent task allocation**: Jockey efficiently distributes workloads between LLMs for logical planning and user interaction, and VFMs for video understanding.
+- **Native video processing**: Unlike systems that rely on pre-generated captions, Jockey works with video content directly, enabling more accurate and nuanced operations.
+- **Flexible architecture**: Built on LangGraph, Jockey's modular design allows for easy customization and extension to suit specific use cases.
+- **Multiple deployment options**: Supports both terminal-based deployment for quick testing and development, and API server deployment for integration into larger applications.
+- **Comprehensive video manipulation**: Capable of tasks such as clip selection, video editing, and content analysis, all driven by natural language instructions.
 
-- [FFMPEG](https://ffmpeg.org/): Must have `ffmpeg` accessible in `$PATH` for the Video Editing worker.
-- [Docker](https://www.docker.com/): Required for running the Jockey API server.
-- [Docker Compose](https://docs.docker.com/compose/): Required for running the Jockey API server.
-  - Needs to accessible via:
-    
-    ```bash
-    docker compose
+## Use Cases
+
+Use cases include but are not limited to the following:
+- Compiling and editing video clips
+- Summarizing videos
+- Generating chapters and highlights
+- Searching for clips or videos using natural language queries
+- Creating custom video compilations based on specific criteria
+- Answering questions about video content
+
+## Prerequisites
+
+Ensure the following prerequisites are met before installing and using Jockey.
+
+### System Prerequisites
+
+- Operating System: macOS
+- CPU: M1 or newer
+- RAM: 8GB minimum
+
+### Software Prerequisites
+
+- **Git**: Any recent version.
+    - **Installation instructions**: [Git Downloads](https://git-scm.com/downloads).
+    - **Verify the installation**: Run the `git --version` command.
+- **Python**: Version 3.11 or higher.
+    - **Installation instructions**: [Python Releases for macOS](https://www.python.org/downloads/macos/).
+    - **Verify the installation**: Run the `python3 --version` command.
+- **FFmpeg**: Must be accessible in your system's `PATH` environment variable.
+    - **Installation instructions**: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to the `PATH` environment variable.
+    - **Verify the installation**: Run the `ffmpeg -version` command.
+- **Docker**: Required for running the Jockey API server.
+    - **Installation instructions**: [Get Docker](https://docs.docker.com/get-docker/).
+    - **Verify the installation**: Run  the `docker --version` command.
+- **Docker Compose V2**: Required for running the Jockey API server.
+    - **Installation instructions**: [Overview of installing Docker Compose](https://docs.docker.com/compose/install/).
+    - **Verify the installation**: Run the `docker compose version` command.
+    If you see a message similar to "docker: 'compose' is not a docker command," you may have v1. To update your Docker Compose version, see the [Migrate to Compose V2](https://docs.docker.com/compose/migrate/) page of the official Docker documentation.
+
+  ### API Keys
+
+- **Twelve Labs API Key**:
+    - If you don't have an account, please [sign up](https://playground.twelvelabs.io/) for a free account. Then, to retrieve your API key, go to the [API Key](https://playground.twelvelabs.io/dashboard/api-key) page, and select the **Copy** icon to the right of the key to copy it to your clipboard.
+- **LLM Provider API Key**:
+    - Jockey supports Azure OpenAI and OpenAI. Retrieve the following based on your chosen provider:
+	    - For Azure: Azure OpenAI endpoint, API key, and API version. For instructions, see the [Retrieve key and endpoint](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#retrieve-key-and-endpoint) section of the official Azure OpenAI documentation.
+	    - For OpenAI: OpenAI API key. For instructions, see the [Account setup](https://platform.openai.com/docs/quickstart/account-setup) section of the official OpenAI documentation.
+ 
+### Additional Prerequisites
+
+- Familiarity with Python and basic command-line operations is recommended.
+- Familiarity with LangGraph is recommended to use Jockey with the LangGraph API server.
+
+## Installation
+
+This section guides you through the process of installing Jockey on your system. Please ensure all the prerequisites are met before proceeding with the installation. If you encounter any issues, please refer to the [Troubleshooting](docs/troubleshooting.md) page or reach out on the [Multimodal Minds Discord](https://discord.gg/4p9QaBvT6r) server for assistance.
+
+### Clone the Repository
+
+Open a terminal, navigate to the directory where you want to install Jockey, and enter the following command:
+
+```sh
+git clone https://github.com/twelvelabs-io/tl-jockey.git
+```
+
+### Set Up a Python Virtual Environment
+
+1. Create a new virtual environment:
+    ```sh
+    cd tl-jockey && python3 -m venv venv
     ```
-
-    Depending on your install method it may only be accessible with:
-
-    ```bash
-    docker-compose
-    ```
-
-    which can cause issues with the `langgraph-cli`. In such a case, you can install [Docker Desktop](https://www.docker.com/products/docker-desktop/) to easily make the above a valid system command.
-
-- Required Python Packages (For Local Dev): [requirements.txt](requirements.txt)
-- Twelve Labs API Key: [Twelve Labs Dashboard](https://dashboard.twelvelabs.io/)
-- LLM Provider API Key (Currently Azure or Open AI only)
-
-### Setup Steps (Mac OSX)
-
-1. Install the external dependencies listed above ([FFMPEG](https://ffmpeg.org/), [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/))
-2. Grab the repo using this command:
-
-    ```bash 
-    git clone https://github.com/twelvelabs-io/tl-jockey.git
-    ```
-
-3. Enter the `tl-jockey` directory: 
-
-    ```bash
-    cd tl-jockey
-    ```
-4. Create a virtual environment: 
-
-    ```bash 
-    python3 -m venv venv
-    ```
-
-5. Activate your virtual environment: 
-
-    ```bash 
+2. Activate your virtual environment:
+    ```sh
     source venv/bin/activate
     ```
-
-6. Install Python package requirements:
-
-    ```bash
-    pip3 install -r requirements.txt
+3. _(Optional)_ Verify that your virtual environment is activated:
+    ```sh
+    echo $VIRTUAL_ENV
     ```
-
-7. Create your `.env` file and add the correct variables:
-
-    ```toml
-    AZURE_OPENAI_ENDPOINT=<IF USING AZURE GPTs>
-    AZURE_OPENAI_API_KEY=<IF USING AZURE GPTs>
-    OPENAI_API_VERSION=<IF USING AZURE GPTs>
-    OPENAI_API_KEY=<IF USING OPEN AI GPTs>
-    # Determines which Langchain classes are used to construct Jockey LLM instances.
-    LLM_PROVIDER=<MUST BE ONE OF [AZURE, OPENAI]>
-    TWELVE_LABS_API_KEY=<YOUR TWELVE LABS API KEY>
-    # This variable is used to persist and make rendered video servable from within the LangGraph API container.
-    # Please make sure this directory exists on the host machine.
-    # Please make sure this directory is available as a File Sharing resource in Docker For Mac.
-    HOST_PUBLIC_DIR=<VOLUME MOUNTED TO LANGGRAPH API SERVER CONTAINER WHERE RENDERED VIDEOS GO>
-    # This variable is a placeholder that will be used by an upcoming Jockey core worker it currently doesn't impact anything.
-    # Please make sure this directory exists on the host machine.
-    # Please make sure this directory is available as a File Sharing resource in Docker For Mac.
-    HOST_VECTOR_DB_DIR=<VOLUME MOUNTED TO LANGGRAPH API SERVER CONTAINER WHERE VECTOR DB GOES>
+    The output should display the path to your virtual environment directory, as shown in the example below:
     ```
+    /Users/tl/jockey/tl-jockey/venv
+    ```
+    This indicates that your virtual environment is activated. Your virtual environment is not activated if you see an empty line.
+    If this check indicates that your virtual environment is not activated, activate it using the `source venv/bin/activate` command.
 
-    Make sure your `.env` file is somewhere in the directory tree of the `tl-jockey` directory.
+### Install Python Dependencies
 
-### Deploying in the Terminal
+Install the required Python packages:
 
-This is an easy and lightweight way to run an instance of Jockey in your terminal. Great for quick testing or validation during local dev work.
+```sh
+pip3 install -r requirements.txt
+```
+
+## Configuration
+
+Jockey uses environment variables for configuration, and comes with an `example.env` file to help you get started.
+
+1. In the `tl-jockey` directory, copy the `example.env` file to a new file named `.env`:
+2. Open the newly created `.env` file in a text editor.
+3. Replace the placeholders with your actual values. See the tables below for details.
+
+**Common variables**
+
+| Variable              | Description                                                                 | Example         |
+| --------------------- | --------------------------------------------------------------------------- | --------------- |
+| `TWELVE_LABS_API_KEY` | Your Twelve Labs API key.                                                   | `tlk_987654321` |
+| `LLM_PROVIDER`        | The LLM provider you wish to use. Possible values are `AZURE` and `OPENAI`. | `AZURE`         |
+| `HOST_PUBLIC_DIR`     | Directory for storing rendered videos                                       | `./output`      |
+| `HOST_VECTOR_DB_DIR`  | Directory for vector database storage                                       | `./vector_db`   |
+
+**LLM provider-specific variables**
+
+For Azure OpenAI:
+
+| Variable                   | Description                      | Example                                        |
+| -------------------------- | -------------------------------- | ---------------------------------------------- |
+| `AZURE_OPENAI_ENDPOINT`      | Your Azure OpenAI endpoint URL | `https://your-resource-name.openai.azure.com/` |
+| `AZURE_OPENAI_API_KEY`       | Your Azure OpenAI API key      | `987654321`                                    |
+| `AZURE_OPENAI_API_VERSION` | The API version you're using     | `2023-12-01-preview`                           |
+
+For OpenAI:
+
+| Variable         | Description         | Example     |
+| ---------------- | ------------------- | ----------- |
+| `OPENAI_API_KEY` | Your OpenAI API key | `987654321` |
+
+
+## Usage
+
+This section provides instructions on how to deploy and use Jockey. Note that Jockey supports the following deployment options:
+
+- Terminal-based deployment: Ideal for quick testing, development work, and debugging.
+- LangGraph API server deployment: Suitable for building and debugging end-to-end user applications.
+
+This document covers the terminal-based deployment. If you're a developer looking to integrate Jockey into your application, see the [Deploy and Use Jockey with the LangGraph API Server](docs/langgraph-api-server.md)
+
+### Deploy and use Jockey in the terminal
+
+The terminal deployment is ideal for quick testing, development work, and debugging. It provides immediate feedback and allows for easy interaction with Jockey.
 
 [Terminal Example Jockey Video Walkthrough](https://www.loom.com/share/91f9745affbc4967b0f0d502c073d6a7?sid=344ad4e3-809f-489f-aaea-4798e30ccc50)
 
-1. Modify your `.env` file with your desired configuration for an LLM provider.
-2. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
-   
-   ```bash
-   python3 -m jockey terminal
-   ```
-
-![Jockey Terminal Startup](assets/jockey_terminal_startup.png)
-3. Currently, Jockey requires an Index ID (and in some cases a Video ID) are supplied as part of the conversation history. You are free to modify how this is handled. An example of an initial prompt might be something like:
-
+1. Activate your virtual environment:
+    ```sh
+    source venv/bin/activate
+    ```
+2. Run the following command:
+    ```sh
+    python3 -m jockey terminal
+    ```
+    ![Jockey Terminal Startup](assets/jockey_terminal_startup.png)
+3. Jockey will initialize and display a startup message. Wait for the prompt indicating it's ready for input.
+4. Once Jockey is ready, you can start interacting with it using natural language commands.
+    Begin by providing and index id in your initial prompt, as shown in the example below:
+    ```
     Use index 65f747a50db0463b8996bde2. I'm trying to create a funny video focusing on Gordon Ramsay. Can you find 3 clips of Gordon yelling at his chefs about scrambled eggs and then a final clip where Gordon bangs his head on a table. After you find all those clips, lets edit them together into one video.
-
-Since the Index ID is now stored as part of the conversation history, subsequent requests utilizing the same Index ID do not need to explicitly include it as part of the prompt (assuming some reference to the Index ID is still within the context window. For example we could now use the following as a prompt:
-
+    ```
+    Note that in some cases, such as summarizing videos or generating chapters and highlights, you must also provide a video ID.
+    You can continue the conversation by providing new instructions or asking questions, as shown in the following example:
+    ```
     This is awesome but the last clip is too long. Lets shorten the last clip where Gordon hits his head on the table by making it start one second later. Then combine all the clips into a single video again.
+    ```
+ 6. When you've finished, exit terminal mode using the `Ctrl+C` keyboard shortcut.
 
-### Debugging In The Terminal
+ #### Debug in the Terminal
 
-The terminal version of Jockey is designed to be a lightweight way to do dev work and have fairly decent access to useful levels of information for debugging. For example, if we take the Gordon Ramsay prompt we used earlier we would see this intermediary output:
+The terminal version of Jockey provides verbose output for debugging purposes:
+- The outputs from all of the individual components are displayed.
+- Tool calls and their results are also displayed.
 
 ![Jockey Terminal Debugging Example](assets/jockey_terminal_debugging_example.png)
 
-As you can see we get the output from all of the individual components of Jockey even including the inputs and outputs to tool calls. This debugging is handled by the [parse_langchain_events_terminal()](jockey/util.py#L31) function and relies on event names and component tags to decide how to parse incoming events. You can modify this code to suite your needs if you need additional information exposed in the terminal. Please note that the tags for the individual components are set in [app.py](jockey/app.py).
+To adjust the verbosity of the output, modify the [`parse_langchain_events_terminal()`](jockey/util.py#L31) function in `jockey/util.py`.
 
-### Deploying with the LangGraph API Server
+Note that the tags for the individual components are set in [app.py](jockey/app.py).
 
-This approach is more suitable for building and testing end-to-end user applications although it takes longer to build.
+## Integrate Jockey Into Your Application
 
-1. Run the following command from the `tl-jockey` directory (where the `langgraph.json` and `compose.yaml` files are.):
+To integrate Jockey into your application, use an HTTP client library or the [LangGraph Python SDK](https://pypi.org/project/langgraph-sdk/).
 
-    ```bash
-    python3 -m jockey server
-    ```
+For a basic example of how to interact with Jockey programmatically, refer to the [client.ipynb](client.ipynb) Jupyter notebook in the project repository. For more detailed information, see the [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) page. 
 
-[LangGraph Debugger UI Walkthrough](https://www.loom.com/share/9b7594df37294edcaed31a4b2d901d7b?sid=28a9019d-0ac4-4ca6-a874-d334e2ab1221)
 
-2. Open [LangGraph Debugger](http://localhost:8124/) in your browser to ensure the LangGraph API server is up and reachable.![LangGraph Debugger](assets/langgraph_debugger.png) `jockey` should appear under "Assistants"
-3. If you click on `jockey` another panel will open and you can click `New Thread` to step into your running Jockey instance!
-4. Visit: [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) for more detailed information on integrating into a user application. You can also check out: [client.ipynb](client.ipynb) for a basic example in a Jupyter notebook.
-5. You can use the [LangGraph Debugger](http://localhost:8124/) to step into the Jockey instance and debug end-to-end including adding breakpoints to examine and validate the graph state for any given input.![Jockey LangGraph Debugger](assets/jockey_langgraph_debugger.png)
+## Additional Documentation
 
-## Jockey Agent Architecture
-
-![Jockey Architecture](assets/jockey_architecture.jpg)
-
-[Jockey Architecture Walkthrough Video](https://www.loom.com/share/72c64749c3ca473eaeaf6e4643ca2621?sid=57dca306-35a3-4a04-9576-ceb9ddbc7c60)
-
-Jockey consists of three main parts.
-
-1. [**Supervisor**](jockey/jockey_graph.py#L127): Responsible for node routing.
-2. [**Planner**](jockey/jockey_graph.py#171): The primary purpose of the planner is to create step-by-step plans for complex user requests.
-3. [**Workers**](jockey/jockey_graph.py#L201): The worker nodes consist of two components.
-   1. [**Instructor**](jockey/jockey_graph.py#L150): Generates exact and complete task instructions for a single worker based on the plan created by the Planner.
-   2. [**Actual Workers**](jockey/stirrups): Agents that ingest the instructions from the instructor and execute them using the tools they have available.
-
-## Customizing Jockey
-
-Jockey comes with a core set of workers for powering a conversational video agent. However, video-related use cases are diverse and complex, and the vanilla core workers may not be adequate for your needs. There are two main ways to customize Jockey that are explored below.
-
-### Prompt as a Feature
-
-This is the most lightweight way to customize Jockey. Use this approach when the agent's functionality or vanilla core workers are sufficient, but the planning capabilities of the LLM are not robust enough for consistent performance across various inputs.
-
-To apply this customization, modify some or all of the [planner.md](jockey/prompts/planner.md) prompt with more targeted and specific instructions. This approach works best for less open-ended use cases that involve minimal dynamic planning.
-
-### Extending or Modifying Jockey
-
-For more complex use cases, the out-of-the-box capabilities of the agent or vanilla core workers may be insufficient. In these instances, consider extending or modifying Jockey in the following ways:
-
-#### Modifying Prompts
-
-This is similar to the [Prompt as a Feature](#prompt-as-a-feature) approach but may require heavily modifying the [planner.md](jockey/prompts/planner.md), [supervisor.md](jockey/prompts/supervisor.md) and [worker](jockey/prompts) prompts.
-
-#### Extending or Modifying State
-
-Given the complex nature of video workflows, the default state that Jockey uses may be inadequate for your use case. Each node in the underlying StateGraph has full access to the JockeyState, allowing you to add or modify state variables to track complex state information that isn't easily handled by LLMs via conversation history. This can help ensure cohesive planning and correct worker selection.
-
-Example:
-
-```python
-# Default JockeyState
-class JockeyState(TypedDict):
-    """Used to track the state between nodes in the graph."""
-    chat_history: Annotated[Sequence[BaseMessage], add_messages]
-    next_worker: str
-    made_plan: bool
-    active_plan: str
-```
-
-To handle multiple sequences of video that could be rendered, extend JockeyState:
-
-```python
-class Clip(BaseModel):
-    """Define what constitutes a clip."""
-    index_id: str = Field(description="A UUID for the index a video belongs to. This is different from the video_id.")
-    video_id: str = Field(description="A UUID for the video a clip belongs to.")
-    start: float = Field(description="The start time of the clip in seconds.")
-    end: float = Field(description="The end time of the clip in seconds.")
-
-class Sequence(BaseModel):
-    """Represents a single sequence of renderable video and its constituents."""
-    clips: List[Clip]
-    sequence_name: str
-
-# Extended JockeyState
-class JockeyState(TypedDict):
-    """Used to track the state between nodes in the graph."""
-    chat_history: Annotated[Sequence[BaseMessage], add_messages]
-    next_worker: str
-    made_plan: bool
-    active_plan: str
-    sequences: Dict[str, Sequence]
-```
-
-This could allow you to manage multiple versions of a sequence that can be selectively rendered or easily modified.
-
-#### Adding or Modifying Workers
-
-If the first two customization options aren't sufficient, you can add or modify existing workers:
-
-- **Modifying an Existing Worker**: Add custom logic or tools to an existing worker. You may also need to refine the appropriate [prompts](jockey/prompts).
-- **Adding a New Worker**: If none of the existing workers provide the needed capabilities, you can create a new worker. Use the [Stirrup](jockey/stirrups/stirrup.py#L11) class to define your custom worker and modify [jockey_graph.py](jockey/jockey_graph.py) to integrate the new worker into Jockey. Update the appropriate [prompts](jockey/prompts) to ensure Jockey correctly uses the new worker(s).
+- [Troubleshooting](docs/troubleshooting.md)
+- [Support](docs/support.md)
+- [Architecture](docs/architecture.md)
+- [Customize Jockey](docs/customize-jockey.md)
+- [Deploy and Use Jockey with the LangGraph API Server](docs/langgraph-api-server.md)
