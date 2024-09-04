@@ -28,13 +28,13 @@ class SearchOptionsEnum(str, Enum):
 
 class MarengoSearchInput(BaseModel):
     """Help to ensure the video-search worker provides valid arguments to any tool it calls."""
-    query: str | dict = Field(description="Search query to run on a collection of videos.")
+    query: Union[str, dict] = Field(description="Search query to run on a collection of videos.")
     index_id: str = Field(description="Index ID which contains a collection of videos.")
-    top_n: int = Field(description="Get the top N clips or videos as search results.", gt=0, le=10, default=3)
+    top_n: int = Field(description="Get the top N clips or videos as search results.", default=3)
     group_by: GroupByEnum = Field(description="Search for clips or videos.", default=GroupByEnum.CLIP)
     search_options: List[SearchOptionsEnum] = Field(description="Which modalities to consider when running a query on a collections of videos.", 
                                                 default=[SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION])
-    video_filter: List[str] | None = Field(description="Filter search results to only include results from video IDs in this list.", 
+    video_filter: Union[List[str], None] = Field(description="Filter search results to only include results from video IDs in this list.", 
                                            default=None)
 
 
@@ -44,7 +44,7 @@ async def _base_video_search(
     top_n: int = 3, 
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
-    video_filter: List[str] | None = None) -> Union[List[Dict], List]:
+    video_filter: Union[List[str], None] = None) -> Union[List[Dict], List]:
 
     headers = {
         "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
@@ -114,7 +114,7 @@ async def simple_video_search(
     top_n: int = 3, 
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
-    video_filter: List[str] | None = None) -> Union[List[Dict], List]:
+    video_filter: Union[List[str], None] = None) -> Union[List[Dict], List]:
     """Run a simple search query against a collection of videos and get results. 
     Query Example: "a dog playing with a yellow and white tennis ball"""
 

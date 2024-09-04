@@ -10,7 +10,7 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
-from langgraph.checkpoint.aiosqlite import AsyncSqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 from jockey.stirrups.video_search import VideoSearchWorker
 from jockey.stirrups.video_text_generation import VideoTextGenerationWorker
 from jockey.stirrups.video_editing import VideoEditingWorker
@@ -19,9 +19,9 @@ from jockey.stirrups.video_editing import VideoEditingWorker
 class JockeyState(TypedDict):
     """Used to track the state between nodes in the graph."""
     chat_history: Annotated[Sequence[BaseMessage], add_messages]
-    next_worker: str | None
+    next_worker: Union[str, None]
     made_plan: bool = False
-    active_plan: str | None
+    active_plan: Union[str, None]
 
 
 class Jockey(StateGraph):
@@ -30,18 +30,18 @@ class Jockey(StateGraph):
     supervisor: Runnable
     router: Dict
     planner_prompt: str
-    planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
+    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
     supervisor_prompt: str
-    supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
-    worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]
+    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
+    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
     worker_instructor: Runnable
 
     def __init__(self, 
-                 planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                 planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
                  planner_prompt: str,
-                 supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
+                 supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI], 
                  supervisor_prompt: str,
-                 worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> None:
+                 worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
         Args:
@@ -308,10 +308,10 @@ class Jockey(StateGraph):
 
     
 def build_jockey_graph(planner_prompt: str,
-                       planner_llm: Union[BaseChatOpenAI | AzureChatOpenAI],
+                       planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
                        supervisor_prompt: str,
-                       supervisor_llm: Union[BaseChatOpenAI | AzureChatOpenAI], 
-                       worker_llm: Union[BaseChatOpenAI | AzureChatOpenAI]) -> Jockey:
+                       supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI], 
+                       worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Jockey:
     """Convenience function for creating an instance of Jockey.
 
     Args:
@@ -343,7 +343,7 @@ def build_jockey_graph(planner_prompt: str,
         worker_llm=worker_llm)
 
     # This keeps track of conversation history and supports async.
-    memory = AsyncSqliteSaver.from_conn_string(":memory:")
+    memory = MemorySaver()
 
     # Compile the StateGraph instance for this instance of Jockey.
     jockey = jockey_graph.compile(checkpointer=memory)

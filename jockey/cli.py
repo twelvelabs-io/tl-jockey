@@ -15,11 +15,13 @@ async def run_jockey_terminal():
     session_id = uuid.uuid4()
 
     while True:
+
         try:
             console.print()
             user_input = console.input("[green]👤 Chat: ")
 
             # Collect user input as a HumanMessage
+          # Reset the state of Jockey instance every new user invocation.
             user_input = [HumanMessage(content=user_input, name="user")]
             jockey_input = {
                 "chat_history": user_input,
@@ -33,8 +35,9 @@ async def run_jockey_terminal():
             console.print()
 
         except (EOFError):
-            console.print("[red]Exiting...[/red]")
-            break
+            console.print("[red]Press Ctrl + C again to exit...[/red]")
+
+
 
 def run_jockey_server():
     """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
