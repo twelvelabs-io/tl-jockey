@@ -1,5 +1,7 @@
 import os
 import subprocess
+import shutil
+import platform
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
 from jockey.stirrups.errors import create_interrupt_event, create_langgraph_error_event, create_jockey_error_event, get_langgraph_errors
