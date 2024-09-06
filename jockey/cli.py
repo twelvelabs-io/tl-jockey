@@ -57,9 +57,9 @@ def run_jockey_server():
 
     print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
 
-    with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as process:
+    with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
         for line in process.stdout:
-            print(line, end='')
+            print(line.decode('utf-8', errors='replace'), end='')
 
         process.wait()
         if process.returncode != 0:
