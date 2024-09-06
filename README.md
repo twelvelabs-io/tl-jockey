@@ -2,10 +2,9 @@
 
 Jockey is a conversational video agent designed for complex video workflows. It combines the following technologies:
 
-- **Twelve Labs Video Understanding Platform**: Offers an [API suite](https://docs.twelvelabs.io/docs/introduction) for integrating  state-of-the-art (“SOTA”) video foundation models (VFMs) that understand contextual information from your videos. The platform works with video natively without the need for intermediary representations like pre-generated captions.
+- **Twelve Labs Video Understanding Platform**: Offers an [API suite](https://docs.twelvelabs.io/docs/introduction) for integrating state-of-the-art (“SOTA”) video foundation models (VFMs) that understand contextual information from your videos. The platform works with video natively without the need for intermediary representations like pre-generated captions.
 - **Large Language Models (LLMs)**: Logically plan execution steps, interact with users, and pass video-related tasks to the Twelve Labs Video Understanding Platform. LLMs interpret natural language instructions and translate them into actionable tasks.
 - **LangGraph**: Orchestrates the interaction between the Twelve Labs API suite and LLMs. [LangGraph](https://python.langchain.com/v0.1/docs/langgraph/) enables the creation of stateful, multi-step applications, allowing for complex video processing workflows.
-
 
 This allows Jockey to perform accurate video operations based on natural language instructions.
 
@@ -22,6 +21,7 @@ This allows Jockey to perform accurate video operations based on natural languag
 ## Use Cases
 
 Use cases include but are not limited to the following:
+
 - Compiling and editing video clips
 - Summarizing videos
 - Generating chapters and highlights
@@ -42,31 +42,37 @@ Ensure the following prerequisites are met before installing and using Jockey.
 ### Software Prerequisites
 
 - **Git**: Any recent version.
-    - **Installation instructions**: [Git Downloads](https://git-scm.com/downloads).
-    - **Verify the installation**: Run the `git --version` command.
+  - **Installation instructions**: [Git Downloads](https://git-scm.com/downloads).
+  - **Verify the installation**: Run the `git --version` command.
 - **Python**: Version 3.11 or higher.
-    - **Installation instructions**: [Python Releases for macOS](https://www.python.org/downloads/macos/).
-    - **Verify the installation**: Run the `python3 --version` command.
+  - **Installation instructions**: [Python Releases for macOS](https://www.python.org/downloads/macos/).
+  - **Verify the installation**: Run the `python3 --version` command.
 - **FFmpeg**: Must be accessible in your system's `PATH` environment variable.
-    - **Installation instructions**: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to the `PATH` environment variable.
-    - **Verify the installation**: Run the `ffmpeg -version` command.
+  - **Installation instructions**: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to the `PATH` environment variable.
+  - **Verify the installation**: Run the `ffmpeg -version` command.
 - **Docker**: Required for running the Jockey API server.
-    - **Installation instructions**: [Get Docker](https://docs.docker.com/get-docker/).
-    - **Verify the installation**: Run  the `docker --version` command.
+  - **Installation instructions**: [Get Docker](https://docs.docker.com/get-docker/).
+  - **Verify the installation**: Run the `docker --version` command.
 - **Docker Compose V2**: Required for running the Jockey API server.
-    - **Installation instructions**: [Overview of installing Docker Compose](https://docs.docker.com/compose/install/).
-    - **Verify the installation**: Run the `docker compose version` command.
+
+  - **Installation instructions**: [Overview of installing Docker Compose](https://docs.docker.com/compose/install/).
+  - **Verify the installation**: Run the `docker compose version` command.
     If you see a message similar to "docker: 'compose' is not a docker command," you may have v1. To update your Docker Compose version, see the [Migrate to Compose V2](https://docs.docker.com/compose/migrate/) page of the official Docker documentation.
 
   ### API Keys
 
 - **Twelve Labs API Key**:
-    - If you don't have an account, please [sign up](https://playground.twelvelabs.io/) for a free account. Then, to retrieve your API key, go to the [API Key](https://playground.twelvelabs.io/dashboard/api-key) page, and select the **Copy** icon to the right of the key to copy it to your clipboard.
+  - If you don't have an account, please [sign up](https://playground.twelvelabs.io/) for a free account. Then, to retrieve your API key, go to the [API Key](https://playground.twelvelabs.io/dashboard/api-key) page, and select the **Copy** icon to the right of the key to copy it to your clipboard.
 - **LLM Provider API Key**:
-    - Jockey supports Azure OpenAI and OpenAI. Retrieve the following based on your chosen provider:
-	    - For Azure: Azure OpenAI endpoint, API key, and API version. For instructions, see the [Retrieve key and endpoint](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#retrieve-key-and-endpoint) section of the official Azure OpenAI documentation.
-	    - For OpenAI: OpenAI API key. For instructions, see the [Account setup](https://platform.openai.com/docs/quickstart/account-setup) section of the official OpenAI documentation.
- 
+  - Jockey supports Azure OpenAI and OpenAI. Retrieve the following based on your chosen provider:
+    - For Azure: Azure OpenAI endpoint, API key, and API version. For instructions, see the [Retrieve key and endpoint](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart?tabs=command-line%2Cpython-new&pivots=programming-language-python#retrieve-key-and-endpoint) section of the official Azure OpenAI documentation.
+    - For OpenAI: OpenAI API key. For instructions, see the [Account setup](https://platform.openai.com/docs/quickstart/account-setup) section of the official OpenAI documentation.
+- **LangSmith API Key**
+  - To deploy the `jockey API server`, we need a [`LangGraph`](https://www.langchain.com/langgraph) API key. You can test LangGraph locally with the [free developer plan](https://www.langchain.com/pricing).
+    1. Log in to `LangGraph`(https://www.langchain.com/langgraph) and click the setting icon at the bottom left.
+    2. Go to `API Keys` and click the `Create API Key` at the top right.
+    3. Generate yours key and save it under the `LANGSMITH_API_KEY` variable in your `.env` file.
+
 ### Additional Prerequisites
 
 - Familiarity with Python and basic command-line operations is recommended.
@@ -87,23 +93,23 @@ git clone https://github.com/twelvelabs-io/tl-jockey.git
 ### Set Up a Python Virtual Environment
 
 1. Create a new virtual environment:
-    ```sh
-    cd tl-jockey && python3 -m venv venv
-    ```
+   ```sh
+   cd tl-jockey && python3 -m venv venv
+   ```
 2. Activate your virtual environment:
-    ```sh
-    source venv/bin/activate
-    ```
+   ```sh
+   source venv/bin/activate
+   ```
 3. _(Optional)_ Verify that your virtual environment is activated:
-    ```sh
-    echo $VIRTUAL_ENV
-    ```
-    The output should display the path to your virtual environment directory, as shown in the example below:
-    ```
-    /Users/tl/jockey/tl-jockey/venv
-    ```
-    This indicates that your virtual environment is activated. Your virtual environment is not activated if you see an empty line.
-    If this check indicates that your virtual environment is not activated, activate it using the `source venv/bin/activate` command.
+   ```sh
+   echo $VIRTUAL_ENV
+   ```
+   The output should display the path to your virtual environment directory, as shown in the example below:
+   ```
+   /Users/tl/jockey/tl-jockey/venv
+   ```
+   This indicates that your virtual environment is activated. Your virtual environment is not activated if you see an empty line.
+   If this check indicates that your virtual environment is not activated, activate it using the `source venv/bin/activate` command.
 
 ### Install Python Dependencies
 
@@ -125,6 +131,7 @@ Jockey uses environment variables for configuration, and comes with an `example
 
 | Variable              | Description                                                                 | Example         |
 | --------------------- | --------------------------------------------------------------------------- | --------------- |
+| `LANGSMITH_API_KEY`   | Your Langgraph-sdk API key.                                                 | `lsv2_...`      |
 | `TWELVE_LABS_API_KEY` | Your Twelve Labs API key.                                                   | `tlk_987654321` |
 | `LLM_PROVIDER`        | The LLM provider you wish to use. Possible values are `AZURE` and `OPENAI`. | `AZURE`         |
 | `HOST_PUBLIC_DIR`     | Directory for storing rendered videos                                       | `./output`      |
@@ -134,18 +141,17 @@ Jockey uses environment variables for configuration, and comes with an `example
 
 For Azure OpenAI:
 
-| Variable                   | Description                      | Example                                        |
-| -------------------------- | -------------------------------- | ---------------------------------------------- |
-| `AZURE_OPENAI_ENDPOINT`      | Your Azure OpenAI endpoint URL | `https://your-resource-name.openai.azure.com/` |
-| `AZURE_OPENAI_API_KEY`       | Your Azure OpenAI API key      | `987654321`                                    |
-| `AZURE_OPENAI_API_VERSION` | The API version you're using     | `2023-12-01-preview`                           |
+| Variable                   | Description                    | Example                                        |
+| -------------------------- | ------------------------------ | ---------------------------------------------- |
+| `AZURE_OPENAI_ENDPOINT`    | Your Azure OpenAI endpoint URL | `https://your-resource-name.openai.azure.com/` |
+| `AZURE_OPENAI_API_KEY`     | Your Azure OpenAI API key      | `987654321`                                    |
+| `AZURE_OPENAI_API_VERSION` | The API version you're using   | `2023-12-01-preview`                           |
 
 For OpenAI:
 
 | Variable         | Description         | Example     |
 | ---------------- | ------------------- | ----------- |
 | `OPENAI_API_KEY` | Your OpenAI API key | `987654321` |
-
 
 ## Usage
 
@@ -163,30 +169,31 @@ The terminal deployment is ideal for quick testing, development work, and debugg
 [Terminal Example Jockey Video Walkthrough](https://www.loom.com/share/91f9745affbc4967b0f0d502c073d6a7?sid=344ad4e3-809f-489f-aaea-4798e30ccc50)
 
 1. Activate your virtual environment:
-    ```sh
-    source venv/bin/activate
-    ```
+   ```sh
+   source venv/bin/activate
+   ```
 2. Run the following command:
-    ```sh
-    python3 -m jockey terminal
-    ```
-    ![Jockey Terminal Startup](assets/jockey_terminal_startup.png)
+   ```sh
+   python3 -m jockey terminal
+   ```
+   ![Jockey Terminal Startup](assets/jockey_terminal_startup.png)
 3. Jockey will initialize and display a startup message. Wait for the prompt indicating it's ready for input.
 4. Once Jockey is ready, you can start interacting with it using natural language commands.
-    Begin by providing and index id in your initial prompt, as shown in the example below:
-    ```
-    Use index 65f747a50db0463b8996bde2. I'm trying to create a funny video focusing on Gordon Ramsay. Can you find 3 clips of Gordon yelling at his chefs about scrambled eggs and then a final clip where Gordon bangs his head on a table. After you find all those clips, lets edit them together into one video.
-    ```
-    Note that in some cases, such as summarizing videos or generating chapters and highlights, you must also provide a video ID.
-    You can continue the conversation by providing new instructions or asking questions, as shown in the following example:
-    ```
-    This is awesome but the last clip is too long. Lets shorten the last clip where Gordon hits his head on the table by making it start one second later. Then combine all the clips into a single video again.
-    ```
- 6. When you've finished, exit terminal mode using the `Ctrl+C` keyboard shortcut.
+   Begin by providing and index id in your initial prompt, as shown in the example below:
+   ```
+   Use index 65f747a50db0463b8996bde2. I'm trying to create a funny video focusing on Gordon Ramsay. Can you find 3 clips of Gordon yelling at his chefs about scrambled eggs and then a final clip where Gordon bangs his head on a table. After you find all those clips, lets edit them together into one video.
+   ```
+   Note that in some cases, such as summarizing videos or generating chapters and highlights, you must also provide a video ID.
+   You can continue the conversation by providing new instructions or asking questions, as shown in the following example:
+   ```
+   This is awesome but the last clip is too long. Lets shorten the last clip where Gordon hits his head on the table by making it start one second later. Then combine all the clips into a single video again.
+   ```
+5. When you've finished, exit terminal mode using the `Ctrl+C` keyboard shortcut.
 
- #### Debug in the Terminal
+#### Debug in the Terminal
 
 The terminal version of Jockey provides verbose output for debugging purposes:
+
 - The outputs from all of the individual components are displayed.
 - Tool calls and their results are also displayed.
 
@@ -200,8 +207,7 @@ Note that the tags for the individual components are set in [app.py](jockey/app.
 
 To integrate Jockey into your application, use an HTTP client library or the [LangGraph Python SDK](https://pypi.org/project/langgraph-sdk/).
 
-For a basic example of how to interact with Jockey programmatically, refer to the [client.ipynb](client.ipynb) Jupyter notebook in the project repository. For more detailed information, see the [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) page. 
-
+For a basic example of how to interact with Jockey programmatically, refer to the [client.ipynb](client.ipynb) Jupyter notebook in the project repository. For more detailed information, see the [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) page.
 
 ## Additional Documentation
 
