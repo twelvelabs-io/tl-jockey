@@ -97,7 +97,10 @@ async def _base_video_search(
             return error_response
         
         video_data = video_metadata.json()
-        result["video_url"] = video_data["hls"]["video_url"]
+
+        if "video_url" not in result or not result["video_url"]:
+            result["video_url"] = video_data["hls"]["video_url"]
+            
         result["video_title"] = video_data["metadata"]["filename"]
 
         if group_by == "video":
