@@ -89,20 +89,24 @@ async def _base_video_search(
 
         video_metadata = get_video_metadata(video_id=video_id, index_id=index_id)
 
-        if video_metadata.status_code != 200:
+        if isinstance(video_metadata, dict) and 'error' in video_metadata:
             error_response = {
                 "message": "There was an API error when retrieving video metadata.",
                 "video_id": video_id,
-                "response": video_metadata.text
+                "response": video_metadata['error']
             }
             return error_response
         
-        result["video_url"] = video_metadata.json()["hls"]["video_url"]
-        result["video_title"] = video_metadata.json()["metadata"]["filename"]
+        video_data = video_metadata.json()
+
+        if "video_url" not in result or not result["video_url"]:
+            result["video_url"] = video_data["hls"]["video_url"]
+            
+        result["video_title"] = video_data["metadata"]["filename"]
 
         if group_by == "video":
-            result["thumbnail_url"] = video_metadata.json()["hls"]["thumbnail_urls"][0]
-
+            result["thumbnail_url"] = video_data["hls"]["thumbnail_urls"][0]
+            
     top_n_results = json.dumps(top_n_results)
     
     return top_n_results
@@ -132,7 +136,7 @@ async def simple_video_search(
                 if not available_modalities:
                     print("Warning: No modalities were extracted from the search results.")
                     return {
-                        "success": False,  # Changed to False
+                        "success": False, 
                         "results": search_results,
                         "available_modalities": available_modalities,
                         "error": "No modalities found"

@@ -59,11 +59,16 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
             clip_audio_input_stream = clip_audio_input_stream.filter("asetpts", "PTS-STARTPTS")
             
-            input_streams.append(clip_video_input_stream)
-            input_streams.append(clip_audio_input_stream)
+            input_streams.extend([clip_video_input_stream, clip_audio_input_stream])
 
         output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
-        ffmpeg.concat(*input_streams, v=1, a=1).output(output_filepath, acodec="libmp3lame").overwrite_output().run()
+        ffmpeg.concat(*input_streams, v=1, a=1).output(
+            output_filepath, 
+            vcodec="libx264",   
+            acodec="libmp3lame", 
+            video_bitrate="1M",
+            audio_bitrate="192k"
+        ).overwrite_output().run()
 
         return output_filepath
     except Exception as error:

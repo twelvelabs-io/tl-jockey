@@ -52,6 +52,13 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     ]
   })
 
+  let storedAgentName = ''
+
+  function extractAgentName(str) {
+    const match = str.match(/"next_worker"\s*:\s*"([^"]+)"/);
+    return match ? match[1] : '';
+  }
+
   for await (const event of client.runs.stream(
     thread.thread_id,
     assistant.assistant_id,
@@ -75,11 +82,21 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
           const responseMetadata = dataItem.response_metadata || {};
 
           if (responseMetadata) {
+            try {
+              const functionCallArgs = dataItem.additional_kwargs?.function_call?.arguments || '';
+              const currentAgentName = extractAgentName(functionCallArgs);
+              if (currentAgentName) {
+                storedAgentName = currentAgentName;
+              }
+            } catch (error) {
+              console.error("Error with function arguments:", error);
+            }
+
             const finishReason = responseMetadata.finish_reason || "N/A";
             console.log(`Response Metadata: Finish Reason - ${finishReason}`);
-            let threadState = await client.threads.getState(thread.thread_id);
+            // let threadState = await client.threads.getState(thread.thread_id);
             if (finishReason === 'stop') {
-              let agentName = threadState.next[0]
+              // let agentName = threadState.next[0]
               dispatch({
                 type: ActionType.SET_ARRAY_MESSAGES,
                 payload: [
@@ -87,7 +104,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
                     sender: 'ai',
                     text: content,
                     link: '',
-                    linkText: agentName,
+                    linkText: storedAgentName,
                     twelveText: content,
                     asrTest: '',
                     lameText: '',
