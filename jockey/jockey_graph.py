@@ -144,7 +144,17 @@ class Jockey(StateGraph):
         # This constructs the supervisor agent and determines the possible node routing.
         # Note: The JsonOutputFunctionsParser forces the response from invoking this agent into the format of {"next_worker": ROUTER_ENUM}
         supervisor = supervisor_prompt | self.supervisor_llm.bind_functions(functions=[self.router], function_call="route") | JsonOutputFunctionsParser()
-        return supervisor
+        
+        # Wrap the supervisor to handle missing state variables
+        async def wrapped_supervisor(state: JockeyState) -> Dict:
+            state_with_defaults = {
+                "chat_history": state["chat_history"],
+                "active_plan": state.get("active_plan", "No active plan"),
+                "made_plan": state.get("made_plan", False)
+            }
+            return await supervisor.ainvoke(state_with_defaults)
+
+        return wrapped_supervisor
     
 
     def _build_worker_instructor(self) -> Runnable:
