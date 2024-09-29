@@ -13,7 +13,6 @@ from jockey.stirrups.stirrup import Stirrup
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
 
-
 class GroupByEnum(str, Enum):
     """Helps to ensure the video-search worker selects a valid `group_by` option."""
     CLIP = "clip"
@@ -24,6 +23,8 @@ class SearchOptionsEnum(str, Enum):
     """Helps to ensure the video-search worker selects valid `search_options`."""
     VISUAL = "visual"
     CONVERSATION = "conversation"
+    TEXT_IN_VIDEO = "text_in_video"
+    LOGO = "logo"
 
 
 class MarengoSearchInput(BaseModel):
@@ -105,9 +106,17 @@ async def _base_video_search(
 
         if group_by == "video":
             result["thumbnail_url"] = video_data["hls"]["thumbnail_urls"][0]
-
-    return top_n_results 
-
+            
+    top_n_results = json.dumps(top_n_results)
+    
+    return top_n_results
+    
+def extract_modalities(search_results):
+    modalities = set()
+    for result in search_results:
+        for module in result.get("modules", []):
+            modalities.add(module.get("type"))
+    return list(modalities)
 
 @tool("simple-video-search", args_schema=MarengoSearchInput, return_direct=True)
 async def simple_video_search(
@@ -117,12 +126,40 @@ async def simple_video_search(
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None) -> Union[List[Dict], List]:
-    """Run a simple search query against a collection of videos and get results. 
-    Query Example: "a dog playing with a yellow and white tennis ball"""
+    """Run a simple search query against a collection of videos and get results."""
 
-    search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+    try:
+        search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+        if isinstance(search_results, list):
+            try:
+                available_modalities = extract_modalities(search_results)
+                if not available_modalities:
+                    print("Warning: No modalities were extracted from the search results.")
+                    return {
+                        "success": False, 
+                        "results": search_results,
+                        "available_modalities": available_modalities,
+                        "error": "No modalities found"
+                    }
+                return {
+                    "success": True,
+                    "results": search_results,
+                    "available_modalities": available_modalities
+                }
+            except Exception as e:
+                print(f"Error extracting modalities: {str(e)}")
+                return {
+                    "success": False,
+                    "results": search_results,
+                    "error": "Failed to extract modalities",
+                    "exception": str(e)
+                }
+        else:
+            print(f"Search error: {search_results}")
+            return search_results 
 
-    return search_results
+    except Exception as e:
+        return {"error": f"An error occurred during the search: {str(e)}"}
 
 
 # Construct a valid worker for a Jockey instance.
@@ -132,3 +169,4 @@ video_search_worker_config = {
     "worker_name": "video-search"
 }
 VideoSearchWorker = Stirrup(**video_search_worker_config)
+
