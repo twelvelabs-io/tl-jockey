@@ -3,7 +3,9 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData, arrayMessages) => {
   dispatch({ type: ActionType.SET_LOADING, payload: true })
-  const client = new Client();
+  const client = new Client({
+    apiUrl: process.env.REACT_APP_LANGGRAPH_API_URL,
+  });
   const indexID = process.env.REACT_APP_API_INDEX_ID
   // List available assistants
   const assistants = await client.assistants.search();
