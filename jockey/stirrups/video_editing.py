@@ -65,25 +65,24 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
                 raise ValueError(f"Invalid start time: {clip.start}. Start time cannot be negative.")
 
         input_streams = []
+        video_filepaths = []
 
         for clip in clips:
             video_id = clip.video_id
             start = clip.start
             end = clip.end
             video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
-
+            video_filepaths.append(video_filepath)
             if os.path.isfile(video_filepath) is False:
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
-                except Exception as error:
-                    # Create JockeyError first
-                    jockey_error = JockeyError.create(
-                        node=NodeType.WORKER,
-                        error_type=ErrorType.VIDEO,
-                        function_name=WorkerFunction.COMBINE_CLIPS,
-                        details=f"Download Failed. Video ID: {video_id} in Index ID: {index_id}. Double check that both video_id and index_id are valid. Error: {error}",
-                    )
-                    raise jockey_error
+                except AssertionError as error:
+                    error_response = {
+                        "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
+                        "Double check that the Video ID and Index ID are valid and correct.",
+                        "error": str(error),
+                    }
+                    continue
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
