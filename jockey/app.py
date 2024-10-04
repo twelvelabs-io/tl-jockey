@@ -54,26 +54,26 @@ check_environment_variables()
 
 if os.environ["LLM_PROVIDER"] == "AZURE":
     planner_llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
+        deployment_name="gpt-4o",
         streaming=True,
         temperature=0,
-        model_version="turbo-2024-04-09",
+        model_version="2024-08-06",
         tags=["planner"]
     )
 
     supervisor_llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
+        deployment_name="gpt-4o",
         streaming=True,
         temperature=0,
-        model_version="turbo-2024-04-09",
+        model_version="2024-08-06",
         tags=["supervisor"]
     )
 
     worker_llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
+        deployment_name="gpt-4o-mini",
         streaming=True,
         temperature=0,
-        model_version="turbo-2024-04-09",
+        model_version="2024-07-18",
         tags=["worker"]
     )
 elif os.environ["LLM_PROVIDER"] == "OPENAI":
