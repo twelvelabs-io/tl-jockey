@@ -7,6 +7,11 @@ from jockey.util import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 
+CODEC_FAMILIES = {
+    'mpeg': {'h264', 'hevc', 'mpeg4'},
+    'vp': {'vp8', 'vp9'},
+    'av1': {'av1'}
+}
 
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
@@ -28,6 +33,12 @@ class RemoveSegmentInput(BaseModel):
     video_filepath: str = Field(description="Full path to target video file.")
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
+
+def are_codecs_compatible(codecs):
+    for family in CODEC_FAMILIES.values():
+        if codecs.issubset(family):
+            return True
+    return False
 
 def check_video_codecs(video_filepaths):
     codecs = set()
@@ -73,7 +84,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
         output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
         codecs = check_video_codecs(video_filepaths)
 
-        if len(codecs) > 1 or 'h264' not in codecs:
+        if not are_codecs_compatible(codecs):
             ffmpeg.concat(*input_streams, v=1, a=1).output(
                 output_filepath, 
                 vcodec="libx264",   
