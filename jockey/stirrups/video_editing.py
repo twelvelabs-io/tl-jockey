@@ -29,6 +29,14 @@ class RemoveSegmentInput(BaseModel):
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
+def check_video_codecs(video_filepaths):
+    codecs = set()
+    for filepath in video_filepaths:
+        probe = ffmpeg.probe(filepath)
+        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
+        if video_stream:
+            codecs.add(video_stream['codec_name'])
+    return codecs
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str:
@@ -36,13 +44,14 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
     The full filepath for the combined clips is returned."""
     try:
         input_streams = []
+        video_filepaths = []        
 
         for clip in clips:
             video_id = clip.video_id
             start = clip.start
             end = clip.end
             video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
-
+            video_filepaths.append(video_filepath)
             if os.path.isfile(video_filepath) is False:
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
@@ -52,7 +61,7 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
                         "Double check that the Video ID and Index ID are valid and correct.",
                         "error": str(error)
                     }
-                    return error_response
+                    continue
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
@@ -62,13 +71,21 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             input_streams.extend([clip_video_input_stream, clip_audio_input_stream])
 
         output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
-        ffmpeg.concat(*input_streams, v=1, a=1).output(
-            output_filepath, 
-            vcodec="libx264",   
-            acodec="libmp3lame", 
-            video_bitrate="1M",
-            audio_bitrate="192k"
-        ).overwrite_output().run()
+        codecs = check_video_codecs(video_filepaths)
+
+        if len(codecs) > 1 or 'h264' not in codecs:
+            ffmpeg.concat(*input_streams, v=1, a=1).output(
+                output_filepath, 
+                vcodec="libx264",   
+                acodec="libmp3lame", 
+                video_bitrate="1M",
+                audio_bitrate="192k"
+            ).overwrite_output().run()
+        else:
+            ffmpeg.concat(*input_streams, v=1, a=1).output(
+                output_filepath, 
+                acodec="libmp3lame"
+            ).overwrite_output().run(capture_stdout=True, capture_stderr=True)
 
         return output_filepath
     except Exception as error:
