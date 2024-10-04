@@ -9,6 +9,8 @@ from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
 import uuid
 
+CODEC_FAMILIES = {"mpeg": {"h264", "hevc", "mpeg4"}, "vp": {"vp8", "vp9"}, "av1": {"av1"}}
+
 
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
