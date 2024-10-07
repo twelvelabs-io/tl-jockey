@@ -15,22 +15,29 @@ async def run_jockey_terminal():
     session_id = uuid.uuid4()
 
     while True:
-        console.print()
-        user_input = console.input("[green]👤 Chat: ")
 
-        # Collect user input as a HumanMessage
-        # Reset the state of Jockey instance every new user invocation.
-        user_input = [HumanMessage(content=user_input, name="user")]
-        jockey_input = {
-            "chat_history": user_input,
-            "made_plan": False,
-            "next_worker": None,
-            "active_plan": None
-        }
-        async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
-            parse_langchain_events_terminal(event)
+        try:
+            console.print()
+            user_input = console.input("[green]👤 Chat: ")
 
-        console.print()
+            # Collect user input as a HumanMessage
+          # Reset the state of Jockey instance every new user invocation.
+            user_input = [HumanMessage(content=user_input, name="user")]
+            jockey_input = {
+                "chat_history": user_input,
+                "made_plan": False,
+                "next_worker": None,
+                "active_plan": None
+            }
+            async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
+                parse_langchain_events_terminal(event)
+
+            console.print()
+
+        except (EOFError):
+            console.print("[red]Press Ctrl + C again to exit...[/red]")
+
+
 
 def run_jockey_server():
     """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
@@ -50,9 +57,9 @@ def run_jockey_server():
 
     print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
 
-    with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as process:
+    with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
         for line in process.stdout:
-            print(line, end='')
+            print(line.decode('utf-8', errors='replace'), end='')
 
         process.wait()
         if process.returncode != 0:
