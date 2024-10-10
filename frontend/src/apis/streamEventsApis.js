@@ -36,8 +36,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     chat_history: [{ type:"user", content: `${indexID} ${inputBox}` }],
   };
 
-
-
+  
   dispatch({
     type: ActionType.SET_ARRAY_MESSAGES,
     payload: [
@@ -95,7 +94,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
             }
 
             const finishReason = responseMetadata.finish_reason || "N/A";
-            console.log(`Response Metadata: Finish Reason - ${finishReason}`);
+            if (finishReason && !['N/A', 'none'].includes(finishReason)) console.log(`Response Metadata: Finish Reason - ${finishReason}`);
             // let threadState = await client.threads.getState(thread.thread_id);
             if (finishReason === 'stop') {
               // let agentName = threadState.next[0]
@@ -110,7 +109,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
                     twelveText: content,
                     asrTest: '',
                     lameText: '',
-                    question: inputBox
+                    question: inputBox,
+                    storedAgentName: storedAgentName
                   }
                 ]
               })
@@ -122,7 +122,12 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     }
       dispatch({
         type: ActionType.CLEAR_STATUS_MESSAGES,
-        payload: [],
+        payload: [
+          {
+            ...arrayMessages,
+            storedAgentName: storedAgentName
+          }
+        ],
       });
   }
 
