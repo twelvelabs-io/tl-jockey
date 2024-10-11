@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ReactComponent as AIIcon } from '../../icons/ai.svg';
 import AutofillQuestions from '../AutofillQuestions/AutofillQuestions';
 import { Link } from 'react-router-dom';
 import { autofillQuestions } from '../AutofillQuestions/AutofillQuestionsTypes';
+
 
 enum initialTexts {
     Headline = "Hi, I'm Jockey",
@@ -20,20 +21,24 @@ const InitialResponse: React.FC<{ message: string }> = ({ message }) => {
                     </div>
                 </div>
             </Link>
-        <div className={'font-aeonikBold text-[45px] font-bold text-[#333431] pb-[20px]'}>
-            { initialTexts.Headline }
+            <div className="mt-4">
+
+            </div>
+            <div className={'font-aeonikBold text-[45px] font-bold text-[#333431] pb-[20px]'}>
+                {initialTexts.Headline}
+            </div>
+            <div className={`whitespace-pre-line pb-[12px] font-aeonik`}>
+                {message}
+            </div>
+            <div className={`whitespace-pre-line pb-[12px] font-aeonik`}>
+                {initialTexts.Body}
+            </div>
+            <AutofillQuestions
+                autofillQuestions={autofillQuestions}
+            />
         </div>
-        <div className={`whitespace-pre-line pb-[12px] font-aeonik`}>
-               { message }
-        </div>
-        <div className={`whitespace-pre-line pb-[12px] font-aeonik`}>
-               { initialTexts.Body }
-        </div>
-        <AutofillQuestions 
-            autofillQuestions={autofillQuestions}
-        />
-      </div>
-      )
+
+    )
 };
 
 export default InitialResponse

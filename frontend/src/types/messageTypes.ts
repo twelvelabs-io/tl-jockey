@@ -3,6 +3,7 @@ export interface Message {
     text: string;
     link?: string;
     linkText?: string;
+    storedAgentName: any; // any for now, future is REFLECT | WORKER
   }
   
 export interface QuestionMessage extends Message {

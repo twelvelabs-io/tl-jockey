@@ -48,7 +48,6 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
         asrTest: '',
         lameText: '',
         question: '',
-        isLastResponse: false
       }
     ]
   })
@@ -66,13 +65,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     { input, streamMode: "messages" }
   )) {
 
-    let runStatus = await client.runs.list(thread.thread_id)[0].status
-
-    // print cur_status only if changed
-    // if (runs[0].status !== cur_status) {
-    // cur_status = runs[0].status
-    console.log("cur_status", runs[0].status)
-    // }
+    let runList = await client.runs.list(thread.thread_id)
+    let runStatus = runList[0].status
 
     // console.log("current", current)
 
@@ -116,9 +110,19 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
 
             const finishReason = responseMetadata.finish_reason || "N/A";
             if (finishReason && !['N/A', 'none'].includes(finishReason)) console.log(`Response Metadata: Finish Reason - ${finishReason}`);
-            // let threadState = await client.threads.getState(thread.thread_id);
+            let threadState = await client.threads.getState(thread.thread_id);
             if (finishReason === 'stop') {
+
               // let agentName = threadState.next[0]
+              console.log("runStatus", runStatus)
+              // console.log("runStatus length", runStatus.length);
+              // console.log("Expected 'pending' length", "pending".length);
+
+              dispatch({
+                type: ActionType.SET_RUN_STATUS,
+                payload: runStatus
+              });
+
               dispatch({
                 type: ActionType.SET_ARRAY_MESSAGES,
                 payload: [
@@ -132,10 +136,10 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
                     lameText: '',
                     question: inputBox,
                     storedAgentName: storedAgentName,
-                    isLastResponse: runStatus === 'success'
                   }
                 ]
-              })
+                // dispatch set runStatus
+              });
             }
           }
         }

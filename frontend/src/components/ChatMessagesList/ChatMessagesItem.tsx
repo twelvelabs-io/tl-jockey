@@ -14,43 +14,53 @@ interface ErrorFallBackProps {
   error: Error
 }
 
-const ErrorFallback:React.FC<ErrorFallBackProps> = ({ error  }) => (
+const ErrorFallback: React.FC<ErrorFallBackProps> = ({ error }) => (
   <div>
     <p>Something went wrong: {error.message}</p>
   </div>
 );
 
-const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message,  index,  handleShow }) => {
+const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message, index, handleShow }) => {
   const [state, dispatch] = useChat()
   const { statusMessages, loading, arrayMessages } = state
   const previousMessageText = arrayMessages[arrayMessages.length - 2]?.text;
-  const lastElement = previousMessageText === message?.text; 
-  if (!message) { 
-    return <p>No messages available</p>; 
+  const lastElement = previousMessageText === message?.text;
+  if (!message) {
+    return <p>No messages available</p>;
   }
 
   const isUserMessage = message.sender === 'user'
-  const initialMessage = message.sender === 'initial'
+  const isInitialMessage = message.sender === 'initial'
 
   return (
-        <div className={'flex flex-col'} key={index}>
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Suspense fallback={<Loading/>}>
-              <div key={index} className={`${isUserMessage ? ' flex-row gap-2 justify-start items-start flex' : 'flex-row gap-2 justify-start items-start flex'}`}>
-                  {isUserMessage 
-                    ? <UserResponse 
-                      message={message.text} 
-                      isUserMessage={isUserMessage} 
-                      statusMessages={statusMessages}
-                      loading={loading}
-                      lastElement={lastElement}
-                      />
-                    : (initialMessage ? <InitialResponse message={message.text} /> : <AIResponse message={message} handleShow={handleShow}/>)
-                  }
-              </div>
-            </Suspense>
-          </ErrorBoundary>
-        </div>
+    <div className={'flex flex-col'} key={index}>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Suspense fallback={<Loading />}>
+          <div key={index} className={`${isUserMessage ? ' flex-row gap-2 justify-start items-start flex' : 'flex-row gap-2 justify-start items-start flex'}`}>
+            {isUserMessage
+              ? <UserResponse
+                message={message.text}
+                isUserMessage={isUserMessage}
+                statusMessages={statusMessages}
+                loading={loading}
+                lastElement={lastElement}
+              />
+              : (
+                <>
+                  {/* <p>{isInitialMessage ? 'isInitialMessage: true' : ''}</p> */}
+                  {/* <p>{'everything in message: ' + JSON.stringify(message)}</p> */}
+                  {isInitialMessage ? (
+                    <InitialResponse message={message.text} />
+                  ) : (
+                    <AIResponse message={message} handleShow={handleShow} />
+                  )}
+                </>
+              )
+            }
+          </div>
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   )
 }
 
