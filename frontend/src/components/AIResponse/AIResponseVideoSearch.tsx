@@ -17,29 +17,32 @@ import {
 import { State } from "../../widgets/VideoAssistant/hooks/useChatTypes";
 
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-interface AIResponseVideoSearch {
+interface AIResponseVideoSearchProps {
   message: Message;
   showAllVideos: boolean;
   setShowAllVideos: Dispatch<SetStateAction<boolean>>;
   videosLengthMoreThan3: boolean | undefined;
   formattedDurations: string[];
   handleVideoClick: (index: number | undefined) => void;
+  isLastReflect: boolean; // New prop to indicate if it's the last REFLECT
 }
 
-export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({
+export const AIResponseVideoSearch: React.FC<AIResponseVideoSearchProps> = ({
   message,
   showAllVideos,
   setShowAllVideos,
   videosLengthMoreThan3,
   formattedDurations,
   handleVideoClick,
+  isLastReflect, // Destructure the new prop
 }) => {
   const [state, dispatch] = useChat();
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(
     undefined
   );
   const [videoUrl, setVideoUrl] = useState<string | undefined>(undefined);
-  const [isFinished, setIsFinished] = useState<boolean>(false); // New state for isFinished
+
+  // Removed isFinished state
 
   const parseThumbnailFromMessage = (message: Message) => {
     const rawReflectNodeOutput = message?.text;
@@ -60,86 +63,68 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({
     }
   };
 
-  const VideoContent: React.FC = () => {
+  const VideoContent: React.FC<{ src: string }> = ({ src }) => {
     return (
       <div className="rounded-lg overflow-hidden">
-        <video
-          src="https://bctglljrspqfnyst.public.blob.vercel-storage.com/clip1-acSeiV1USauyPPw8dziufSGBifE5ZK.mp4"
-          autoPlay
-          loop
-          controls
-          className="w-full h-full"
-        />
+        <video src={src} autoPlay loop muted className="w-full h-full" />
       </div>
     );
   };
 
   useEffect(() => {
-    const runStatus = state.runStatus;
+    parseThumbnailFromMessage(message);
+    parseVideoUrlFromMessage(message);
+  }, [message]);
 
-    if (state.arrayMessages.at(-1)?.storedAgentName === "REFLECT" && runStatus === "success") {
-      setIsFinished(true); // Update isFinished state
-    } else {
-      setIsFinished(false); // Update isFinished state
-    }
-  }, [state]);
+  // for demo purposes
+  const tempArray3 = [
+    "https://bctglljrspqfnyst.public.blob.vercel-storage.com/clip1-acSeiV1USauyPPw8dziufSGBifE5ZK.mp4",
+    "https://bctglljrspqfnyst.public.blob.vercel-storage.com/clip2-tP1ouw1XdIRtjim3YMb17rexTHMS8L.mp4",
+    "https://bctglljrspqfnyst.public.blob.vercel-storage.com/clip3-c6ennHRQ29HkSn0oYMm7BFf87ApjkU.mp4",
+  ];
+
+  const tempArray1 = [
+    "https://bctglljrspqfnyst.public.blob.vercel-storage.com/clip1-acSeiV1USauyPPw8dziufSGBifE5ZK.mp4",
+  ];
+  const tempArray =
+    state.arrayMessages.at(-1)?.question === "Find the top 3 clips of a touchdown"
+      ? tempArray3
+      : tempArray1;
+
+
+  const isMultipleVideos = tempArray.length > 1;
 
   return (
-    <div className="">
-      <ul className={"flex flex-wrap pb-3 gap-[12px]"}>
-        {/* log isFinished */}
-        <p>{"isFinished: " + isFinished}</p>
-        {message.toolsData &&
-          message.toolsData
-            .slice(0, showAllVideos ? undefined : 3)
-            .map((video, index) => {
-              console.log("Video data!!!!!!!:", video);
-              return (
-                <li key={index} className=" ">
-                  <div className="flex flex-row justify-between items-start gap-[12px]">
-                    {isFinished ? (
-                      <Suspense
-                        fallback={
-                          <FallBackVideoSingle
-                            oneThumbnail={
-                              message?.toolsData &&
-                              message.toolsData.length <= 1
-                            }
-                            index={index}
-                            duration={formattedDurations[index]}
-                          />
-                        }
-                      >
-                        <VideoContent />
-                        <VideoThumbnail
-                          thumbnailUrl={video.thumbnail_url || thumbnailUrl}
-                          index={index}
-                          onClick={() => handleVideoClick(index)}
-                          duration={formattedDurations[index]}
-                          oneThumbnail={
-                            message?.toolsData && message.toolsData.length <= 1
-                          }
-                        />
-                      </Suspense>
-                    ) : (
+    <div className="w-full">
+      <ul className={`flex ${isMultipleVideos ? 'flex-row flex-wrap' : 'flex-col'} gap-2`}>
+        {/* <p>{"isLastReflect: " + isLastReflect}</p>
+        <p>{"showAllVideos: " + showAllVideos}</p>
+        <p>{"formattedDurations: " + formattedDurations}</p> */}
+        {tempArray.map((videoUrl, index) => (
+          <li key={index} className={`${isMultipleVideos ? 'w-[calc(50.33%-1rem)]' : 'w-full'}`}>
+            <div className="flex flex-col gap-2">
+              {isLastReflect && (
+                <div className="w-full aspect-video">
+                  <Suspense
+                    fallback={
                       <FallBackVideoSingle
-                        oneThumbnail={
-                          message?.toolsData && message.toolsData.length <= 1
-                        }
+                        oneThumbnail={formattedDurations.length <= 1}
                         index={index}
                         duration={formattedDurations[index]}
                       />
-                    )}
-                    <div className="flex-grow w-[400px]">
-                      {/* Apply the streaming effect to the text */}
-                      {video && (
-                        <StreamingTextEffect text={video.video_title} />
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+                    }
+                  >
+                    <VideoContent src={videoUrl} />
+                  </Suspense>
+                </div>
+              )}
+              <div className="w-full">
+                {/* Video title or other content */}
+                {/* <p className="text-sm">Video {index + 1}</p> */}
+              </div>
+            </div>
+          </li>
+        ))}
       </ul>
       {videosLengthMoreThan3 && (
         <SeeMoreResultsButton
