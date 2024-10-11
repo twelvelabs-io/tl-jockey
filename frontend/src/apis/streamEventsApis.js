@@ -15,7 +15,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
       console.log(toolCalls)
       const formattedCalls = toolCalls.map(
         (call) =>
-            call.name
+          call.name
       );
       return formattedCalls.join("\n");
     }
@@ -33,10 +33,9 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
   const runs = await client.runs.list(thread.thread_id);
   // Let's kick off a run
   const input = {
-    chat_history: [{ type:"user", content: `${indexID} ${inputBox}` }],
+    chat_history: [{ type: "user", content: `${indexID} ${inputBox}` }],
   };
 
-  
   dispatch({
     type: ActionType.SET_ARRAY_MESSAGES,
     payload: [
@@ -48,7 +47,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
         twelveText: '',
         asrTest: '',
         lameText: '',
-        question: ''
+        question: '',
+        isLastResponse: false
       }
     ]
   })
@@ -66,14 +66,35 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     { input, streamMode: "messages" }
   )) {
 
+    const runs = await client.runs.list(thread.thread_id);
+
+    // print cur_status only if changed
+    // if (runs[0].status !== cur_status) {
+    // cur_status = runs[0].status
+    console.log("cur_status", runs[0].status)
+    // }
+
+    // console.log("current", current)
+
+    // if (storedEvent !== event) {
+    //   storedEvent = event;
+    //   console.log("event:", event);
+    // }
+
+
+    // if (storedAssistant !== client.assistants) {
+    // storedAssistant = client.assistants;
+    // console.log("client.assistants", storedAssistant);
+    // }
+
 
     if (event.event === "metadata") {
       const data = event.data
     } else if (event.event === "on_tool_start") {
       console.log("START X")
-     }
-    
-    
+    }
+
+
     else if (event.event === "messages/partial") {
       for (const dataItem of event?.data) {
         if ("role" in dataItem && dataItem.role === "user") {
@@ -110,7 +131,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
                     asrTest: '',
                     lameText: '',
                     question: inputBox,
-                    storedAgentName: storedAgentName
+                    storedAgentName: storedAgentName,
+                    isLastResponse: finishReason === 'stop' && !event.data.some(item => item.role === 'assistant'),
                   }
                 ]
               })
@@ -120,15 +142,15 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
       }
       console.log("-".repeat(50));
     }
-      dispatch({
-        type: ActionType.CLEAR_STATUS_MESSAGES,
-        payload: [
-          {
-            ...arrayMessages,
-            storedAgentName: storedAgentName
-          }
-        ],
-      });
+    dispatch({
+      type: ActionType.CLEAR_STATUS_MESSAGES,
+      payload: [
+        {
+          ...arrayMessages,
+          storedAgentName: storedAgentName
+        }
+      ],
+    });
   }
 
 }
