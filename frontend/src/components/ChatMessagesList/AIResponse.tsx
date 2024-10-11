@@ -68,7 +68,7 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
   const lastReflectIndex = useMemo(() => {
     return arrayMessages
       .map((msg, idx) => ({ msg, idx }))
-      .filter(({ msg }) => msg.storedAgentName === "REFLECT")
+      .filter(({ msg }) => msg.storedAgentName === "REFLECT" && state.runStatus === "success")
       .map(({ idx }) => idx)
       .pop();
   }, [arrayMessages]);
@@ -79,12 +79,11 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
     return currentIndex === lastReflectIndex;
   }, [arrayMessages, message, lastReflectIndex]);
 
-
   return (
     <>
       <div className={"relative w-[680px]"}>
         {hasTextMessage &&
-          <AIResponseHeader message={message}/>
+          <AIResponseHeader message={message} />
         }
         {/* <p>Debugging UI: hasTextMessage: {hasTextMessage ? 'true' : 'false'}, hasValidMessage: {hasValidMessage ? 'true' : 'false'}, videosLengthMoreThan3: {videosLengthMoreThan3 ? 'true' : 'false'}</p> */}
         {/* show everything in message */}
@@ -97,13 +96,16 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
             <p>{"message:" + JSON.stringify(message)}</p>
             <p>{"videosLengthMoreThan3:" + videosLengthMoreThan3}</p>
             <p>{"formattedDurations:" + formattedDurations}</p> */}
-            
+
           </div>
           {hasValidMessage ? (
             <ExtendMessage agent={message.linkText} message={message.text} />
           ) : (
             <ExtendMessage agent="error" message={message.text} />
           )}
+          {/* show isLastReflect */}
+          {/* <p>{"isLastReflect: " + isLastReflect}</p>
+         <p>{"runStatus: " + state.runStatus}</p>  */}
           {message ? (
             <div className="flex flex-row flex-wrap mt-4"> {/* Ensure flex-row and flex-wrap are applied here */}
               <AIResponseVideoSearch
