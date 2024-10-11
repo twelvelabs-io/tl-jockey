@@ -66,7 +66,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
     { input, streamMode: "messages" }
   )) {
 
-    const runs = await client.runs.list(thread.thread_id);
+    let runStatus = await client.runs.list(thread.thread_id)[0].status
 
     // print cur_status only if changed
     // if (runs[0].status !== cur_status) {
@@ -132,7 +132,7 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
                     lameText: '',
                     question: inputBox,
                     storedAgentName: storedAgentName,
-                    isLastResponse: finishReason === 'stop' && !event.data.some(item => item.role === 'assistant'),
+                    isLastResponse: runStatus === 'success'
                   }
                 ]
               })
