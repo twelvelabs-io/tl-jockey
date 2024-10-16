@@ -119,6 +119,32 @@ Install the required Python packages:
 pip3 install -r requirements.txt
 ```
 
+## Formatting
+
+To preserve git blame, please format your code using `ruff` with the following command when working with .py files:
+
+```sh
+ruff check . --fix
+```
+
+If you are using vscode or cursor, we recommend installing the `ruff` extension to format your code when you save
+
+Configure your settings.json in vscode by pressing `cmd + shift + p` and then typing "Preferences: Open Settings (JSON)"
+```json
+{
+  // ... other settings
+
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "[typescriptreact]": {
+      "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[python]": {
+      "editor.defaultFormatter": "charliermarsh.ruff",
+  },
+}
+```
+
 ## Configuration
 
 Jockey uses environment variables for configuration, and comes with an `example.env` file to help you get started.
