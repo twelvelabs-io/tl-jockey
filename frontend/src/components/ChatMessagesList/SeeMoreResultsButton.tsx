@@ -17,7 +17,7 @@ export const SeeMoreResultsButton: React.FC<SeeMoreResultsButtonProps> = ({ show
         >
             {showAllVideos ? 'Show Less' : `See ${videosAmountLeft} more results`}
             <ArrowIcon direction={showAllVideos}/>
-      </button>
+    </button>
     )
 }
 

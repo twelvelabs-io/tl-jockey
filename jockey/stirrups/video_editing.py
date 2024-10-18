@@ -69,7 +69,8 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str
             video_bitrate="1M",
             audio_bitrate="192k"
         ).overwrite_output().run()
-
+        ngrok_url = f"https://videos.ngrok.app/{index_id}/{output_filename}"
+        return ngrok_url
         return output_filepath
     except Exception as error:
         print(error)

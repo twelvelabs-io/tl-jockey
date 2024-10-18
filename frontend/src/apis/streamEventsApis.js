@@ -3,9 +3,7 @@ import { Client } from "@langchain/langgraph-sdk";
 
 export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData, arrayMessages) => {
   dispatch({ type: ActionType.SET_LOADING, payload: true })
-  const client = new Client({
-    apiUrl: process.env.REACT_APP_LANGGRAPH_API_URL,
-  });
+  const client = new Client();
   const indexID = process.env.REACT_APP_API_INDEX_ID
   // List available assistants
   const assistants = await client.assistants.search();
@@ -69,6 +67,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
 
 
     if (event.event === "metadata") {
+      console.log('Event')
+      console.log(event)
       const data = event.data
     } else if (event.event === "on_tool_start") {
       console.log("START X")
@@ -80,6 +80,8 @@ export const streamEvents = async (ActionType, dispatch, inputBox, setStreamData
         if ("role" in dataItem && dataItem.role === "user") {
           console.log(`Human: ${dataItem.content}`);
         } else {
+          console.log('item')
+          console.log(dataItem)
           const content = dataItem.content || "";
           const responseMetadata = dataItem.response_metadata || {};
 
