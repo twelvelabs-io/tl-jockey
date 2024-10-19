@@ -11,32 +11,30 @@ async def run_jockey_terminal():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work.
     We use the default version of Jockey for this."""
     console = Console()
-
     session_id = uuid.uuid4()
-
     while True:
-
         try:
             console.print()
             user_input = console.input("[green]👤 Chat: ")
 
-            # Collect user input as a HumanMessage
-          # Reset the state of Jockey instance every new user invocation.
+            # hanndle empty input (Enter)
+            if not user_input.strip():
+                continue
+
             user_input = [HumanMessage(content=user_input, name="user")]
-            jockey_input = {
-                "chat_history": user_input,
-                "made_plan": False,
-                "next_worker": None,
-                "active_plan": None
-            }
-            async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
-                parse_langchain_events_terminal(event)
+            jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+
+            try:
+                async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
+                    parse_langchain_events_terminal(event)
+            except KeyboardInterrupt:
+                console.print("\nInterrupted. Exiting chat.")
+                raise SystemExit
 
             console.print()
-
-        except (EOFError):
-            console.print("[red]Press Ctrl + C again to exit...[/red]")
-
+        except KeyboardInterrupt:
+            console.print("\nExiting chat.")
+            raise SystemExit
 
 
 def run_jockey_server():
@@ -46,20 +44,13 @@ def run_jockey_server():
     langgraph_json_file_path = os.path.join(jockey_package_dir, "langgraph.json")
     compose_file_path = os.path.join(jockey_package_dir, "compose.yaml")
 
-    langgraph_cli_command = [
-        "langgraph", 
-        "up", 
-        "-c", langgraph_json_file_path, 
-        "-d", compose_file_path, 
-        "--recreate", 
-        "--verbose"
-    ]
+    langgraph_cli_command = ["langgraph", "up", "-c", langgraph_json_file_path, "-d", compose_file_path, "--recreate", "--verbose"]
 
     print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
 
     with subprocess.Popen(langgraph_cli_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
         for line in process.stdout:
-            print(line.decode('utf-8', errors='replace'), end='')
+            print(line.decode("utf-8", errors="replace"), end="")
 
         process.wait()
         if process.returncode != 0:
