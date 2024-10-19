@@ -127,21 +127,27 @@ To preserve git blame, please format your code using `ruff` with the following c
 ruff check . --fix
 ```
 
-If you are using vscode or cursor, we recommend installing the `ruff` extension to format your code when you save
+If you are using vscode or cursor, we recommend installing the `ruff` and `prettier` extensions to format your code when you save
 
-Configure your settings.json in vscode by pressing `cmd + shift + p` and then typing "Preferences: Open Settings (JSON)"
+Configure your settings.json in vscode by pressing `cmd + shift + p` and then typing `Preferences: Open Settings (JSON)`
+
 ```json
 {
   // ... other settings
 
-  "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
   "[typescriptreact]": {
-      "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
   },
   "[python]": {
-      "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnType": true
   },
+  "editor.formatOnSave": true
 }
 ```
 
