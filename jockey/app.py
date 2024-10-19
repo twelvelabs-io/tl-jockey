@@ -28,9 +28,7 @@ def build_jockey(
     """
 
     # Here we load all the required prompts for a Jockey instance.
-    supervisor_filepath = os.path.join(
-        os.path.dirname(__file__), "prompts", "supervisor.md"
-    )
+    supervisor_filepath = os.path.join(os.path.dirname(__file__), "prompts", "supervisor.md")
     planner_filepath = os.path.join(os.path.dirname(__file__), "prompts", "planner.md")
 
     with open(supervisor_filepath, "r") as supervisor_prompt_file:
@@ -58,21 +56,17 @@ check_environment_variables()
 
 if os.environ["LLM_PROVIDER"] == "AZURE":
     planner_llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
+        deployment_name="gpt-4o-2024-08-06",
         streaming=True,
         temperature=0,
-        model_version="1106-preview",
         tags=["planner"],
     )
-
     supervisor_llm = AzureChatOpenAI(
-        deployment_name="gpt-4",
+        deployment_name="gpt-4o-2024-08-06",
         streaming=True,
         temperature=0,
-        model_version="1106-preview",
         tags=["supervisor"],
     )
-
     worker_llm = AzureChatOpenAI(
         deployment_name="gpt-4o-mini",
         streaming=True,
@@ -81,24 +75,12 @@ if os.environ["LLM_PROVIDER"] == "AZURE":
         tags=["worker"],
     )
 elif os.environ["LLM_PROVIDER"] == "OPENAI":
-    planner_llm = ChatOpenAI(
-        model="gpt-4o", streaming=True, temperature=0, tags=["planner"]
-    )
-
-    supervisor_llm = ChatOpenAI(
-        model="gpt-4o", streaming=True, temperature=0, tags=["supervisor"]
-    )
-
-    worker_llm = ChatOpenAI(
-        model="gpt-4o-mini-2024-07-18", streaming=True, temperature=0, tags=["worker"]
-    )
+    planner_llm = ChatOpenAI(model="gpt-4o-2024-08-06", streaming=True, temperature=0, tags=["planner"])
+    supervisor_llm = ChatOpenAI(model="gpt-4o-2024-08-06", streaming=True, temperature=0, tags=["supervisor"])
+    worker_llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18", streaming=True, temperature=0, tags=["worker"])
 else:
-    print(
-        f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}"
-    )
+    print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
 
 # This variable is what is used by the LangGraph API server.
-jockey = build_jockey(
-    planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm
-)
+jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)

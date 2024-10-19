@@ -8,22 +8,27 @@ from dotenv import find_dotenv, load_dotenv
 from rich.padding import Padding
 from rich.console import Console
 from rich.json import JSON
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    InternalServerError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+    APIError,
+    UnprocessableEntityError,
+    OpenAI,
+)
+
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
-REQUIRED_ENVIRONMENT_VARIABLES = set([
-    "TWELVE_LABS_API_KEY",
-    "HOST_PUBLIC_DIR",
-    "LLM_PROVIDER"
-])
-AZURE_ENVIRONMENT_VARIABLES = set([
-    "AZURE_OPENAI_ENDPOINT",
-    "AZURE_OPENAI_API_KEY",
-    "OPENAI_API_VERSION"
-])
-OPENAI_ENVIRONMENT_VARIABLES = set([
-    "OPENAI_API_KEY"
-])
+REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
+AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
+OPENAI_ENVIRONMENT_VARIABLES = set(["OPENAI_API_KEY"])
 ALL_JOCKEY_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES | AZURE_ENVIRONMENT_VARIABLES | OPENAI_ENVIRONMENT_VARIABLES
 
 
@@ -36,7 +41,7 @@ def parse_langchain_events_terminal(event: dict):
             content = event["data"]["chunk"]["content"]
         else:
             content = event["data"]["chunk"].content
-        
+
         if content and "instructor" in event["tags"]:
             console.print(f"[red]{content}", end="")
         elif content and "planner" in event["tags"]:
@@ -69,11 +74,7 @@ def parse_langchain_events_terminal(event: dict):
 def get_video_metadata(index_id: str, video_id: str) -> dict:
     video_url = f"{INDEX_URL}{index_id}/videos/{video_id}"
 
-    headers = {
-        "accept": "application/json",
-        "Content-Type": "application/json",
-        "x-api-key": os.environ["TWELVE_LABS_API_KEY"]
-    }
+    headers = {"accept": "application/json", "Content-Type": "application/json", "x-api-key": os.environ["TWELVE_LABS_API_KEY"]}
 
     response = requests.get(video_url, headers=headers)
 
@@ -81,28 +82,24 @@ def get_video_metadata(index_id: str, video_id: str) -> dict:
         assert response.status_code == 200
     except AssertionError:
         error_response = {
-                "message": f"There was an error getting the metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                "Double check that the Video ID and Index ID are valid and correct.",
-                "error": response.text
-            }
+            "message": f"There was an error getting the metadata for Video ID: {video_id} in Index ID: {index_id}. "
+            "Double check that the Video ID and Index ID are valid and correct.",
+            "error": response.text,
+        }
         return error_response
 
     return response
 
 
 def download_video(video_id: str, index_id: str, start: float, end: float) -> str:
-    """Download a video for a given video in a given index and get the filepath. 
+    """Download a video for a given video in a given index and get the filepath.
     Should only be used when the user explicitly requests video editing functionalities."""
-    headers = {
-        "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
+    headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
 
     video_url = f"https://api.twelvelabs.io/v1.2/indexes/{index_id}/videos/{video_id}"
 
     response = requests.get(video_url, headers=headers)
-        
+
     assert response.status_code == 200
 
     hls_uri = response.json()["hls"]["video_url"]
@@ -119,15 +116,13 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
         try:
             duration = end - start
             buffer = 1  # Add a 1-second buffer on each side
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=max(0, start-buffer), t=duration+2*buffer) \
-                .output(video_path, vcodec="libx264", acodec="aac", avoid_negative_ts="make_zero", fflags="+genpts") \
-                .run()
+            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=max(0, start - buffer), t=duration + 2 * buffer).output(
+                video_path, vcodec="libx264", acodec="aac", avoid_negative_ts="make_zero", fflags="+genpts"
+            ).run()
 
             # Then trim the video more precisely
             output_trimmed = f"{os.path.splitext(video_path)[0]}_trimmed.mp4"
-            ffmpeg.input(video_path, ss=buffer, t=duration) \
-                .output(output_trimmed, vcodec="copy", acodec="copy") \
-                .run()
+            ffmpeg.input(video_path, ss=buffer, t=duration).output(output_trimmed, vcodec="copy", acodec="copy").run()
 
             # Replace the original file with the trimmed version
             os.replace(output_trimmed, video_path)
@@ -135,7 +130,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
             error_response = {
                 "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
                 "Double check that the Video ID and Index ID are valid and correct.",
-                "error": str(error)
+                "error": str(error),
             }
             return error_response
 
@@ -154,8 +149,10 @@ def check_environment_variables():
         print(f"Missing:\n\t{str.join(', ', missing_environment_variables)}")
         sys.exit("Missing required environment variables.")
 
-    if AZURE_ENVIRONMENT_VARIABLES & os.environ.keys() != AZURE_ENVIRONMENT_VARIABLES and \
-        OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys() != OPENAI_ENVIRONMENT_VARIABLES:
+    if (
+        AZURE_ENVIRONMENT_VARIABLES & os.environ.keys() != AZURE_ENVIRONMENT_VARIABLES
+        and OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys() != OPENAI_ENVIRONMENT_VARIABLES
+    ):
         missing_azure_environment_variables = AZURE_ENVIRONMENT_VARIABLES - os.environ.keys()
         missing_openai_environment_variables = OPENAI_ENVIRONMENT_VARIABLES - os.environ.keys()
         print(f"If using Azure, Expected the following environment variables:\n\t{str.join(', ', AZURE_ENVIRONMENT_VARIABLES)}")
@@ -165,3 +162,43 @@ def check_environment_variables():
         print(f"Missing:\n\t{str.join(', ', missing_openai_environment_variables)}")
         sys.exit("Missing Azure or Open AI environment variables.")
 
+
+def preflight_checks():
+    # no need to check if using azure
+    if os.getenv("LLM_PROVIDER") != "OPENAI":
+        return
+
+    load_dotenv()
+    api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=api_key)
+    models = ["gpt-4o-mini-2024-07-18", "gpt-4o-2024-08-06"]
+
+    for model in models:
+        for stream in [False, True]:
+            try:
+                response = client.chat.completions.create(
+                    model=model, messages=[{"role": "system", "content": "Test message"}], temperature=1, max_tokens=2048, stream=stream
+                )
+
+                if stream:
+                    if not any(chunk.choices[0].delta.content for chunk in response if chunk.choices[0].delta.content is not None):
+                        return f"API request failed. Streaming: {stream}. Model: {model}. Check your OpenAI API key or usage limits."
+                elif not response.choices[0].message.content:
+                    return f"API request failed. Streaming: {stream}. Model: {model}. Check your OpenAI API key or usage limits."
+
+            except (
+                APIConnectionError,
+                APITimeoutError,
+                AuthenticationError,
+                BadRequestError,
+                ConflictError,
+                InternalServerError,
+                NotFoundError,
+                PermissionDeniedError,
+                RateLimitError,
+                APIError,
+                UnprocessableEntityError,
+            ) as e:
+                return f"{type(e).__name__} occurred. Model: {model}. Error: {str(e)}"
+
+    return "Preflight checks passed. All models functioning correctly."
