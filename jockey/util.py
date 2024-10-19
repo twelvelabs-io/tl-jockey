@@ -22,6 +22,8 @@ from openai import (
     UnprocessableEntityError,
     OpenAI,
 )
+from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
+from openai import AzureOpenAI
 
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
@@ -164,14 +166,22 @@ def check_environment_variables():
 
 
 def preflight_checks():
-    # no need to check if using azure
-    if os.getenv("LLM_PROVIDER") != "OPENAI":
-        return
-
+    print("Performing preflight checks...")
     load_dotenv()
-    api_key = os.getenv("OPENAI_API_KEY")
-    client = OpenAI(api_key=api_key)
-    models = ["gpt-4o-mini-2024-07-18", "gpt-4o-2024-08-06"]
+
+    llm_provider = os.getenv("LLM_PROVIDER")
+    if llm_provider == "OPENAI":
+        api_key = os.getenv("OPENAI_API_KEY")
+        client = OpenAI(api_key=api_key)
+        models = list(OPENAI_MODELS.values())
+    elif llm_provider == "AZURE":
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        client = AzureOpenAI(api_key=api_key, azure_endpoint=endpoint)
+        models = [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()]
+    else:
+        print("Invalid LLM_PROVIDER. Must be one of: [AZURE, OPENAI]")
+        sys.exit("Invalid LLM_PROVIDER environment variable.")
 
     for model in models:
         for stream in [False, True]:
@@ -179,13 +189,11 @@ def preflight_checks():
                 response = client.chat.completions.create(
                     model=model, messages=[{"role": "system", "content": "Test message"}], temperature=1, max_tokens=2048, stream=stream
                 )
-
                 if stream:
-                    if not any(chunk.choices[0].delta.content for chunk in response if chunk.choices[0].delta.content is not None):
-                        return f"API request failed. Streaming: {stream}. Model: {model}. Check your OpenAI API key or usage limits."
+                    if not any(chunk.choices and chunk.choices[0].delta.content for chunk in response if chunk.choices and chunk.choices[0].delta.content is not None):
+                        return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
                 elif not response.choices[0].message.content:
-                    return f"API request failed. Streaming: {stream}. Model: {model}. Check your OpenAI API key or usage limits."
-
+                    return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
             except (
                 APIConnectionError,
                 APITimeoutError,

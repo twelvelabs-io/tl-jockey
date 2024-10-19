@@ -4,6 +4,7 @@ from typing import Union
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from jockey.jockey_graph import Jockey, build_jockey_graph
 from jockey.util import check_environment_variables
+from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 
 
 def build_jockey(
@@ -56,28 +57,30 @@ check_environment_variables()
 
 if os.environ["LLM_PROVIDER"] == "AZURE":
     planner_llm = AzureChatOpenAI(
-        deployment_name="gpt-4o-2024-08-06",
+        deployment_name=AZURE_DEPLOYMENTS["planner"]["deployment_name"],
         streaming=True,
         temperature=0,
+        model_version=AZURE_DEPLOYMENTS["planner"]["model_version"],
         tags=["planner"],
     )
     supervisor_llm = AzureChatOpenAI(
-        deployment_name="gpt-4o-2024-08-06",
+        deployment_name=AZURE_DEPLOYMENTS["supervisor"]["deployment_name"],
         streaming=True,
         temperature=0,
+        model_version=AZURE_DEPLOYMENTS["supervisor"]["model_version"],
         tags=["supervisor"],
     )
     worker_llm = AzureChatOpenAI(
-        deployment_name="gpt-4o-mini",
+        deployment_name=AZURE_DEPLOYMENTS["worker"]["deployment_name"],
         streaming=True,
         temperature=0,
-        model_version="1106-preview",
+        model_version=AZURE_DEPLOYMENTS["worker"]["model_version"],
         tags=["worker"],
     )
 elif os.environ["LLM_PROVIDER"] == "OPENAI":
-    planner_llm = ChatOpenAI(model="gpt-4o-2024-08-06", streaming=True, temperature=0, tags=["planner"])
-    supervisor_llm = ChatOpenAI(model="gpt-4o-2024-08-06", streaming=True, temperature=0, tags=["supervisor"])
-    worker_llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18", streaming=True, temperature=0, tags=["worker"])
+    planner_llm = ChatOpenAI(model=OPENAI_MODELS["planner"], streaming=True, temperature=0, tags=["planner"])
+    supervisor_llm = ChatOpenAI(model=OPENAI_MODELS["supervisor"], streaming=True, temperature=0, tags=["supervisor"])
+    worker_llm = ChatOpenAI(model=OPENAI_MODELS["worker"], streaming=True, temperature=0, tags=["worker"])
 else:
     print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
     sys.exit("Incorrect LLM_PROVIDER environment variable.")

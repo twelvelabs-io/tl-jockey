@@ -6,7 +6,7 @@ from jockey.util import preflight_checks
 
 def main():
     try:
-        # preflight_checks()
+        preflight_checks()
         mode = sys.argv[1] if len(sys.argv) > 1 else "terminal"
         if mode == "server":
             run_jockey_server()
