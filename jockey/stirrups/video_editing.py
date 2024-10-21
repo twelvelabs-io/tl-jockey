@@ -50,13 +50,13 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> Uni
             if os.path.isfile(video_filepath) is False:
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
-                except AssertionError as error:
-                    error_response = {
-                        "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                        "Double check that the Video ID and Index ID are valid and correct.",
-                        "error": str(error),
-                    }
-                    return error_response
+                except AssertionError:
+                    return TwelveLabsError.create(
+                        error_type=TwelveLabsErrorType.RETRIEVE_VIDEO_METADATA,
+                        error_state=ErrorState.VIDEO_EDITING_ERROR,
+                        error=f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
+                              "Double check that the Video ID and Index ID are valid and correct. Error: {error}"
+                    ).model_dump()
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio

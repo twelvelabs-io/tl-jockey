@@ -187,10 +187,14 @@ def preflight_checks():
         for stream in [False, True]:
             try:
                 response = client.chat.completions.create(
-                    model=model, messages=[{"role": "system", "content": "Test message"}], temperature=1, max_tokens=2048, stream=stream
+                    model=model, messages=[{"role": "system", "content": "Test message"}], temperature=0, max_tokens=2048, stream=stream
                 )
                 if stream:
-                    if not any(chunk.choices and chunk.choices[0].delta.content for chunk in response if chunk.choices and chunk.choices[0].delta.content is not None):
+                    if not any(
+                        chunk.choices and chunk.choices[0].delta.content
+                        for chunk in response
+                        if chunk.choices and chunk.choices[0].delta.content is not None
+                    ):
                         return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
                 elif not response.choices[0].message.content:
                     return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
