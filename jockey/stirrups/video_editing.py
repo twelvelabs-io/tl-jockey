@@ -35,7 +35,7 @@ class RemoveSegmentInput(BaseModel):
 
 
 @tool("combine-clips", args_schema=CombineClipsInput)
-def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> Union[str, Dict]:
+def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
     """Combine or edit multiple clips together based on their start and end times and video IDs.
     The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
     try:
@@ -54,8 +54,8 @@ def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> Uni
                     return TwelveLabsError.create(
                         error_type=TwelveLabsErrorType.RETRIEVE_VIDEO_METADATA,
                         error_state=ErrorState.VIDEO_EDITING_ERROR,
-                        error=f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                              "Double check that the Video ID and Index ID are valid and correct. Error: {error}"
+                        error=f"Video ID: {video_id} in Index ID: {index_id}. "
+                        "Double check that the Video ID and Index ID are valid and correct. Error: {error}",
                     ).model_dump()
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video

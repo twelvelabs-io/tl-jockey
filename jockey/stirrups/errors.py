@@ -9,6 +9,7 @@ class TwelveLabsErrorType(str, Enum):
     GIST_TEXT_GENERATION = "gist-text-generation"
     SUMMARIZE_TEXT_GENERATION = "summarize-text-generation"
     FREEFORM_TEXT_GENERATION = "freeform-text-generation"
+    RETRIEVE_VIDEO_METADATA = "retrieve-video-metadata"
 
 
 class ErrorState(str, Enum):
@@ -18,6 +19,7 @@ class ErrorState(str, Enum):
     TEXT_GENERATION_ERROR = "TEXT_GENERATION_ERROR"
     API_ERROR = "API_ERROR"
     INVALID_INPUT = "INVALID_INPUT"
+    RETRIEVE_VIDEO_METADATA = "RETRIEVE_VIDEO_METADATA"
 
 
 class ErrorMessages(str, Enum):
@@ -27,7 +29,7 @@ class ErrorMessages(str, Enum):
     GIST_TEXT_GENERATION = "There was a text generation error: {error}"
     SUMMARIZE_TEXT_GENERATION = "There was a text generation error: {error}"
     FREEFORM_TEXT_GENERATION = "There was a text generation error: {error}"
-
+    RETRIEVE_VIDEO_METADATA = "There was an error retrieving the video metadata: {error}"
 
 class TwelveLabsError(BaseModel):
     error_type: TwelveLabsErrorType

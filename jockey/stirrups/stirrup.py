@@ -7,6 +7,8 @@ from langchain_openai.chat_models.base import BaseChatOpenAI
 from typing import List, Union, Dict
 from langchain.pydantic_v1 import BaseModel
 
+from jockey.stirrups.errors import TwelveLabsError, TwelveLabsErrorType, ErrorState
+
 
 class Stirrup(BaseModel):
     """Base class for creating workers for an instance of Jockey. Inherits from the Pydantic BaseModel.
@@ -25,7 +27,7 @@ class Stirrup(BaseModel):
     Returns:
         Runnable: A Runnable which consists of a worker LLM bound with tools and a tool routing coroutine.
     """
-    
+
     tools: List[BaseTool]
     worker_prompt_file_path: str
     worker_name: str
@@ -46,16 +48,23 @@ class Stirrup(BaseModel):
 
         for tool_call in tool_calls:
             base_tool: BaseTool = tool_map[tool_call["name"]]
-            tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
+            try:
+                tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
+            except Exception as e:
+                if isinstance(e, TwelveLabsError):
+                    tool_call["output"] = e.model_dump()
+                else:
+                    # For other exceptions, create a generic error response
+                    tool_call["output"] = {"error_type": "UNKNOWN_ERROR", "error_state": "TOOL_FAILURE", "error_message": str(e)}
 
         return tool_calls
-   
+
     def build_worker(self, worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Runnable:
         """Build a useable worker for a Jockey instance.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better. 
+            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+                The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better.
 
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.
@@ -65,10 +74,10 @@ class Stirrup(BaseModel):
         """
         if any(map(lambda x: isinstance(worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
             raise TypeError(f"LLM type must be one of: [BaseChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
-        
+
         with open(self.worker_prompt_file_path, "r") as worker_prompt_file:
             worker_prompt = worker_prompt_file.read()
-        
+
         # NOTE: We expect the incoming request from the instructor to be complete and singular in nature as you'll notice the
         # absence of any chat history here. This is intended to keep the workers as lightweight as possible so tasks can be
         # executed quickly.
