@@ -7,7 +7,8 @@ from langchain_openai.chat_models.base import BaseChatOpenAI
 from typing import List, Union, Dict
 from langchain.pydantic_v1 import BaseModel
 
-from jockey.stirrups.errors import TwelveLabsError, TwelveLabsErrorType, ErrorState
+from jockey.stirrups.errors import JockeyError, ErrorType, NodeType
+import langgraph.errors
 
 
 class Stirrup(BaseModel):
@@ -50,12 +51,22 @@ class Stirrup(BaseModel):
             base_tool: BaseTool = tool_map[tool_call["name"]]
             try:
                 tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
+            except langgraph.errors.GraphRecursionError as e:
+                # TODO: handle what happens when this happens... need to handle langgraph errors outside in main or something
+                tool_call["output"] = f"Graph recursion limit reached: {str(e)}"
+            except langgraph.errors.InvalidUpdateError as e:
+                tool_call["output"] = f"Invalid graph update: {str(e)}"
+            except langgraph.errors.NodeInterrupt as e:
+                tool_call["output"] = f"Node execution interrupted: {str(e)}"
+            except langgraph.errors.EmptyInputError as e:
+                tool_call["output"] = f"Empty input received: {str(e)}"
+            except JockeyError as e:
+                tool_call["output"] = str(e)
+                raise e
             except Exception as e:
-                if isinstance(e, TwelveLabsError):
-                    tool_call["output"] = e.model_dump()
-                else:
-                    # For other exceptions, create a generic error response
-                    tool_call["output"] = {"error_type": "UNKNOWN_ERROR", "error_state": "TOOL_FAILURE", "error_message": str(e)}
+                raise JockeyError.create(
+                    node=NodeType.INSTRUCTOR, error_type=ErrorType.TOOL_EXECUTION, details=f"Error in tool {tool_call['name']}: {str(e)}"
+                )
 
         return tool_calls
 
@@ -87,11 +98,25 @@ class Stirrup(BaseModel):
         ])
 
         worker_llm_with_tools = worker_llm.bind_tools(self.tools)
-        # The chain here processes the incoming request from the instructor before that response AIMessage is
-        # passed onto the _call_tools coroutine which ten determines which tool to call.
-        # We choose this approach so we can directly return a call from any tool a workers uses without any additional parsing.
-        worker = worker_prompt | worker_llm_with_tools | self._call_tools
-        # WE want to make sure we can parse worker events if needed so we add a custom tag.
-        worker = worker.with_config({"tags": [self.worker_name]})
-        worker.name = self.worker_name
-        return worker
+
+        try:
+            # The chain here processes the incoming request from the instructor before that response AIMessage is
+            # passed onto the _call_tools coroutine which then determines which tool to call.
+            # We choose this approach so we can directly return a call from any tool a workers uses without any additional parsing.
+            worker = worker_prompt | worker_llm_with_tools | self._call_tools
+            # WE want to make sure we can parse worker events if needed so we add a custom tag.
+            worker = worker.with_config({"tags": [self.worker_name]})
+            worker.name = self.worker_name
+            return worker
+        except langgraph.errors.GraphRecursionError as e:
+            raise JockeyError.create(
+                node=NodeType.WORKER,
+                error_type=ErrorType.GRAPH_CONSTRUCTION,
+                details=f"Graph recursion limit reached while building worker: {str(e)}",
+            )
+        except langgraph.errors.InvalidUpdateError as e:
+            raise JockeyError.create(
+                node=NodeType.WORKER, error_type=ErrorType.GRAPH_CONSTRUCTION, details=f"Invalid graph update while building worker: {str(e)}"
+            )
+        except Exception as e:
+            raise JockeyError.create(node=NodeType.WORKER, error_type=ErrorType.GRAPH_CONSTRUCTION, details=f"Error building worker: {str(e)}")
