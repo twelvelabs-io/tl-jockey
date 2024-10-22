@@ -2,9 +2,10 @@ import uuid
 import os
 import subprocess
 from rich.console import Console
-from jockey.util import parse_langchain_events_terminal
+from jockey.util import parse_langchain_events_terminal, get_langgraph_errors
 from langchain_core.messages import HumanMessage
 from jockey.app import jockey
+from jockey.stirrups.errors import JockeyError
 
 
 async def run_jockey_terminal():
@@ -27,9 +28,17 @@ async def run_jockey_terminal():
             try:
                 async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
                     parse_langchain_events_terminal(event)
-            except KeyboardInterrupt:
-                console.print("\nInterrupted. Exiting chat.")
-                raise SystemExit
+            except get_langgraph_errors() as e:
+                error_message = f"LangGraph Error occurred: {str(e)}"
+                console.print(f"[red]{error_message}[/red]")
+                jockey_input["chat_history"].append(HumanMessage(content=error_message, name="error"))
+            except JockeyError as e:
+                error_message = f"Jockey Error occurred: {str(e)}"
+                console.print(f"[red]{error_message}[/red]")
+                jockey_input["chat_history"].append(HumanMessage(content=error_message, name="error"))
+            # except KeyboardInterrupt:
+            #     console.print("\nInterrupted. Exiting chat.")
+            #     raise SystemExit
 
             console.print()
         except KeyboardInterrupt:
