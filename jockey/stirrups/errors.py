@@ -9,6 +9,7 @@ class NodeType(str, Enum):
     PLANNER = "planner"
     SUPERVISOR = "supervisor"
     WORKER = "worker"
+    INSTRUCTOR = "instructor"
     REFLECT = "reflect"
 
 
@@ -18,6 +19,9 @@ class WorkerFunction(str, Enum):
     VIDEO_SEARCH = "video_search"
     VIDEO_EDITING = "video_editing"
     VIDEO_TEXT_GENERATION = "video_text_generation"
+    REMOVE_SEGMENT = "remove_segment"
+    COMBINE_CLIPS = "combine_clips"
+    DOWNLOAD_VIDEO = "download_video"
 
 
 class ErrorType(str, Enum):
@@ -34,26 +38,34 @@ class ErrorType(str, Enum):
     UNEXPECTED = "UNEXPECTED"
 
 
-class JockeyError(BaseModel):
+class JockeyErrorData(BaseModel):
+    """Data class for error details"""
+
     node: NodeType
     error_type: ErrorType
-    function_name: Optional[WorkerFunction] = None  # Only needed for worker node errors
+    function_name: Optional[WorkerFunction] = None
     details: Optional[str] = None
 
     @property
     def error_message(self) -> str:
-        if self.node == NodeType.WORKER and self.function_name:
-            base_msg = f"{self.error_type.value} error in {self.node.value} node ({self.function_name.value})"
-        else:
-            base_msg = f"{self.error_type.value} error in {self.node.value} node"
+        base_msg = f"{self.error_type.value} error in {self.node.value} node"
+        if self.function_name:
+            base_msg += f" ({self.function_name.value})"
+        return f"{base_msg}: {self.details}" if self.details else base_msg
 
-        if self.details:
-            return f"{base_msg}: {self.details}"
-        return base_msg
+
+# this needs to be decoupled because we can't inherit both JockeyError(Exception, BaseModel)
+class JockeyError(Exception):
+    """Custom exception class"""
+
+    def __init__(self, error_data: JockeyErrorData):
+        super().__init__(error_data.error_message)
+        self.error_data = error_data
 
     @classmethod
     def create(cls, node: NodeType, error_type: ErrorType, function_name: Optional[WorkerFunction] = None, details: Optional[str] = None):
-        return cls(node=node, error_type=error_type, function_name=function_name, details=details)
+        error_data = JockeyErrorData(node=node, error_type=error_type, function_name=function_name, details=details)
+        return cls(error_data)
 
 
 # Example usage:

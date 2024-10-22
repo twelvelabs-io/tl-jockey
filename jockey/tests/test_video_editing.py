@@ -4,7 +4,8 @@ import ffmpeg
 
 # testing stirrups/video_editing.py
 from jockey.stirrups.video_editing import combine_clips, remove_segment, Clip, CombineClipsInput, RemoveSegmentInput
-from jockey.stirrups.errors import TwelveLabsErrorType, ErrorState
+from jockey.stirrups.errors import JockeyError, ErrorType, NodeType, WorkerFunction
+# from jockey.jockey_graph import Jockey, jockey_graph
 
 
 @pytest.fixture
@@ -45,20 +46,29 @@ async def test_combine_clips_download_error(mock_download, mock_ffmpeg, mock_env
     # Arrange
     clips = [Clip(index_id="index1", video_id="video1", start=0, end=10)]
     input_data = CombineClipsInput(clips=clips, output_filename="combined.mp4", index_id="index1")
-
-    mock_download.side_effect = AssertionError("Download failed")
-
-    # must be converted to dict(). see https://api.python.langchain.com/en/latest/chains/langchain.chains.llm.LLMChain.html#langchain.chains.llm.LLMChain.ainvoke
     input_dict = input_data.dict()
 
-    # Act
-    result = await combine_clips.ainvoke(input=input_dict, config={"tags": ["video-editing"]})
+    # Simulate a download error
+    mock_download.side_effect = Exception("Download failed")
 
-    # Assert
-    assert isinstance(result, dict)
-    assert result["error_type"] == TwelveLabsErrorType.RETRIEVE_VIDEO_METADATA.value
-    assert result["error_state"] == ErrorState.VIDEO_EDITING_ERROR.value
-    assert "There was an error retrieving the video metadata" in result["error_message"]
+    # Act & Assert
+    with pytest.raises(JockeyError) as exc_info:
+        await combine_clips.ainvoke(input=input_dict, config={"tags": ["video-editing"]})
+
+    # check the JockeyError attributes (note that we check error_data as the JockeyError is an Exception)
+    error = exc_info.value
+    assert error.error_data.node == NodeType.WORKER
+    assert error.error_data.error_type == ErrorType.VIDEO
+    assert error.error_data.function_name == WorkerFunction.COMBINE_CLIPS
+    assert "Download Failed" in error.error_data.details
+    assert "Video ID: video1" in error.error_data.details
+    assert "Index ID: index1" in error.error_data.details
+    assert "Double check that both video_id and index_id are valid" in error.error_data.details
+    assert "Error: Download failed" in error.error_data.details
+    assert str(error) == error.error_data.error_message
+
+    # Ensure ffmpeg was not called
+    mock_ffmpeg.concat.assert_not_called()
 
 
 # @patch("jockey.stirrups.video_editing.ffmpeg")
@@ -91,7 +101,7 @@ async def test_combine_clips_download_error(mock_download, mock_ffmpeg, mock_env
 
 #     # Assert
 #     assert isinstance(result, dict)
-#     assert result["error_type"] == TwelveLabsErrorType.REMOVE_SEGMENT.value
+#     assert result["error_type"] == ErrorType.REMOVE_SEGMENT.value
 #     assert result["error_state"] == ErrorState.VIDEO_EDITING_ERROR.value
 #     assert "FFmpeg error" in result["error_message"]
 

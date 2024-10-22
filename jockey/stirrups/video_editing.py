@@ -6,7 +6,7 @@ from typing import List, Dict, Union
 from jockey.util import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
-from jockey.stirrups.errors import TwelveLabsError, TwelveLabsErrorType, ErrorState
+from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
 
 
 class Clip(BaseModel):
@@ -50,13 +50,13 @@ def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Uni
             if os.path.isfile(video_filepath) is False:
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
-                except AssertionError:
-                    return TwelveLabsError.create(
-                        error_type=TwelveLabsErrorType.RETRIEVE_VIDEO_METADATA,
-                        error_state=ErrorState.VIDEO_EDITING_ERROR,
-                        error=f"Video ID: {video_id} in Index ID: {index_id}. "
-                        "Double check that the Video ID and Index ID are valid and correct. Error: {error}",
-                    ).model_dump()
+                except Exception as error:
+                    raise JockeyError.create(
+                        node=NodeType.WORKER,
+                        error_type=ErrorType.VIDEO,
+                        function_name=WorkerFunction.COMBINE_CLIPS,
+                        details=f"Download Failed. Video ID: {video_id} in Index ID: {index_id}. Double check that both video_id and index_id are valid. Error: {error}",
+                    )
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
@@ -72,11 +72,12 @@ def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Uni
 
         return output_filepath
     except Exception as error:
-        return TwelveLabsError.create(
-            error_type=TwelveLabsErrorType.COMBINE_CLIPS,
-            error_state=ErrorState.VIDEO_EDITING_ERROR,
-            error=str(error),
-        ).model_dump()
+        raise JockeyError.create(
+            node=NodeType.WORKER,
+            error_type=ErrorType.VIDEO,
+            function_name=WorkerFunction.COMBINE_CLIPS,
+            details=f"Error: {error}",
+        )
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
@@ -100,9 +101,12 @@ def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, 
         ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
         return output_filepath
     except Exception as error:
-        return TwelveLabsError.create(
-            error_type=TwelveLabsErrorType.REMOVE_SEGMENT, error_state=ErrorState.VIDEO_EDITING_ERROR, error=str(error)
-        ).model_dump()
+        raise JockeyError.create(
+            node=NodeType.WORKER,
+            error_type=ErrorType.VIDEO,
+            function_name=WorkerFunction.REMOVE_SEGMENT,
+            details=f"Error: {error}",
+        )
 
 
 # Construct a valid worker for a Jockey instance.
