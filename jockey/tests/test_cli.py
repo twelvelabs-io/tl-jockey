@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock, call
 from jockey.cli import run_jockey_terminal
 from jockey.util import get_langgraph_errors
 from langgraph.errors import (
@@ -82,5 +82,26 @@ async def test_run_jockey_terminal_langgraph_errors(mock_console, mock_jockey, m
     assert actual_chat_history[-1].content == expected_error_message.content
     assert actual_chat_history[-1].name == expected_error_message.name
 
+    assert mock_console.print.call_args_list == [
+        call(),
+        call(f"[red]LangGraph Error occurred: {error_message}[/red]"),
+        call(),
+        call(),
+    ]
+
+    # this proves that the input is called twice, once for the initial prompt and once after the error
+    assert mock_console.mock_calls == [
+        call.print(),
+        call.input("[green]👤 Chat: "),
+        call.print(f"[red]LangGraph Error occurred: {error_message}[/red]"),
+        call.print(),
+        call.print(),
+        call.input("[green]👤 Chat: "),
+    ]
+
+    # Todo: another assert to check that the error message is in the chat history or state
+
+    # print(mock_console.mock_calls)
+    # print(mock_console.input.call_args_list)
     # print(f"Console calls: {mock_console.print.call_args_list}")
     # print(f"Jockey calls: {mock_jockey.astream_events.call_args_list}")

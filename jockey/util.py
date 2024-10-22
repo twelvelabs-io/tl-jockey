@@ -24,6 +24,17 @@ from openai import (
 )
 from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 from openai import AzureOpenAI
+from langgraph.errors import (
+    GraphRecursionError,
+    InvalidUpdateError,
+    EmptyInputError,
+    TaskNotFound,
+    CheckpointNotLatest,
+    MultipleSubgraphsError,
+    GraphInterrupt,
+    NodeInterrupt,
+    GraphDelegate,
+)
 
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
@@ -50,11 +61,13 @@ def parse_langchain_events_terminal(event: dict):
             console.print(f"[yellow]{content}", end="")
         elif content and "supervisor" in event["tags"]:
             console.print(f"[white]{content}", end="")
+
     elif event["event"] == "on_tool_start":
         tool = event["name"]
         console.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
         console.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
         console.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
+
     elif event["event"] == "on_tool_end":
         tool = event["name"]
         console.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
@@ -63,6 +76,7 @@ def parse_langchain_events_terminal(event: dict):
             console.print(Padding(JSON(event["data"]["output"], indent=2), (1, 6)))
         except (json.decoder.JSONDecodeError, TypeError):
             console.print(Padding(str(event["data"]["output"]), (0, 6)))
+
     elif event["event"] == "on_chat_model_start":
         if "instructor" in event["tags"]:
             console.print(Padding(f"[red]🏇 Instructor: ", (1, 0)), end="")
@@ -214,3 +228,17 @@ def preflight_checks():
                 return f"{type(e).__name__} occurred. Model: {model}. Error: {str(e)}"
 
     return "Preflight checks passed. All models functioning correctly."
+
+
+def get_langgraph_errors():
+    return (
+        GraphRecursionError,
+        InvalidUpdateError,
+        GraphInterrupt,
+        NodeInterrupt,
+        GraphDelegate,
+        EmptyInputError,
+        TaskNotFound,
+        CheckpointNotLatest,
+        MultipleSubgraphsError,
+    )
