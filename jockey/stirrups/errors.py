@@ -1,42 +1,76 @@
-from pydantic import BaseModel
 from enum import Enum
+from pydantic import BaseModel
+from typing import Optional
 
 
-class TwelveLabsErrorType(str, Enum):
-    COMBINE_CLIPS = "combine-clips"
-    REMOVE_SEGMENT = "remove-segment"
-    SIMPLE_VIDEO_SEARCH = "simple-video-search"
-    GIST_TEXT_GENERATION = "gist-text-generation"
-    SUMMARIZE_TEXT_GENERATION = "summarize-text-generation"
-    FREEFORM_TEXT_GENERATION = "freeform-text-generation"
-    RETRIEVE_VIDEO_METADATA = "retrieve-video-metadata"
+class NodeType(str, Enum):
+    """High-level nodes where errors can occur"""
+
+    PLANNER = "planner"
+    SUPERVISOR = "supervisor"
+    WORKER = "worker"
+    REFLECT = "reflect"
 
 
-class ErrorState(str, Enum):
-    TOOL_FAILURE = "TOOL_FAILURE"
-    VIDEO_EDITING_ERROR = "VIDEO_EDITING_ERROR"
-    SEARCH_ERROR = "SEARCH_ERROR"
-    TEXT_GENERATION_ERROR = "TEXT_GENERATION_ERROR"
-    API_ERROR = "API_ERROR"
-    INVALID_INPUT = "INVALID_INPUT"
-    RETRIEVE_VIDEO_METADATA = "RETRIEVE_VIDEO_METADATA"
+class WorkerFunction(str, Enum):
+    """Specific functions within the worker node"""
+
+    VIDEO_SEARCH = "video_search"
+    VIDEO_EDITING = "video_editing"
+    VIDEO_TEXT_GENERATION = "video_text_generation"
 
 
-class ErrorMessages(str, Enum):
-    COMBINE_CLIPS = "There was a video editing error: {error}"
-    REMOVE_SEGMENT = "There was a video editing error: {error}"
-    SIMPLE_VIDEO_SEARCH = "There was a video search error: {error}"
-    GIST_TEXT_GENERATION = "There was a text generation error: {error}"
-    SUMMARIZE_TEXT_GENERATION = "There was a text generation error: {error}"
-    FREEFORM_TEXT_GENERATION = "There was a text generation error: {error}"
-    RETRIEVE_VIDEO_METADATA = "There was an error retrieving the video metadata: {error}"
+class ErrorType(str, Enum):
+    """Categories of errors that can occur"""
 
-class TwelveLabsError(BaseModel):
-    error_type: TwelveLabsErrorType
-    error_state: ErrorState
-    error_message: str
+    VIDEO = "VIDEO"
+    SEARCH = "SEARCH"
+    TEXT = "TEXT"
+    API = "API"
+    METADATA = "METADATA"
+    VALIDATION = "VALIDATION"
+    INSTRUCTION = "INSTRUCTION"
+    PLANNING = "PLANNING"
+    UNEXPECTED = "UNEXPECTED"
+
+
+class JockeyError(BaseModel):
+    node: NodeType
+    error_type: ErrorType
+    function_name: Optional[WorkerFunction] = None  # Only needed for worker node errors
+    details: Optional[str] = None
+
+    @property
+    def error_message(self) -> str:
+        if self.node == NodeType.WORKER and self.function_name:
+            base_msg = f"{self.error_type.value} error in {self.node.value} node ({self.function_name.value})"
+        else:
+            base_msg = f"{self.error_type.value} error in {self.node.value} node"
+
+        if self.details:
+            return f"{base_msg}: {self.details}"
+        return base_msg
 
     @classmethod
-    def create(cls, error_type: TwelveLabsErrorType, error_state: ErrorState, error: str):
-        error_message = ErrorMessages[error_type.name].value.format(error=error)
-        return cls(error_type=error_type, error_state=error_state, error_message=error_message)
+    def create(cls, node: NodeType, error_type: ErrorType, function_name: Optional[WorkerFunction] = None, details: Optional[str] = None):
+        return cls(node=node, error_type=error_type, function_name=function_name, details=details)
+
+
+# Example usage:
+
+# try:
+#     # Worker node video editing failure
+#     raise ValueError("Invalid timestamp")
+# except Exception as e:
+#     error = JockeyError.create(node=NodeType.WORKER, error_type=ErrorType.VIDEO, function_name=WorkerFunction.VIDEO_EDITING, details=str(e))
+#     # error.error_message would return:
+#     # "VIDEO error in worker node (video_editing): Invalid timestamp"
+
+# # Example of planner node error
+# try:
+#     # Planner node failure
+#     raise Exception("Failed to generate plan")
+# except Exception as e:
+#     error = JockeyError.create(node=NodeType.PLANNER, error_type=ErrorType.PLANNING, details=str(e))
+#     # error.error_message would return:
+#     # "PLANNING error in planner node: Failed to generate plan"
