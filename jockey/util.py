@@ -35,7 +35,7 @@ from langgraph.errors import (
     NodeInterrupt,
     GraphDelegate,
 )
-
+from typing import Dict, Any
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
@@ -43,11 +43,15 @@ REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", 
 AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
 OPENAI_ENVIRONMENT_VARIABLES = set(["OPENAI_API_KEY"])
 ALL_JOCKEY_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES | AZURE_ENVIRONMENT_VARIABLES | OPENAI_ENVIRONMENT_VARIABLES
+LOCAL_LANGGRAPH_URL = "http://localhost:8000"
 
 
-def parse_langchain_events_terminal(event: dict):
+async def parse_langchain_events_terminal(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
     console = Console()
+
+    with open("event_log.txt", "a") as f:
+        f.write(f"{event}\n")
 
     if event["event"] == "on_chat_model_stream":
         if isinstance(event["data"]["chunk"], dict):
@@ -242,3 +246,62 @@ def get_langgraph_errors():
         CheckpointNotLatest,
         MultipleSubgraphsError,
     )
+
+
+def create_interrupt_event(run_id: str, last_event: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Create an interrupt event dictionary matching LangChain's event structure."""
+    return {
+        "event": "on_interrupt",
+        "name": "JockeyInterrupt",
+        "run_id": str(run_id),
+        "data": {
+            "message": "Stream interrupted by user",
+            "last_event": last_event,
+            "event_type": last_event.get("event") if last_event else None,
+            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
+        },
+        "tags": last_event.get("tags", []) if last_event else [],
+        "metadata": {
+            "interrupted_at": last_event.get("metadata", {}) if last_event else {},
+        },
+    }
+
+
+def create_langgraph_error_event(run_id: str, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
+    """Create an interrupt event dictionary matching LangChain's event structure."""
+    return {
+        "event": "on_error",
+        "name": "LangGraphError",
+        "run_id": str(run_id),
+        "data": {
+            "message": "LangGraph error occurred",
+            "last_event": last_event,
+            "event_type": last_event.get("event") if last_event else None,
+            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
+        },
+        "tags": last_event.get("tags", []) if last_event else [],
+        "metadata": {
+            "error_at": last_event.get("metadata", {}) if last_event else {},
+            "error": error,
+        },
+    }
+
+
+def create_jockey_error_event(run_id: str, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
+    """Create a Jockey error event dictionary matching LangChain's event structure."""
+    return {
+        "event": "on_error",
+        "name": "JockeyError",
+        "run_id": str(run_id),
+        "data": {
+            "message": "Jockey error occurred",
+            "last_event": last_event,
+            "event_type": last_event.get("event") if last_event else None,
+            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
+        },
+        "tags": last_event.get("tags", []) if last_event else [],
+        "metadata": {
+            "error_at": last_event.get("metadata", {}) if last_event else {},
+            "error": error,
+        },
+    }

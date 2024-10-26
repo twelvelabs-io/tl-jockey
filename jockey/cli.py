@@ -6,19 +6,19 @@ from jockey.util import parse_langchain_events_terminal, get_langgraph_errors
 from langchain_core.messages import HumanMessage
 from jockey.app import jockey
 from jockey.stirrups.errors import JockeyError
+import asyncio
+from jockey.util import create_interrupt_event, create_langgraph_error_event, create_jockey_error_event
 
 
 async def run_jockey_terminal():
-    """Quickstart function to create a Jockey instance in the terminal for easy dev work.
-    We use the default version of Jockey for this."""
+    """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
     console = Console()
     session_id = uuid.uuid4()
+
     while True:
         try:
             console.print()
             user_input = console.input("[green]👤 Chat: ")
-
-            # hanndle empty input (Enter)
             if not user_input.strip():
                 continue
 
@@ -26,24 +26,43 @@ async def run_jockey_terminal():
             jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
 
             try:
-                async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
-                    parse_langchain_events_terminal(event)
+                last_event = None
+                stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
+
+                async for event in stream:
+                    last_event = event
+                    await parse_langchain_events_terminal(event)
+
+            except asyncio.CancelledError:
+                # Create and emit the interrupt event
+                if last_event:
+                    interrupt_event = create_interrupt_event(session_id, last_event)
+                    await parse_langchain_events_terminal(interrupt_event)
+                console.print("\nOperation interrupted")
+                continue
+
             except get_langgraph_errors() as e:
                 error_message = f"LangGraph Error occurred: {str(e)}"
                 console.print(f"[red]{error_message}[/red]")
-                jockey_input["chat_history"].append(HumanMessage(content=error_message, name="error"))
+                if last_event:
+                    langgraph_error_event = create_langgraph_error_event(session_id, last_event, error_message)
+                    await parse_langchain_events_terminal(langgraph_error_event, e)
+                console.print(f"[red]{error_message}[/red]")
+                continue
+
             except JockeyError as e:
                 error_message = f"Jockey Error occurred: {str(e)}"
                 console.print(f"[red]{error_message}[/red]")
-                jockey_input["chat_history"].append(HumanMessage(content=error_message, name="error"))
-            # except KeyboardInterrupt:
-            #     console.print("\nInterrupted. Exiting chat.")
-            #     raise SystemExit
+                if last_event:
+                    jockey_error_event = create_jockey_error_event(session_id, last_event, error_message)
+                    await parse_langchain_events_terminal(jockey_error_event, e)
+                continue
 
             console.print()
+
         except KeyboardInterrupt:
-            console.print("\nExiting chat.")
-            raise SystemExit
+            console.print("\nExiting Jockey terminal...")
+            return
 
 
 def run_jockey_server():
