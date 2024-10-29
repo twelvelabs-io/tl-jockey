@@ -46,7 +46,7 @@ async def run_jockey_terminal():
                 console.print(f"[red]{error_message}[/red]")
                 if last_event:
                     langgraph_error_event = create_langgraph_error_event(session_id, last_event, error_message)
-                    await parse_langchain_events_terminal(langgraph_error_event, e)
+                    await parse_langchain_events_terminal(langgraph_error_event)
                 console.print(f"[red]{error_message}[/red]")
                 continue
 
@@ -55,7 +55,7 @@ async def run_jockey_terminal():
                 console.print(f"[red]{error_message}[/red]")
                 if last_event:
                     jockey_error_event = create_jockey_error_event(session_id, last_event, error_message)
-                    await parse_langchain_events_terminal(jockey_error_event, e)
+                    await parse_langchain_events_terminal(jockey_error_event)
                 continue
 
             console.print()

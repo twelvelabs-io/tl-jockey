@@ -248,7 +248,7 @@ def get_langgraph_errors():
     )
 
 
-def create_interrupt_event(run_id: str, last_event: Dict[str, Any] = None) -> Dict[str, Any]:
+def create_interrupt_event(run_id: str | None = None, last_event: Dict[str, Any] = None) -> Dict[str, Any]:
     """Create an interrupt event dictionary matching LangChain's event structure."""
     return {
         "event": "on_interrupt",
@@ -267,11 +267,11 @@ def create_interrupt_event(run_id: str, last_event: Dict[str, Any] = None) -> Di
     }
 
 
-def create_langgraph_error_event(run_id: str, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
+def create_langgraph_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
     """Create an interrupt event dictionary matching LangChain's event structure."""
     return {
         "event": "on_error",
-        "name": "LangGraphError",
+        "name": f"LangGraphError::{error.__class__.__name__ if error else 'Unknown'}",  # Changed to :: separator and fixed error name
         "run_id": str(run_id),
         "data": {
             "message": "LangGraph error occurred",
@@ -282,16 +282,16 @@ def create_langgraph_error_event(run_id: str, last_event: Dict[str, Any] = None,
         "tags": last_event.get("tags", []) if last_event else [],
         "metadata": {
             "error_at": last_event.get("metadata", {}) if last_event else {},
-            "error": error,
         },
     }
 
 
-def create_jockey_error_event(run_id: str, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
+def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
     """Create a Jockey error event dictionary matching LangChain's event structure."""
+
     return {
         "event": "on_error",
-        "name": "JockeyError",
+        "name": f"JockeyError::{error.error_data.error_type.value if error else 'Unknown'}",
         "run_id": str(run_id),
         "data": {
             "message": "Jockey error occurred",
@@ -302,6 +302,5 @@ def create_jockey_error_event(run_id: str, last_event: Dict[str, Any] = None, er
         "tags": last_event.get("tags", []) if last_event else [],
         "metadata": {
             "error_at": last_event.get("metadata", {}) if last_event else {},
-            "error": error,
         },
     }

@@ -9,6 +9,7 @@ from langchain.pydantic_v1 import BaseModel
 
 from jockey.stirrups.errors import JockeyError, ErrorType, NodeType
 import langgraph.errors
+from jockey.util import create_langgraph_error_event, create_jockey_error_event, parse_langchain_events_terminal, get_langgraph_errors
 
 
 class Stirrup(BaseModel):
@@ -51,22 +52,14 @@ class Stirrup(BaseModel):
             base_tool: BaseTool = tool_map[tool_call["name"]]
             try:
                 tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
-            except langgraph.errors.GraphRecursionError as e:
-                # TODO: handle what happens when this happens... need to handle langgraph errors outside in main or something
-                tool_call["output"] = f"Graph recursion limit reached: {str(e)}"
-            except langgraph.errors.InvalidUpdateError as e:
-                tool_call["output"] = f"Invalid graph update: {str(e)}"
-            except langgraph.errors.NodeInterrupt as e:
-                tool_call["output"] = f"Node execution interrupted: {str(e)}"
-            except langgraph.errors.EmptyInputError as e:
-                tool_call["output"] = f"Empty input received: {str(e)}"
+            except get_langgraph_errors() as e:
+                tool_call["output"] = f"{e.__class__.__name__}: {str(e)}"
+                langgraph_error_event = create_langgraph_error_event()
+                await parse_langchain_events_terminal(langgraph_error_event)
             except JockeyError as e:
-                tool_call["output"] = str(e)
-                raise e
-            except Exception as e:
-                raise JockeyError.create(
-                    node=NodeType.INSTRUCTOR, error_type=ErrorType.TOOL_EXECUTION, details=f"Error in tool {tool_call['name']}: {str(e)}"
-                )
+                tool_call["output"] = f"{e.__class__.__name__}: {str(e)}"
+                jockey_error_event = create_jockey_error_event()
+                await parse_langchain_events_terminal(jockey_error_event)
 
         return tool_calls
 
