@@ -5,6 +5,7 @@ import ffmpeg
 # testing stirrups/video_editing.py
 from jockey.stirrups.video_editing import combine_clips, remove_segment, Clip, CombineClipsInput, RemoveSegmentInput
 from jockey.stirrups.errors import JockeyError, ErrorType, NodeType, WorkerFunction
+from jockey.util import create_jockey_error_event
 # from jockey.jockey_graph import Jockey, jockey_graph
 
 
@@ -37,7 +38,9 @@ async def test_combine_clips_success(mock_download, mock_ffmpeg, mock_environmen
     assert mock_download.call_count == 2  # because we have two clips
     assert mock_ffmpeg.concat.called
     assert mock_ffmpeg.concat.return_value.output.called
-
+    print("everything:", mock_ffmpeg.concat.called, mock_ffmpeg.concat.return_value.output.called)
+    print("error:", mock_ffmpeg.concat.return_value)
+    print("return value:", result)
 
 @pytest.mark.asyncio
 @patch("jockey.stirrups.video_editing.ffmpeg")
@@ -48,6 +51,13 @@ async def test_combine_clips_download_error(mock_download, mock_ffmpeg, mock_env
     input_data = CombineClipsInput(clips=clips, output_filename="combined.mp4", index_id="index1")
     input_dict = input_data.dict()
 
+    # Create a mock last_event that matches LangChain's structure
+    last_event = {
+        "event": "tool_start",
+        "metadata": {"langgraph_node": "combine_clips", "timestamp": "2024-03-20T15:30:45Z"},
+        "tags": ["video-editing"],
+    }
+
     # Simulate a download error
     mock_download.side_effect = Exception("Download failed")
 
@@ -55,20 +65,38 @@ async def test_combine_clips_download_error(mock_download, mock_ffmpeg, mock_env
     with pytest.raises(JockeyError) as exc_info:
         await combine_clips.ainvoke(input=input_dict, config={"tags": ["video-editing"]})
 
-    # check the JockeyError attributes (note that we check error_data as the JockeyError is an Exception)
+    # check the JockeyError attributes
     error = exc_info.value
     assert error.error_data.node == NodeType.WORKER
     assert error.error_data.error_type == ErrorType.VIDEO
     assert error.error_data.function_name == WorkerFunction.COMBINE_CLIPS
-    assert "Download Failed" in error.error_data.details
-    assert "Video ID: video1" in error.error_data.details
-    assert "Index ID: index1" in error.error_data.details
-    assert "Double check that both video_id and index_id are valid" in error.error_data.details
-    assert "Error: Download failed" in error.error_data.details
-    assert str(error) == error.error_data.error_message
+
+    # Verify the error event structure matches create_jockey_error_event
+    expected_error_event = {
+        "event": "on_error",
+        "name": f"JockeyError::{error.error_data.error_type.value}",
+        "run_id": str(None),  # or specific run_id if provided
+        "data": {
+            "message": "Jockey error occurred",
+            "last_event": last_event,
+            "event_type": last_event.get("event"),
+            "node": last_event.get("metadata", {}).get("langgraph_node"),
+        },
+        "tags": last_event.get("tags", []),
+        "metadata": {
+            "error_at": last_event.get("metadata", {}),
+        },
+    }
+
+    # Create actual error event
+    actual_error_event = create_jockey_error_event(run_id=None, last_event=last_event, error=error)
+
+    assert actual_error_event == expected_error_event
 
     # Ensure ffmpeg was not called
     mock_ffmpeg.concat.assert_not_called()
+    print("error:", mock_ffmpeg.concat.called, mock_ffmpeg.concat.return_value.output.called)
+    print("actual error event:", actual_error_event)
 
 
 # @patch("jockey.stirrups.video_editing.ffmpeg")

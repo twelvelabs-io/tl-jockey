@@ -3,7 +3,7 @@ import ffmpeg
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
-from jockey.util import download_video
+from jockey.util import create_jockey_error_event, download_video, parse_langchain_events_terminal
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
@@ -35,10 +35,15 @@ class RemoveSegmentInput(BaseModel):
 
 
 @tool("combine-clips", args_schema=CombineClipsInput)
-def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
+async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
     """Combine or edit multiple clips together based on their start and end times and video IDs.
     The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
     try:
+        # Input validation first
+        for clip in clips:
+            if clip.start < 0:
+                raise ValueError(f"Invalid start time: {clip.start}. Start time cannot be negative.")
+
         input_streams = []
 
         for clip in clips:
@@ -51,12 +56,17 @@ def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Uni
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
                 except Exception as error:
-                    raise JockeyError.create(
+                    # Create JockeyError first
+                    jockey_error = JockeyError.create(
                         node=NodeType.WORKER,
                         error_type=ErrorType.VIDEO,
                         function_name=WorkerFunction.COMBINE_CLIPS,
                         details=f"Download Failed. Video ID: {video_id} in Index ID: {index_id}. Double check that both video_id and index_id are valid. Error: {error}",
                     )
+                    # Then create the event using the JockeyError
+                    jockey_error_event = create_jockey_error_event(error=jockey_error)
+                    await parse_langchain_events_terminal(jockey_error_event)
+                    raise jockey_error
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
@@ -72,16 +82,26 @@ def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Uni
 
         return output_filepath
     except Exception as error:
-        raise JockeyError.create(
-            node=NodeType.WORKER,
-            error_type=ErrorType.VIDEO,
-            function_name=WorkerFunction.COMBINE_CLIPS,
-            details=f"Error: {error}",
-        )
+        if isinstance(error, JockeyError):
+            # If it's already a JockeyError, just create the event and re-raise
+            jockey_error_event = create_jockey_error_event(error=error)
+            await parse_langchain_events_terminal(jockey_error_event)
+            raise
+        else:
+            # If it's not a JockeyError, wrap it first
+            jockey_error = JockeyError.create(
+                node=NodeType.WORKER,
+                error_type=ErrorType.VIDEO,
+                function_name=WorkerFunction.COMBINE_CLIPS,
+                details=f"Error: {str(error)}",
+            )
+            jockey_error_event = create_jockey_error_event(error=jockey_error)
+            await parse_langchain_events_terminal(jockey_error_event)
+            raise jockey_error
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
-def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, Dict]:
+async def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, Dict]:
     """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned. Return a Union str if successful, or a Dict if an error occurs."""
     try:
         output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
@@ -101,12 +121,15 @@ def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, 
         ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
         return output_filepath
     except Exception as error:
-        raise JockeyError.create(
+        jockey_error = JockeyError.create(
             node=NodeType.WORKER,
             error_type=ErrorType.VIDEO,
             function_name=WorkerFunction.REMOVE_SEGMENT,
-            details=f"Error: {error}",
+            details=f"Error: {str(error)}",
         )
+        jockey_error_event = create_jockey_error_event(error=jockey_error)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise jockey_error
 
 
 # Construct a valid worker for a Jockey instance.

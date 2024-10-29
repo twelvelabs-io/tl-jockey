@@ -6,7 +6,7 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import tool
 from typing import Dict, List, Union
 from enum import Enum
-from jockey.util import get_video_metadata
+from jockey.util import create_jockey_error_event, get_video_metadata, parse_langchain_events_terminal
 from jockey.prompts import DEFAULT_VIDEO_TEXT_GENERATION_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction
@@ -79,13 +79,15 @@ async def gist_text_generation(video_id: str, index_id: str, endpoint_options: L
         return json.dumps(response)
 
     except Exception as error:
-        print("error", error)
-        raise JockeyError.create(
+        jockey_error = JockeyError.create(
             node=NodeType.WORKER,
             error_type=ErrorType.TEXT_GENERATION,
             function_name=WorkerFunction.GIST_TEXT_GENERATION,
-            details=f"Error: {error}",
+            details=f"Error: {str(error)}",
         )
+        jockey_error_event = create_jockey_error_event(error=jockey_error)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise jockey_error
 
 
 @tool("summarize-text-generation", args_schema=PegasusSummarizeInput)
@@ -107,13 +109,15 @@ async def summarize_text_generation(video_id: str, index_id: str, endpoint_optio
         return json.dumps(response)
 
     except Exception as error:
-        print("error", error)
-        raise JockeyError.create(
+        jockey_error = JockeyError.create(
             node=NodeType.WORKER,
             error_type=ErrorType.TEXT_GENERATION,
             function_name=WorkerFunction.SUMMARIZE_TEXT_GENERATION,
-            details=f"Error: {error}",
+            details=f"Error: {str(error)}",
         )
+        jockey_error_event = create_jockey_error_event(error=jockey_error)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise jockey_error
 
 
 @tool("freeform-text-generation", args_schema=PegasusFreeformInput)
@@ -134,13 +138,15 @@ async def free_text_generation(video_id: str, index_id: str, prompt: str) -> Dic
         return json.dumps(response)
 
     except Exception as error:
-        print("error", error)
-        raise JockeyError.create(
+        jockey_error = JockeyError.create(
             node=NodeType.WORKER,
             error_type=ErrorType.TEXT_GENERATION,
             function_name=WorkerFunction.FREE_TEXT_GENERATION,
-            details=f"Error: {error}",
+            details=f"Error: {str(error)}",
         )
+        jockey_error_event = create_jockey_error_event(error=jockey_error)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise jockey_error
 
 
 # Construct a valid worker for a Jockey instance.

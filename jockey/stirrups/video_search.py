@@ -10,6 +10,7 @@ from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunct
 from jockey.util import get_video_metadata
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
+from jockey.stirrups.events import create_jockey_error_event, parse_langchain_events_terminal
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
@@ -145,25 +146,29 @@ async def simple_video_search(
                     return {"success": False, "results": search_results, "available_modalities": available_modalities, "error": "No modalities found"}
                 return {"success": True, "results": search_results, "available_modalities": available_modalities}
             except Exception as error:
-                print("error", error)
-                raise JockeyError.create(
+                jockey_error = JockeyError.create(
                     node=NodeType.WORKER,
                     error_type=ErrorType.SEARCH,
                     function_name=WorkerFunction.VIDEO_SEARCH,
-                    details=f"Error: {error}",
+                    details=f"Error: {str(error)}",
                 )
+                jockey_error_event = create_jockey_error_event(error=jockey_error)
+                await parse_langchain_events_terminal(jockey_error_event)
+                raise jockey_error
         else:
             print(f"Search error: {search_results}")
             return search_results
 
     except Exception as error:
-        print("error", error)
-        raise JockeyError.create(
+        jockey_error = JockeyError.create(
             node=NodeType.WORKER,
             error_type=ErrorType.SEARCH,
             function_name=WorkerFunction.VIDEO_SEARCH,
-            details=f"Error: {error}",
+            details=f"Error: {str(error)}",
         )
+        jockey_error_event = create_jockey_error_event(error=jockey_error)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise jockey_error
 
 
 # Construct a valid worker for a Jockey instance.
