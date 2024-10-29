@@ -22,6 +22,9 @@ class WorkerFunction(str, Enum):
     REMOVE_SEGMENT = "remove_segment"
     COMBINE_CLIPS = "combine_clips"
     DOWNLOAD_VIDEO = "download_video"
+    GIST_TEXT_GENERATION = "gist_text_generation"
+    SUMMARIZE_TEXT_GENERATION = "summarize_text_generation"
+    FREE_TEXT_GENERATION = "free_text_generation"
 
 
 class ErrorType(str, Enum):
@@ -35,6 +38,7 @@ class ErrorType(str, Enum):
     VALIDATION = "VALIDATION"
     INSTRUCTION = "INSTRUCTION"
     PLANNING = "PLANNING"
+    TEXT_GENERATION = "text_generation"
     UNEXPECTED = "UNEXPECTED"
 
 
