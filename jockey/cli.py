@@ -34,6 +34,7 @@ async def run_jockey_terminal():
                     await parse_langchain_events_terminal(event)
 
             except asyncio.CancelledError:
+                console.print("asyncio.CancelledError")
                 # Create and emit the interrupt event
                 if last_event:
                     interrupt_event = create_interrupt_event(session_id, last_event)
@@ -47,7 +48,6 @@ async def run_jockey_terminal():
                 if last_event:
                     langgraph_error_event = create_langgraph_error_event(session_id, last_event, error_message)
                     await parse_langchain_events_terminal(langgraph_error_event)
-                console.print(f"[red]{error_message}[/red]")
                 continue
 
             except JockeyError as e:

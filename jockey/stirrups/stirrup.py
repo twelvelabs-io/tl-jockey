@@ -56,10 +56,12 @@ class Stirrup(BaseModel):
                 tool_call["output"] = f"{e.__class__.__name__}: {str(e)}"
                 langgraph_error_event = create_langgraph_error_event()
                 await parse_langchain_events_terminal(langgraph_error_event)
+                raise e
             except JockeyError as e:
                 tool_call["output"] = f"{e.__class__.__name__}: {str(e)}"
                 jockey_error_event = create_jockey_error_event()
                 await parse_langchain_events_terminal(jockey_error_event)
+                raise e
 
         return tool_calls
 
@@ -101,15 +103,11 @@ class Stirrup(BaseModel):
             worker = worker.with_config({"tags": [self.worker_name]})
             worker.name = self.worker_name
             return worker
-        except langgraph.errors.GraphRecursionError as e:
-            raise JockeyError.create(
-                node=NodeType.WORKER,
-                error_type=ErrorType.GRAPH_CONSTRUCTION,
-                details=f"Graph recursion limit reached while building worker: {str(e)}",
-            )
-        except langgraph.errors.InvalidUpdateError as e:
-            raise JockeyError.create(
-                node=NodeType.WORKER, error_type=ErrorType.GRAPH_CONSTRUCTION, details=f"Invalid graph update while building worker: {str(e)}"
-            )
-        except Exception as e:
-            raise JockeyError.create(node=NodeType.WORKER, error_type=ErrorType.GRAPH_CONSTRUCTION, details=f"Error building worker: {str(e)}")
+        except get_langgraph_errors():
+            langgraph_error_event = create_langgraph_error_event()
+            parse_langchain_events_terminal(langgraph_error_event)
+            raise
+        except JockeyError:
+            jockey_error_event = create_jockey_error_event()
+            parse_langchain_events_terminal(jockey_error_event)
+            raise
