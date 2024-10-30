@@ -14,8 +14,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from jockey.stirrups.video_search import VideoSearchWorker
 from jockey.stirrups.video_text_generation import VideoTextGenerationWorker
 from jockey.stirrups.video_editing import VideoEditingWorker
-from jockey.util import create_langgraph_error_event, parse_langchain_events_terminal
-
 
 
 # TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
@@ -317,7 +315,7 @@ class Jockey(StateGraph):
         self.set_entry_point("supervisor")
 
 
-async def build_jockey_graph(
+def build_jockey_graph(
     planner_prompt: str,
     planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
     supervisor_prompt: str,
@@ -359,10 +357,5 @@ async def build_jockey_graph(
     memory = MemorySaver()
 
     # Compile the StateGraph instance for this instance of Jockey.
-    try:
-        jockey = jockey_graph.compile(checkpointer=memory)
-    except Exception as error:
-        langgraph_error = create_langgraph_error_event(error=error)
-        await parse_langchain_events_terminal(langgraph_error)
-        raise error
+    jockey = jockey_graph.compile(checkpointer=memory)
     return jockey

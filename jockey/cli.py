@@ -8,6 +8,7 @@ from jockey.app import jockey
 from jockey.stirrups.errors import JockeyError
 import asyncio
 from jockey.util import create_interrupt_event, create_langgraph_error_event, create_jockey_error_event
+import sys
 
 
 async def run_jockey_terminal():
@@ -62,7 +63,7 @@ async def run_jockey_terminal():
 
         except KeyboardInterrupt:
             console.print("\nExiting Jockey terminal...")
-            return
+            sys.exit(0)  # Exit the program completely
 
 
 def run_jockey_server():

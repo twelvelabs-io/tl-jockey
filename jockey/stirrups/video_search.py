@@ -10,7 +10,7 @@ from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunct
 from jockey.util import get_video_metadata
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
-from jockey.stirrups.events import create_jockey_error_event, parse_langchain_events_terminal
+from jockey.util import create_jockey_error_event, parse_langchain_events_terminal
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
