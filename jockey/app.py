@@ -86,4 +86,8 @@ else:
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
 
 # This variable is what is used by the LangGraph API server.
-jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
+try:
+    jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
+except Exception as error:
+    print(f"Error building Jockey: {error}")
+    sys.exit(1)
