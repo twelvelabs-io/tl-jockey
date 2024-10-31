@@ -36,6 +36,9 @@ from langgraph.errors import (
     GraphDelegate,
 )
 from typing import Dict, Any
+import time
+
+from jockey.stirrups.errors import JockeyError
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
@@ -197,22 +200,40 @@ def preflight_checks():
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         client = AzureOpenAI(api_key=api_key, azure_endpoint=endpoint)
         models = [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()]
+
+        # assert that the models are correct
+        # print(models, [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()])
+        assert all(model in models for model in [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()])
     else:
         print("Invalid LLM_PROVIDER. Must be one of: [AZURE, OPENAI]")
         sys.exit("Invalid LLM_PROVIDER environment variable.")
 
     for model in models:
+        print(f"[DEBUG] Testing model: {model}")
         for stream in [False, True]:
             try:
                 response = client.chat.completions.create(
-                    model=model, messages=[{"role": "system", "content": "Test message"}], temperature=0, max_tokens=2048, stream=stream
+                    model=model,
+                    messages=[{"role": "system", "content": "Test message"}],
+                    temperature=0,
+                    max_tokens=2048,
+                    stream=stream,
+                    timeout=10,  # Add 10 second timeout
                 )
                 if stream:
-                    if not any(
-                        chunk.choices and chunk.choices[0].delta.content
-                        for chunk in response
-                        if chunk.choices and chunk.choices[0].delta.content is not None
-                    ):
+                    # Process stream with timeout using a simple counter
+                    start_time = time.time()
+                    timeout_seconds = 10
+                    has_content = False
+
+                    for chunk in response:
+                        if time.time() - start_time > timeout_seconds:
+                            return f"Timeout occurred while processing stream. Model: {model}"
+                        if chunk.choices and chunk.choices[0].delta.content is not None:
+                            has_content = True
+                            break
+
+                    if not has_content:
                         return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
                 elif not response.choices[0].message.content:
                     return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
@@ -228,6 +249,7 @@ def preflight_checks():
                 RateLimitError,
                 APIError,
                 UnprocessableEntityError,
+                requests.exceptions.Timeout,  # Add requests timeout
             ) as e:
                 return f"{type(e).__name__} occurred. Model: {model}. Error: {str(e)}"
 
@@ -286,18 +308,24 @@ def create_langgraph_error_event(run_id: str | None = None, last_event: Dict[str
     }
 
 
-def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
+def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: JockeyError = None) -> Dict[str, Any]:
     """Create a Jockey error event dictionary matching LangChain's event structure."""
-
     return {
         "event": "on_error",
         "name": f"JockeyError::{error.error_data.error_type.value if error else 'Unknown'}",
         "run_id": str(run_id),
         "data": {
-            "message": "Jockey error occurred",
+            "message": str(error) if error else "Jockey error occurred",
             "last_event": last_event,
             "event_type": last_event.get("event") if last_event else None,
             "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
+            "error_details": {
+                "node": error.error_data.node.value if error else None,
+                "error_type": error.error_data.error_type.value if error else None,
+                "function_name": error.error_data.function_name.value if error and error.error_data.function_name else None,
+                "details": error.error_data.details if error else None,
+                "error_message": error.error_data.error_message if error else None,
+            }
         },
         "tags": last_event.get("tags", []) if last_event else [],
         "metadata": {

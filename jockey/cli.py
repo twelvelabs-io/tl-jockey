@@ -11,59 +11,81 @@ from jockey.util import create_interrupt_event, create_langgraph_error_event, cr
 import sys
 
 
+async def process_single_message(message: str):
+    """Process a single message and exit."""
+    console = Console()
+    session_id = uuid.uuid4()
+
+    console.print()
+    console.print(f"[green]👤 Chat: {message}")
+    user_input = [HumanMessage(content=message, name="user")]
+    jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+
+    try:
+        last_event = None
+        stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
+
+        async for event in stream:
+            last_event = event
+            await parse_langchain_events_terminal(event)
+
+    except JockeyError as e:
+        console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
+        jockey_error_event = create_jockey_error_event(session_id, last_event, e)
+        await parse_langchain_events_terminal(jockey_error_event)
+        raise
+
+    console.print()
+
+
 async def run_jockey_terminal():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
     console = Console()
     session_id = uuid.uuid4()
 
-    while True:
+    try:
+        console.print()
+        user_input = console.input("[green]👤 Chat: ")
+        if not user_input.strip():
+            return
+
+        user_input = [HumanMessage(content=user_input, name="user")]
+        jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+
         try:
-            console.print()
-            user_input = console.input("[green]👤 Chat: ")
-            if not user_input.strip():
-                continue
+            last_event = None
+            stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
 
-            user_input = [HumanMessage(content=user_input, name="user")]
-            jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+            async for event in stream:
+                last_event = event
+                await parse_langchain_events_terminal(event)
 
-            try:
-                last_event = None
-                stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
+        except asyncio.CancelledError:
+            console.print("\nOperation interrupted")
+            if last_event:
+                interrupt_event = create_interrupt_event(session_id, last_event)
+                await parse_langchain_events_terminal(interrupt_event)
+            return
 
-                async for event in stream:
-                    last_event = event
-                    await parse_langchain_events_terminal(event)
+        except get_langgraph_errors() as e:
+            console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
+            if last_event:
+                langgraph_error_event = create_langgraph_error_event(session_id, last_event, e)
+                await parse_langchain_events_terminal(langgraph_error_event)
+            return
 
-            except asyncio.CancelledError:
-                console.print("asyncio.CancelledError")
-                # Create and emit the interrupt event
-                if last_event:
-                    interrupt_event = create_interrupt_event(session_id, last_event)
-                    await parse_langchain_events_terminal(interrupt_event)
-                console.print("\nOperation interrupted")
-                continue
+        except JockeyError as e:
+            console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
+            if last_event:
+                jockey_error_event = create_jockey_error_event(session_id, last_event, e)
+                await parse_langchain_events_terminal(jockey_error_event)
+            return
 
-            except get_langgraph_errors() as e:
-                error_message = f"LangGraph Error occurred: {str(e)}"
-                console.print(f"[red]{error_message}[/red]")
-                if last_event:
-                    langgraph_error_event = create_langgraph_error_event(session_id, last_event, error_message)
-                    await parse_langchain_events_terminal(langgraph_error_event)
-                continue
+        console.print()
 
-            except JockeyError as e:
-                error_message = f"Jockey Error occurred: {str(e)}"
-                console.print(f"[red]{error_message}[/red]")
-                if last_event:
-                    jockey_error_event = create_jockey_error_event(session_id, last_event, error_message)
-                    await parse_langchain_events_terminal(jockey_error_event)
-                continue
-
-            console.print()
-
-        except KeyboardInterrupt:
-            console.print("\nExiting Jockey terminal...")
-            sys.exit(0)  # Exit the program completely
+    except KeyboardInterrupt:
+        console.print("\nExiting Jockey terminal...")
+        sys.exit(0)
 
 
 def run_jockey_server():

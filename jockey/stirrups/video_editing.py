@@ -63,9 +63,6 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
                         function_name=WorkerFunction.COMBINE_CLIPS,
                         details=f"Download Failed. Video ID: {video_id} in Index ID: {index_id}. Double check that both video_id and index_id are valid. Error: {error}",
                     )
-                    # Then create the event using the JockeyError
-                    jockey_error_event = create_jockey_error_event(error=jockey_error)
-                    await parse_langchain_events_terminal(jockey_error_event)
                     raise jockey_error
 
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
@@ -81,23 +78,20 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
         ).overwrite_output().run()
 
         return output_filepath
+
+    except JockeyError:
+        # propagate JockeyError as is
+        raise
+
     except Exception as error:
-        if isinstance(error, JockeyError):
-            # If it's already a JockeyError, just create the event and re-raise
-            jockey_error_event = create_jockey_error_event(error=error)
-            await parse_langchain_events_terminal(jockey_error_event)
-            raise
-        else:
-            # If it's not a JockeyError, wrap it first
-            jockey_error = JockeyError.create(
-                node=NodeType.WORKER,
-                error_type=ErrorType.VIDEO,
-                function_name=WorkerFunction.COMBINE_CLIPS,
-                details=f"Error: {str(error)}",
-            )
-            jockey_error_event = create_jockey_error_event(error=jockey_error)
-            await parse_langchain_events_terminal(jockey_error_event)
-            raise jockey_error
+        # other errors
+        jockey_error = JockeyError.create(
+            node=NodeType.WORKER,
+            error_type=ErrorType.VIDEO,
+            function_name=WorkerFunction.COMBINE_CLIPS,
+            details=f"Error: {str(error)}",
+        )
+        raise jockey_error
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
@@ -127,8 +121,8 @@ async def remove_segment(video_filepath: str, start: float, end: float) -> Union
             function_name=WorkerFunction.REMOVE_SEGMENT,
             details=f"Error: {str(error)}",
         )
-        jockey_error_event = create_jockey_error_event(error=jockey_error)
-        await parse_langchain_events_terminal(jockey_error_event)
+        # jockey_error_event = create_jockey_error_event(error=jockey_error)
+        # await parse_langchain_events_terminal(jockey_error_event)
         raise jockey_error
 
 
