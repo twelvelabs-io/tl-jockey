@@ -111,7 +111,7 @@ class Stirrup(BaseModel):
             langgraph_error_event = create_langgraph_error_event()
             parse_langchain_events_terminal(langgraph_error_event)
             raise
-        except JockeyError:
-            jockey_error_event = create_jockey_error_event()
+        except JockeyError as error:
+            jockey_error_event = create_jockey_error_event(error=error)
             parse_langchain_events_terminal(jockey_error_event)
             raise

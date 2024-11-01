@@ -121,8 +121,6 @@ async def remove_segment(video_filepath: str, start: float, end: float) -> Union
             function_name=WorkerFunction.REMOVE_SEGMENT,
             details=f"Error: {str(error)}",
         )
-        # jockey_error_event = create_jockey_error_event(error=jockey_error)
-        # await parse_langchain_events_terminal(jockey_error_event)
         raise jockey_error
 
 
