@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 AZURE_DEPLOYMENTS = {
     "planner": {"deployment_name": "gpt-4o", "model_version": "2024-05-13"},
@@ -15,6 +16,7 @@ OPENAI_MODELS = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Jockey Video Search")
+    parser.add_argument("-s", "--server", action="store_true", help="Run in server mode")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     parser.add_argument(
         "-i",
@@ -23,7 +25,14 @@ def parse_args():
         help="Initial message to start the conversation (used for testing)",
         dest="initial_message",
     )
-    return parser.parse_args()
+    
+    args, unknown = parser.parse_known_args()
+    
+    # Handle the case where someone uses the old "server" argument
+    if unknown and unknown[0] == "server":
+        args.server = True
+        
+    return args
 
 
 args = parse_args()
