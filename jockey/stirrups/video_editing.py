@@ -3,7 +3,7 @@ import ffmpeg
 from langchain.tools import tool
 from langchain.pydantic_v1 import BaseModel, Field
 from typing import List, Dict, Union
-from jockey.util import create_jockey_error_event, download_video, parse_langchain_events_terminal
+from jockey.video_utils import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType

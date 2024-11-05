@@ -2,8 +2,6 @@ import os
 import sys
 import json
 import requests
-import urllib
-import ffmpeg
 from dotenv import find_dotenv, load_dotenv
 from rich.padding import Padding
 from rich.console import Console
@@ -24,24 +22,9 @@ from openai import (
 )
 from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 from openai import AzureOpenAI
-from langgraph.errors import (
-    GraphRecursionError,
-    InvalidUpdateError,
-    EmptyInputError,
-    TaskNotFound,
-    CheckpointNotLatest,
-    MultipleSubgraphsError,
-    GraphInterrupt,
-    NodeInterrupt,
-    GraphDelegate,
-)
-from typing import Dict, Any
 import time
 
-from jockey.stirrups.errors import JockeyError
 
-TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
-INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
 AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
 OPENAI_ENVIRONMENT_VARIABLES = set(["OPENAI_API_KEY"])
@@ -92,72 +75,6 @@ async def parse_langchain_events_terminal(event: dict):
         elif "reflect" in event["tags"]:
             console.print()
             console.print(f"[cyan]🏇 Jockey: ", end="")
-
-
-def get_video_metadata(index_id: str, video_id: str) -> dict:
-    video_url = f"{INDEX_URL}{index_id}/videos/{video_id}"
-
-    headers = {"accept": "application/json", "Content-Type": "application/json", "x-api-key": os.environ["TWELVE_LABS_API_KEY"]}
-
-    response = requests.get(video_url, headers=headers)
-
-    try:
-        assert response.status_code == 200
-    except AssertionError:
-        error_response = {
-            "message": f"There was an error getting the metadata for Video ID: {video_id} in Index ID: {index_id}. "
-            "Double check that the Video ID and Index ID are valid and correct.",
-            "error": response.text,
-        }
-        return error_response
-
-    return response
-
-
-def download_video(video_id: str, index_id: str, start: float, end: float) -> str:
-    """Download a video for a given video in a given index and get the filepath.
-    Should only be used when the user explicitly requests video editing functionalities."""
-    headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
-
-    video_url = f"https://api.twelvelabs.io/v1.2/indexes/{index_id}/videos/{video_id}"
-
-    response = requests.get(video_url, headers=headers)
-
-    assert response.status_code == 200
-
-    hls_uri = response.json()["hls"]["video_url"]
-
-    video_dir = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id)
-
-    if os.path.isdir(video_dir) is False:
-        os.mkdir(video_dir)
-
-    video_filename = f"{video_id}_{start}_{end}.mp4"
-    video_path = os.path.join(video_dir, video_filename)
-
-    if os.path.isfile(video_path) is False:
-        try:
-            duration = end - start
-            buffer = 1  # Add a 1-second buffer on each side
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=max(0, start - buffer), t=duration + 2 * buffer).output(
-                video_path, vcodec="libx264", acodec="aac", avoid_negative_ts="make_zero", fflags="+genpts"
-            ).run()
-
-            # Then trim the video more precisely
-            output_trimmed = f"{os.path.splitext(video_path)[0]}_trimmed.mp4"
-            ffmpeg.input(video_path, ss=buffer, t=duration).output(output_trimmed, vcodec="copy", acodec="copy").run()
-
-            # Replace the original file with the trimmed version
-            os.replace(output_trimmed, video_path)
-        except Exception as error:
-            error_response = {
-                "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
-                "Double check that the Video ID and Index ID are valid and correct.",
-                "error": str(error),
-            }
-            return error_response
-
-    return video_path
 
 
 def check_environment_variables():
@@ -254,81 +171,3 @@ def preflight_checks():
                 return f"{type(e).__name__} occurred. Model: {model}. Error: {str(e)}"
 
     return "Preflight checks passed. All models functioning correctly."
-
-
-def get_langgraph_errors():
-    return (
-        GraphRecursionError,
-        InvalidUpdateError,
-        GraphInterrupt,
-        NodeInterrupt,
-        GraphDelegate,
-        EmptyInputError,
-        TaskNotFound,
-        CheckpointNotLatest,
-        MultipleSubgraphsError,
-    )
-
-
-def create_interrupt_event(run_id: str | None = None, last_event: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Create an interrupt event dictionary matching LangChain's event structure."""
-    return {
-        "event": "on_interrupt",
-        "name": "JockeyInterrupt",
-        "run_id": str(run_id),
-        "data": {
-            "message": "Stream interrupted by user",
-            "last_event": last_event,
-            "event_type": last_event.get("event") if last_event else None,
-            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
-        },
-        "tags": last_event.get("tags", []) if last_event else [],
-        "metadata": {
-            "interrupted_at": last_event.get("metadata", {}) if last_event else {},
-        },
-    }
-
-
-def create_langgraph_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: Exception = None) -> Dict[str, Any]:
-    """Create an interrupt event dictionary matching LangChain's event structure."""
-    return {
-        "event": "on_error",
-        "name": f"LangGraphError::{error.__class__.__name__ if error else 'Unknown'}",  # Changed to :: separator and fixed error name
-        "run_id": str(run_id),
-        "data": {
-            "message": "LangGraph error occurred",
-            "last_event": last_event,
-            "event_type": last_event.get("event") if last_event else None,
-            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
-        },
-        "tags": last_event.get("tags", []) if last_event else [],
-        "metadata": {
-            "error_at": last_event.get("metadata", {}) if last_event else {},
-        },
-    }
-
-
-def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, Any] = None, error: JockeyError = None) -> Dict[str, Any]:
-    """Create a Jockey error event dictionary matching LangChain's event structure."""
-    return {
-        "event": "on_error",
-        "name": f"JockeyError::{error.error_data.error_type.value if error else 'Unknown'}",
-        "run_id": str(run_id),
-        "data": {
-            "message": str(error) if error else "Jockey error occurred",
-            "last_event": last_event,
-            "event_type": last_event.get("event") if last_event else None,
-            "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
-            "error_details": {
-                "node": error.error_data.node.value if error else None,
-                "error_type": error.error_data.error_type.value if error else None,
-                "function_name": error.error_data.function_name.value if error and error.error_data.function_name else None,
-                "details": error.error_data.details if error else None,
-                "error_message": error.error_data.error_message if error else None,
-            }
-        },
-        "tags": last_event.get("tags", []) if last_event else [],
-        "metadata": {
-            "error_at": last_event.get("metadata", {}) if last_event else {},
-        },
-    }
