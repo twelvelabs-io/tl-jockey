@@ -9,7 +9,7 @@ from jockey.app import jockey
 from jockey.stirrups.errors import JockeyError
 import asyncio
 import sys
-from jockey.jockey_graph import JockeyState, Jockey
+from jockey.jockey_graph import JockeyState
 
 
 async def process_single_message(message: str):
@@ -53,43 +53,50 @@ async def run_jockey_terminal():
 
         user_input = [HumanMessage(content=user_input, name="user")]
         jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+        # # test_input = [HumanMessage(content="find 2 clips of smiling and combine into a video in index 66fb14ecfcb30711cc97227c", name="user")]
+        # jockey_input = {"chat_history": test_input, "made_plan": False, "next_worker": None, "active_plan": None}
 
         try:
             last_event = None
-            stream = jockey.astream_events(jockey_input, thread, version="v2")
+            events = []
 
-            async for event in stream:
-                last_event = event
-                await parse_langchain_events_terminal(event)
+            # Continue streaming until we reach a terminal state
+            while True:
+                # async for event in jockey.astream(jockey_input, thread, stream_mode="values"):
+                async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
+                    # event["chat_history"][-1].pretty_print()
+                    events.append(event)
+                    await parse_langchain_events_terminal(event)
 
-            # human feedback section
-            # get user input
-            try:
-                user_input = console.input("[green]👤 Feedback: ")
-            except KeyboardInterrupt:
-                user_input = "no feedback"
-                console.print("\nExiting Jockey terminal...")
-                sys.exit(0)
+                final_event = events[-1] if events else None
+                state = jockey.get_state(thread)
 
-            # update jockey state with feedback
-            jockey_state_human_feedback = JockeyState(
-                chat_history=last_event.get("chat_history", []),
-                next_worker=last_event.get("next_worker", None),
-                made_plan=last_event.get("made_plan", False),
-                active_plan=last_event.get("active_plan", None),
-                feedback=user_input,
-            )
+                # If we've reached a terminal state, break the loop
+                if not state.next:
+                    break
 
-            jockey_graph.update_state(thread, jockey_state_human_feedback, as_node="human_feedback")
+                # Debug output
+                print("--latest state--")
+                latest_chat_history = state.values["chat_history"][-1]
+                print("\nlatest_chat_history", latest_chat_history)
+                print("\nvalues", state.values)
+                print("\nstate", state)
+                print("\nnext_worker", state.values["next_worker"])
+                print("\nnext", state.next)
 
-            # debug
-            print("--State after update--")
-            print(jockey_graph.get_state(thread))
-            jockey_graph.get_state(thread).next
+                # Get user feedback
+                try:
+                    user_input = console.input("[green]👤 Feedback: ")
+                except KeyboardInterrupt:
+                    user_input = "no feedback"
+                    console.print("\nExiting Jockey terminal...")
+                    sys.exit(0)
 
-            # proceed
-            for event in jockey_graph.stream(None, thread, stream_mode="values"):
-                print(event)
+                # Update state and continue loop
+                jockey.update_state(thread, {"feedback": user_input}, as_node="ask_human")
+
+                # Reset events list for next iteration
+                events = []
 
         except asyncio.CancelledError:
             console.print("\nOperation interrupted")
@@ -101,6 +108,7 @@ async def run_jockey_terminal():
         except get_langgraph_errors() as e:
             console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
             if last_event:
+                print("error", e)
                 langgraph_error_event = create_langgraph_error_event(session_id, last_event, e)
                 await parse_langchain_events_terminal(langgraph_error_event)
             return

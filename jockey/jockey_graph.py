@@ -18,6 +18,7 @@ from jockey.stirrups.errors import JockeyError, create_jockey_error_event
 from jockey.util import parse_langchain_events_terminal
 from langgraph.prebuilt import ToolNode
 from jockey.stirrups import collect_all_tools
+from langgraph.graph.state import CompiledStateGraph
 
 
 # TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
@@ -291,22 +292,27 @@ class Jockey(StateGraph):
         # NOTE: We reset the `active_plan` and `made_plan` variables of teh graph state for extra safety.
         return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
 
-    def should_continue(self, state: JockeyState) -> str:
-        """Determines if the agent should continue or ask the human for feedback."""
-        latest_state = state["chat_history"][-1]
-        print(f"[DEBUG] latest_state: {latest_state}")
-        # if not state["chat_history"][-1].tool_calls:
-        #     return "end"
-
-        # # if state.get("feedback", None) is not None:
-        # if state.too
-        #     return "ask_human"
-        # else:
-        #     return "continue"
-
     # We define a fake node to ask the human
     def _ask_human(self, state):
         pass
+
+    def go_back_from_ask_human(self, state: JockeyState) -> str:
+        """Determines which node to go back to from the ask_human node."""
+        if state["next_worker"] is None:
+            return "end"
+
+        # get the state
+        print("\nstate::go_back_from_ask_human", state)
+
+        # get the next worker
+        print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
+
+        # will be either revise_planner, revise_supervisor, or revise_worker
+        return f"revise_{state["next_worker"]}"
+
+    def planner_to_human_or_supervisor(self, state: JockeyState) -> str:
+        """Determines which node to go to from the planner node."""
+        return "ask_human" if state["made_plan"] else "supervisor"
 
     def construct_graph(self):
         """Construct the actual Jockey agent as a graph."""
@@ -319,29 +325,20 @@ class Jockey(StateGraph):
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
         self.add_node("ask_human", self._ask_human)
-        self.add_node("action", self.tool_node)
 
         # Since the supervisor decides/calls workers, we need to create edges between the supervisor and each worker.
         for worker, node in zip(self.workers, worker_nodes):
             self.add_node(worker.name, node)
             self.add_edge(worker.name, "supervisor")
-            self.add_conditional_edges(
-                worker.name,
-                self.should_continue,
-                {
-                    # If `tools`, then we call the tool node.
-                    "continue": "action",
-                    # We may ask the human
-                    "ask_human": "ask_human",
-                    # Otherwise we finish.
-                    "end": END,
-                },
-            )
-
+            self.add_edge(worker.name, "ask_human")
         # Since the planner is needed for many user inputs, we need an edge between the planner and the supervisor.
-        self.add_edge("planner", "supervisor")
+        # self.add_edge("planner", "supervisor")
         # self.add_edge("ask_human", "supervisor")  # if needed to go to next worker
-        self.add_edge("ask_human", "planner")
+
+        # self.add_edge("ask_human", "planner")
+
+        # always go to ask_human after planner
+        self.add_edge("planner", "ask_human")
 
         # We construct a node map as a dictionary where the keys values are the worker names.
         # So, if a worker's name is looked up, it routes to the name of the node -- which is the same.
@@ -352,7 +349,8 @@ class Jockey(StateGraph):
         node_map["planner"] = "planner"
 
         # We need a special edge to the END node to ensure the agent execution terminates after the reflect node runs.
-        self.add_edge("ask_human", "reflect")
+        # self.add_edge("ask_human", "reflect")
+        # self.add_edge("ask_human", "supervisor")
         self.add_edge("reflect", END)
 
         # The conditional edges here are used to decide when to route to a given node
@@ -365,6 +363,13 @@ class Jockey(StateGraph):
             node_map,
         )
 
+        # see if revisions are needed
+        # ask_human -> planner, supervisor, workers
+        ask_human_edges = {"revise_planner": "planner", "revise_supervisor": "supervisor", "end": END} | {
+            f"revise_{worker.name}": worker.name for worker in self.workers
+        }
+        self.add_conditional_edges("ask_human", self.go_back_from_ask_human, ask_human_edges)
+
         # Need to ensure that at the start of every agent execution, the supervisor node receives the input first.
         self.set_entry_point("supervisor")
 
@@ -375,7 +380,7 @@ def build_jockey_graph(
     supervisor_prompt: str,
     supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
     worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
-) -> Jockey:
+) -> CompiledStateGraph:
     """Convenience function for creating an instance of Jockey.
 
     Args:
@@ -418,8 +423,7 @@ def build_jockey_graph(
     # breakpoint()
 
     worker_names: list[str] = [[worker.name] for worker in jockey_graph.workers]
-    # jockey = jockey_graph.compile(checkpointer=memory, interrupt_before=["ask_human"])
-    jockey = jockey_graph.compile(checkpointer=memory)
+    jockey = jockey_graph.compile(checkpointer=memory, interrupt_before=["ask_human"])
     # Save the graph visualization to a PNG file
     with open("graph.png", "wb") as f:
         f.write(jockey.get_graph().draw_mermaid_png())

@@ -55,8 +55,7 @@ class Stirrup(BaseModel):
             except get_langgraph_errors() as e:
                 tool_call["output"] = f"{e.__class__.__name__}: {str(e)}" if e else "Unknown"
                 raise
-            except JockeyError as e:
-                tool_call["output"] = (f"JockeyError::{e.error_data.error_type.value if e else 'Unknown'}",)
+            except JockeyError:
                 raise
             except Exception as e:
                 tool_call["output"] = f"Error: {str(e)}"

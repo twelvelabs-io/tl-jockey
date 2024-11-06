@@ -2,16 +2,18 @@ import os
 import sys
 from typing import Union
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
-from jockey.jockey_graph import Jockey, build_jockey_graph
+from jockey.jockey_graph import build_jockey_graph
 from jockey.util import check_environment_variables
 from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
+from jockey.stirrups import collect_all_tools
+from langgraph.graph.state import CompiledStateGraph
 
 
 def build_jockey(
     planner_llm: Union[AzureChatOpenAI, ChatOpenAI],
     supervisor_llm: Union[AzureChatOpenAI, ChatOpenAI],
     worker_llm: Union[AzureChatOpenAI, ChatOpenAI],
-) -> Jockey:
+) -> CompiledStateGraph:
     """Convenience function for standing up a local Jockey instance for dev work.
 
     Args:
@@ -38,13 +40,15 @@ def build_jockey(
     with open(planner_filepath, "r") as planner_prompt_file:
         planner_prompt = planner_prompt_file.read()
 
-    return build_jockey_graph(
+    jockey: CompiledStateGraph = build_jockey_graph(
         planner_llm=planner_llm,
         planner_prompt=planner_prompt,
         supervisor_llm=supervisor_llm,
         supervisor_prompt=supervisor_prompt,
         worker_llm=worker_llm,
     )
+
+    return jockey
 
 
 # Here we construct all the LLMs for a Jockey instance.
@@ -85,9 +89,26 @@ else:
     print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
 
+from pydantic import BaseModel
+
+
+# We are going "bind" all tools to the model
+# We have the ACTUAL tools from above, but we also need a mock tool to ask a human
+# Since `bind_tools` takes in tools but also just tool definitions,
+# We can define a tool definition for `ask_human`
+class AskHuman(BaseModel):
+    """Ask the human a question"""
+
+    question: str
+
+
+tools = collect_all_tools()
+for model in [planner_llm, supervisor_llm, worker_llm]:
+    model = model.bind_tools(tools + [AskHuman])
+
 # This variable is what is used by the LangGraph API server.
 try:
-    jockey = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
+    jockey: CompiledStateGraph = build_jockey(planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm)
 except Exception as error:
     print(f"Error building Jockey: {error}")
     sys.exit(1)

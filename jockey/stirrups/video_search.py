@@ -174,7 +174,6 @@ async def simple_video_search(
                 )
                 raise jockey_error
         else:
-            print(f"[ERROR] Search returned non-list result: {search_results}")
             return search_results
 
     except Exception as error:
