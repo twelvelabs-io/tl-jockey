@@ -9,6 +9,10 @@ def main():
         print("[DEBUG] Debug mode enabled")
         preflight_checks()
 
+    # clear event_log.txt
+    with open("event_log.txt", "w") as f:
+        f.write("")
+
     # run server
     if args.server:
         run_jockey_server()

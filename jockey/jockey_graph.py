@@ -298,11 +298,10 @@ class Jockey(StateGraph):
 
     def go_back_from_ask_human(self, state: JockeyState) -> str:
         """Determines which node to go back to from the ask_human node."""
-        if state["next_worker"] is None:
-            return "end"
-
         # get the state
         print("\nstate::go_back_from_ask_human", state)
+        if state["next_worker"].lower() == "reflect":
+            return "end"
 
         # get the next worker
         print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
@@ -357,9 +356,15 @@ class Jockey(StateGraph):
         # Since the router we constructed uses a JsonOutputFunctionsParser() we can expect: {"next_worker": <current_next_worker_enum_value>}
         # Because we also constructed the node map with the keys and values having the worker names this allows us to seamless route
         # to the correct worker based off of the value of `next_worker` in the graph state.
+
+        def debug_router(state):
+            print(f"\nCurrent state: {state}")
+            print(f"\nNext worker: {state['next_worker']}")
+            return state["next_worker"]
+
         self.add_conditional_edges(
             "supervisor",
-            lambda x: x["next_worker"],
+            debug_router,
             node_map,
         )
 

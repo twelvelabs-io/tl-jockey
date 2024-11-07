@@ -10,6 +10,8 @@ from jockey.stirrups.errors import JockeyError
 import asyncio
 import sys
 from jockey.jockey_graph import JockeyState
+from typing import List
+from langchain_core.runnables.schema import StreamEvent
 
 
 async def process_single_message(message: str):
@@ -46,37 +48,37 @@ async def run_jockey_terminal():
     thread = {"configurable": {"thread_id": session_id}}
 
     try:
-        console.print()
-        user_input = console.input("[green]👤 Chat: ")
-        if not user_input.strip():
-            return
+        while True:
+            # Get initial user input
+            console.print()
+            user_input = console.input("[green]👤 Chat: ")
+            if not user_input.strip():
+                return
 
-        user_input = [HumanMessage(content=user_input, name="user")]
-        jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
-        # # test_input = [HumanMessage(content="find 2 clips of smiling and combine into a video in index 66fb14ecfcb30711cc97227c", name="user")]
-        # jockey_input = {"chat_history": test_input, "made_plan": False, "next_worker": None, "active_plan": None}
+            # Prepare input for processing
+            messages = [HumanMessage(content=user_input, name="user")]
+            jockey_input = {"chat_history": messages, "made_plan": False, "next_worker": None, "active_plan": None}
+            # # test_input = [HumanMessage(content="find 2 clips of smiling and combine into a video in index 66fb14ecfcb30711cc97227c", name="user")]
+            # jockey_input = {"chat_history": test_input, "made_plan": False, "next_worker": None, "active_plan": None}
 
-        try:
-            last_event = None
-            events = []
-
-            # Continue streaming until we reach a terminal state
-            while True:
-                # async for event in jockey.astream(jockey_input, thread, stream_mode="values"):
-                async for event in jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2"):
+            # currently only used for error handling... not rly needed
+            events: List[StreamEvent] = []
+            try:
+                # Continue streaming until we reach a terminal state
+                async for event in jockey.astream_events(jockey_input, thread, version="v2"):
                     # event["chat_history"][-1].pretty_print()
                     events.append(event)
                     await parse_langchain_events_terminal(event)
 
-                final_event = events[-1] if events else None
                 state = jockey.get_state(thread)
 
-                # If we've reached a terminal state, break the loop
-                if not state.next:
-                    break
+                # If we've reached a terminal state or reflection, continue with new input
+                if not state.next or state.values["next_worker"].lower() == "reflect":
+                    events = []  # Reset events before continuing
+                    continue
 
                 # Debug output
-                print("--latest state--")
+                print("\n--latest state--")
                 latest_chat_history = state.values["chat_history"][-1]
                 print("\nlatest_chat_history", latest_chat_history)
                 print("\nvalues", state.values)
@@ -90,6 +92,11 @@ async def run_jockey_terminal():
                 except KeyboardInterrupt:
                     user_input = "no feedback"
                     console.print("\nExiting Jockey terminal...")
+
+                    # process in events log
+                    interrupt_event = create_interrupt_event(session_id, events[-1])
+                    await parse_langchain_events_terminal(interrupt_event)
+
                     sys.exit(0)
 
                 # Update state and continue loop
@@ -98,26 +105,25 @@ async def run_jockey_terminal():
                 # Reset events list for next iteration
                 events = []
 
-        except asyncio.CancelledError:
-            console.print("\nOperation interrupted")
-            if last_event:
-                interrupt_event = create_interrupt_event(session_id, last_event)
+            except asyncio.CancelledError:
+                console.print("\nOperation interrupted")
+                # if last_event:
+                interrupt_event = create_interrupt_event(session_id, events[-1])
                 await parse_langchain_events_terminal(interrupt_event)
-            return
+                return
 
-        except get_langgraph_errors() as e:
-            console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
-            if last_event:
+            except get_langgraph_errors() as e:
+                console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
+                # if last_event:
                 print("error", e)
-                langgraph_error_event = create_langgraph_error_event(session_id, last_event, e)
+                langgraph_error_event = create_langgraph_error_event(session_id, events[-1], e)
                 await parse_langchain_events_terminal(langgraph_error_event)
-            return
+                return
 
-        except JockeyError as e:
-            console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
-            if last_event:
-                jockey_error_event = create_jockey_error_event(session_id, last_event, e)
-                await parse_langchain_events_terminal(jockey_error_event)
+            except JockeyError as e:
+                console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
+                jockey_error_event = create_jockey_error_event(session_id, events[-1], e)
+            await parse_langchain_events_terminal(jockey_error_event)
             return
 
         console.print()
