@@ -48,7 +48,7 @@ async def run_jockey_terminal():
     thread = {"configurable": {"thread_id": session_id}}
 
     try:
-        while True:
+        while True:  # Outer loop for new chat messages
             # Get initial user input
             console.print()
             user_input = console.input("[green]👤 Chat: ")
@@ -58,63 +58,62 @@ async def run_jockey_terminal():
             # Prepare input for processing
             messages = [HumanMessage(content=user_input, name="user")]
             jockey_input = {"chat_history": messages, "made_plan": False, "next_worker": None, "active_plan": None}
-            # # test_input = [HumanMessage(content="find 2 clips of smiling and combine into a video in index 66fb14ecfcb30711cc97227c", name="user")]
-            # jockey_input = {"chat_history": test_input, "made_plan": False, "next_worker": None, "active_plan": None}
 
-            # currently only used for error handling... not rly needed
+            # Process until we need human input
             events: List[StreamEvent] = []
             try:
-                # Continue streaming until we reach a terminal state
+                # Stream until we hit the ask_human breakpoint
                 async for event in jockey.astream_events(jockey_input, thread, version="v2"):
                     # event["chat_history"][-1].pretty_print()
                     events.append(event)
                     await parse_langchain_events_terminal(event)
 
-                state = jockey.get_state(thread)
+                while True:  # Continue processing current thread
+                    state = jockey.get_state(thread)
 
-                # If we've reached a terminal state or reflection, continue with new input
-                if not state.next or state.values["next_worker"].lower() == "reflect":
-                    events = []  # Reset events before continuing
-                    continue
+                    # If we've reached a terminal state or reflection, break to get new chat input
+                    if not state.next or state.values["next_worker"].lower() == "reflect":
+                        break
 
-                # Debug output
-                print("\n--latest state--")
-                latest_chat_history = state.values["chat_history"][-1]
-                print("\nlatest_chat_history", latest_chat_history)
-                print("\nvalues", state.values)
-                print("\nstate", state)
-                print("\nnext_worker", state.values["next_worker"])
-                print("\nnext", state.next)
+                    # Debug output
+                    print("\n--latest state--")
+                    latest_chat_history = state.values["chat_history"][-1]
+                    print("\nlatest_chat_history", latest_chat_history)
+                    print("\nvalues", state.values)
+                    print("\nstate", state)
+                    print("\nnext_worker", state.values["next_worker"])
+                    print("\nnext", state.next)
 
-                # Get user feedback
-                try:
-                    user_input = console.input("[green]👤 Feedback: ")
-                except KeyboardInterrupt:
-                    user_input = "no feedback"
-                    console.print("\nExiting Jockey terminal...")
+                    # Get user feedback
+                    try:
+                        feedback_user_input = console.input("[green]👤 Feedback: ")
+                    except KeyboardInterrupt:
+                        feedback_user_input = "no feedback"
+                        console.print("\nExiting Jockey terminal...")
+                        # process in events log
+                        interrupt_event = create_interrupt_event(session_id, events[-1])
+                        await parse_langchain_events_terminal(interrupt_event)
+                        sys.exit(0)
 
-                    # process in events log
-                    interrupt_event = create_interrupt_event(session_id, events[-1])
-                    await parse_langchain_events_terminal(interrupt_event)
+                    # Update state and continue processing
+                    jockey.update_state(thread, {"feedback": feedback_user_input}, as_node="ask_human")
 
-                    sys.exit(0)
+                    # Process the next steps until we need human input again
+                    async for event in jockey.astream_events(None, thread, version="v2"):
+                        events.append(event)
+                        await parse_langchain_events_terminal(event)
 
-                # Update state and continue loop
-                jockey.update_state(thread, {"feedback": user_input}, as_node="ask_human")
-
-                # Reset events list for next iteration
-                events = []
+                # print the current state
+                print("\nstate::run_jockey_terminal::current_state", jockey.get_state(thread))
 
             except asyncio.CancelledError:
                 console.print("\nOperation interrupted")
-                # if last_event:
                 interrupt_event = create_interrupt_event(session_id, events[-1])
                 await parse_langchain_events_terminal(interrupt_event)
                 return
 
             except get_langgraph_errors() as e:
                 console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
-                # if last_event:
                 print("error", e)
                 langgraph_error_event = create_langgraph_error_event(session_id, events[-1], e)
                 await parse_langchain_events_terminal(langgraph_error_event)
@@ -123,8 +122,8 @@ async def run_jockey_terminal():
             except JockeyError as e:
                 console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
                 jockey_error_event = create_jockey_error_event(session_id, events[-1], e)
-            await parse_langchain_events_terminal(jockey_error_event)
-            return
+                await parse_langchain_events_terminal(jockey_error_event)
+            # return
 
         console.print()
 

@@ -228,7 +228,7 @@ class Jockey(StateGraph):
         planner_response = HumanMessage(content=planner_response.content, name="planner")
         # We update the graph state to ensure the supervisor has access to the `active_plan` and is selected as the `next_worker`
         # The supervisor is also made aware that the planner was called via `made_plan`
-        return {"chat_history": [planner_response], "active_plan": planner_response.content, "next_worker": "supervisor", "made_plan": True}
+        return {"chat_history": [planner_response], "active_plan": planner_response.content, "next_worker": "ask_human", "made_plan": True}
 
     async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
         """A worker_node in the StateGraph instance. Workers are responsible for directly calling tools in their domains.
@@ -298,15 +298,36 @@ class Jockey(StateGraph):
 
     def go_back_from_ask_human(self, state: JockeyState) -> str:
         """Determines which node to go back to from the ask_human node."""
-        # get the state
         print("\nstate::go_back_from_ask_human", state)
+
+        # If we're reflecting, end the conversation
         if state["next_worker"].lower() == "reflect":
             return "end"
 
-        # get the next worker
-        print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
+        # Get the last message's name to know where we came from
+        last_message = state["chat_history"][-1]
+        source_node = last_message.name
+        feedback = state.get("feedback", "").strip()
 
-        # will be either revise_planner, revise_supervisor, or revise_worker
+        # TODO: Implement proper feedback handling function
+        # For now, stub the feedback processing
+        def process_feedback(feedback: str) -> bool:
+            """Stub function - will be replaced with LLM call"""
+            return feedback.lower() in ["", "yes", "continue", "ok"]
+
+        # print the current node we are on
+        print("\nstate::go_back_from_ask_human::current_node", source_node)
+
+        # If coming from planner, either continue to supervisor or revise plan
+        if source_node == "planner":
+            if process_feedback(feedback):
+                return "supervisor"  # Continue with plan
+            else:
+                # TODO: Store feedback to be used in plan revision
+                return "revise_planner"  # Revise plan
+
+        # For all other nodes, go to revision
+        print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
         return f"revise_{state["next_worker"]}"
 
     def planner_to_human_or_supervisor(self, state: JockeyState) -> str:
@@ -315,72 +336,53 @@ class Jockey(StateGraph):
 
     def construct_graph(self):
         """Construct the actual Jockey agent as a graph."""
-        # This arbitrarily generates worker nodes for each worker in the Jockey instance
-        # We use `functools.partial` to generate a node that takes only a single argument, namely the graph state.
-        worker_nodes = [functools.partial(self._worker_node, worker=worker) for worker in self.workers]
 
-        # Create the pre-named nodes
+        # create nodes
         self.add_node("planner", self._planner_node)
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
         self.add_node("ask_human", self._ask_human)
 
-        # Since the supervisor decides/calls workers, we need to create edges between the supervisor and each worker.
-        for worker, node in zip(self.workers, worker_nodes):
-            self.add_node(worker.name, node)
-            self.add_edge(worker.name, "supervisor")
+        # connect workers to supervisor
+        for worker in self.workers:
+            worker_node = functools.partial(self._worker_node, worker=worker)
+            self.add_node(worker.name, worker_node)
             self.add_edge(worker.name, "ask_human")
-        # Since the planner is needed for many user inputs, we need an edge between the planner and the supervisor.
-        # self.add_edge("planner", "supervisor")
-        # self.add_edge("ask_human", "supervisor")  # if needed to go to next worker
 
-        # self.add_edge("ask_human", "planner")
-
-        # always go to ask_human after planner
+        # core flow
+        self.set_entry_point("supervisor")
         self.add_edge("planner", "ask_human")
-
-        # We construct a node map as a dictionary where the keys values are the worker names.
-        # So, if a worker's name is looked up, it routes to the name of the node -- which is the same.
-        node_map = {worker.name: worker.name for worker in self.workers}
-        # We add the pre-named nodes REFLECT and planner here.
-        # NOTE: The node map keys MUST match the Enum in the router that is constructed for them to be actually reachable.
-        node_map["REFLECT"] = "reflect"
-        node_map["planner"] = "planner"
-
-        # We need a special edge to the END node to ensure the agent execution terminates after the reflect node runs.
-        # self.add_edge("ask_human", "reflect")
-        # self.add_edge("ask_human", "supervisor")
         self.add_edge("reflect", END)
 
-        # The conditional edges here are used to decide when to route to a given node
-        # Since the router we constructed uses a JsonOutputFunctionsParser() we can expect: {"next_worker": <current_next_worker_enum_value>}
-        # Because we also constructed the node map with the keys and values having the worker names this allows us to seamless route
-        # to the correct worker based off of the value of `next_worker` in the graph state.
-
-        def debug_router(state):
-            print(f"\nCurrent state: {state}")
-            print(f"\nNext worker: {state['next_worker']}")
-            return state["next_worker"]
-
+        # Conditional routing
         self.add_conditional_edges(
             "supervisor",
-            debug_router,
-            node_map,
+            lambda state: state["next_worker"],
+            {"REFLECT": "reflect", "planner": "planner", **{worker.name: worker.name for worker in self.workers}},
         )
 
-        # see if revisions are needed
-        # ask_human -> planner, supervisor, workers
-        ask_human_edges = {"revise_planner": "planner", "revise_supervisor": "supervisor", "end": END} | {
-            f"revise_{worker.name}": worker.name for worker in self.workers
+        # Human feedback routing
+        ask_human_edges = {
+            "revise_planner": "planner",
+            "revise_supervisor": "supervisor",
+            "supervisor": "supervisor",
+            "end": END,
+            **{f"revise_{worker.name}": worker.name for worker in self.workers},
         }
-        self.add_conditional_edges("ask_human", self.go_back_from_ask_human, ask_human_edges)
 
-        # Need to ensure that at the start of every agent execution, the supervisor node receives the input first.
-        self.set_entry_point("supervisor")
+        # see if revisions are needed
+        ask_human_edges = {
+            "revise_planner": "planner",
+            "revise_supervisor": "supervisor",
+            "end": END,
+            "supervisor": "supervisor",  # Add this edge for the continue case
+        } | {f"revise_{worker.name}": worker.name for worker in self.workers}
+        self.add_conditional_edges("ask_human", self.go_back_from_ask_human, ask_human_edges)
 
 
 def build_jockey_graph(
     planner_prompt: str,
+    
     planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
     supervisor_prompt: str,
     supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
