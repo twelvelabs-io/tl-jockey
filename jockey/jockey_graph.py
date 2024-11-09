@@ -1,13 +1,14 @@
 import functools
 import json
 import os
-from typing import Annotated, Union, Sequence, Dict, TypedDict
+from typing import Annotated, Union, Sequence, Dict, TypedDict, List, Literal, OrderedDict
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import Runnable
+from langchain_core.messages.ai import AIMessage
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.memory import MemorySaver
@@ -19,6 +20,51 @@ from jockey.util import parse_langchain_events_terminal
 from langgraph.prebuilt import ToolNode
 from jockey.stirrups import collect_all_tools
 from langgraph.graph.state import CompiledStateGraph
+from langchain_openai import ChatOpenAI
+
+from pydantic import BaseModel, Field
+
+
+class FeedbackEntry(TypedDict):
+    node_content: str
+    node: str
+    feedback: str | None
+
+
+class AskHuman(BaseModel):
+    """Route to the appropriate node based on human feedback, and respond with 1 concise sentence feedback to the human"""
+
+    next_node: Literal["planner", "supervisor", "reflect", "video-search", "video-text-generation", "video-editing"] = Field(
+        description="The next node to route to based on the feedback"
+    )
+    model_config = {"json_schema_extra": {"required": ["next_node"]}}
+
+    @classmethod
+    def from_response(cls, response):
+        """Helper method to parse LangChain LLM response"""
+        # Case 1: Direct Pydantic model (ideal case with strict=True)
+        if isinstance(response, cls):
+            return response
+
+        # Case 2: AIMessage with tool_calls
+        if hasattr(response, "additional_kwargs") and "tool_calls" in response.additional_kwargs:
+            tool_call = response.additional_kwargs["tool_calls"][0]
+            args = json.loads(tool_call["function"]["arguments"])
+            return cls(**args)
+
+        # Case 3: AIMessage with parsed content
+        if hasattr(response, "additional_kwargs") and "parsed" in response.additional_kwargs:
+            return response.additional_kwargs["parsed"]
+
+        # Case 4: AIMessage with JSON string content
+        if hasattr(response, "content"):
+            try:
+                data = json.loads(response.content)
+                return cls(**data)
+            except json.JSONDecodeError:
+                pass
+
+        raise ValueError(f"Unable to parse response type: {type(response)}\nResponse: {response}")
 
 
 # TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
@@ -29,7 +75,7 @@ class JockeyState(TypedDict):
     next_worker: Union[str, None]
     made_plan: bool = False
     active_plan: Union[str, None]
-    feedback: Union[str, None]
+    feedback_history: List[FeedbackEntry]  # earlist [] latest
 
 
 class Jockey(StateGraph):
@@ -39,10 +85,10 @@ class Jockey(StateGraph):
     supervisor: Runnable
     router: Dict
     planner_prompt: str
-    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
+    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
     supervisor_prompt: str
-    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
-    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]
+    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
     worker_instructor: Runnable
     _compiled_instance = None  # Class variable to store compiled instance
 
@@ -53,6 +99,7 @@ class Jockey(StateGraph):
         supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
         supervisor_prompt: str,
         worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+        ask_human_llm: Union[AzureChatOpenAI, ChatOpenAI],
     ) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
@@ -79,6 +126,7 @@ class Jockey(StateGraph):
         self.supervisor_prompt = supervisor_prompt
         self.supervisor_llm = supervisor_llm
         self.worker_llm = worker_llm
+        self.ask_human_llm = ask_human_llm
 
         # collect all @tools from stirrups
         self.all_tools = collect_all_tools()
@@ -228,7 +276,17 @@ class Jockey(StateGraph):
         planner_response = HumanMessage(content=planner_response.content, name="planner")
         # We update the graph state to ensure the supervisor has access to the `active_plan` and is selected as the `next_worker`
         # The supervisor is also made aware that the planner was called via `made_plan`
-        return {"chat_history": [planner_response], "active_plan": planner_response.content, "next_worker": "ask_human", "made_plan": True}
+
+        feedback_history = state.get("feedback_history", [])
+        feedback_history.append({"node_content": planner_response.content, "node": "planner", "feedback": None})
+
+        return {
+            "chat_history": [planner_response],
+            "active_plan": planner_response.content,
+            "next_worker": "ask_human",
+            "made_plan": True,
+            "feedback_history": feedback_history,
+        }
 
     async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
         """A worker_node in the StateGraph instance. Workers are responsible for directly calling tools in their domains.
@@ -268,7 +326,11 @@ class Jockey(StateGraph):
         # We return the response from the worker as a special human with the name of the worker.
         # This helps with understanding historical context as the chat history grows.
         worker_response = HumanMessage(content=worker_response, name=f"{state['next_worker']}")
-        return {"chat_history": [worker_instructions, worker_response]}
+
+        feedback_history = state.get("feedback_history", [])
+        feedback_history.append({"node_content": worker_response.content, "node": state["next_worker"], "feedback": None})
+
+        return {"chat_history": [worker_instructions, worker_response], "feedback_history": feedback_history}
 
     async def _reflect_node(self, state: JockeyState) -> Dict:
         """The reflect node in the graph. This node reviews all the context for a given user input before generating a final output.
@@ -290,49 +352,95 @@ class Jockey(StateGraph):
         reflect_chain = reflect_chain.with_config({"tags": ["reflect"]})
         reflect_response = await reflect_chain.ainvoke(state)
         # NOTE: We reset the `active_plan` and `made_plan` variables of teh graph state for extra safety.
+
         return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
 
-    # We define a fake node to ask the human
-    def _ask_human(self, state):
-        pass
+    def _ask_human_node(state):
+        return state.get("next_node", "supervisor")
 
-    def go_back_from_ask_human(self, state: JockeyState) -> str:
-        """Determines which node to go back to from the ask_human node."""
-        print("\nstate::go_back_from_ask_human", state)
+    async def ask_human(self, state: JockeyState) -> str:
+        """Given the llm's decision to make a tool_call, we route to the appropriate node.
 
-        # If we're reflecting, end the conversation
-        if state["next_worker"].lower() == "reflect":
-            return "end"
+        we also need to keep track of how many times the human has asked for a revision so the worker nodes don't repeat the same mistakes.
 
-        # Get the last message's name to know where we came from
-        last_message = state["chat_history"][-1]
-        source_node = last_message.name
-        feedback = state.get("feedback", "").strip()
+        in the end we discard all previous revision feedback and only keep the latest one.
+        """
+        # initial state
+        if not state:
+            return "supervisor"
 
-        # TODO: Implement proper feedback handling function
-        # For now, stub the feedback processing
-        def process_feedback(feedback: str) -> bool:
-            """Stub function - will be replaced with LLM call"""
-            return feedback.lower() in ["", "yes", "continue", "ok"]
+        latest_chat_history = state.get("chat_history", [])[-1]
+        current_node = latest_chat_history.name  # Get the node that called ask_human
 
-        # print the current node we are on
-        print("\nstate::go_back_from_ask_human::current_node", source_node)
+        # confirm that we have user input sent from the cli or client
+        human_feedback_input = state.get("feedback_history", [])
+        if not human_feedback_input:
+            raise ValueError("No feedback provided to ask_human node")
 
-        # If coming from planner, either continue to supervisor or revise plan
-        if source_node == "planner":
-            if process_feedback(feedback):
-                return "supervisor"  # Continue with plan
-            else:
-                # TODO: Store feedback to be used in plan revision
-                return "revise_planner"  # Revise plan
+        # Include feedback history in llm call
+        # grab all feedback history for the current node
+        node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
+        feedback_context = (
+            "Previous attempts for this task:\n"
+            + "\n".join(
+                f"<history_{entry['node']}_node_{i + 1}>\n"
+                f"<llm_output>{entry['node_content'].strip().replace('\n', '').replace('\t', '')}</llm_output>\n"
+                f"<human_feedback>{entry['feedback'].strip().replace('\n', '').replace('\t', '')}</human_feedback>\n"
+                f"</chat_{entry['node']}_{i + 1}>"
+                for i, entry in enumerate(node_feedback_history)
+            )
+            if node_feedback_history
+            else ""
+        )
 
-        # For all other nodes, go to revision
-        print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
-        return f"revise_{state["next_worker"]}"
+        # make llm call
+        messages = [("system", feedback_context), ("human", "")]
+        response = await self.ask_human_llm.ainvoke(messages, stop=None, temperature=0)
+        try:
+            # Parse the LLM response to determine the next node
+            ask_human_obj = AskHuman.from_response(response)
+            if ask_human_obj.next_node == "reflect":
+                # Create ToolMessage for reflection
+                return "end"
+            return f"revise_{ask_human_obj.next_node}"
 
-    def planner_to_human_or_supervisor(self, state: JockeyState) -> str:
-        """Determines which node to go to from the planner node."""
-        return "ask_human" if state["made_plan"] else "supervisor"
+        except ValueError as e:
+            print(f"Error parsing ask_human response: {e}")
+            return "supervisor"
+
+    # def go_back_from_ask_human(self, state: JockeyState) -> str:
+    #     """Determines which node to go back to from the ask_human node."""
+    #     print("\nstate::go_back_from_ask_human", state)
+
+    #     # If we're reflecting, end the conversation
+    #     if state["next_worker"].lower() == "reflect":
+    #         return "end"
+
+    #     # Get the last message's name to know where we came from
+    #     last_message = state["chat_history"][-1]
+    #     source_node = last_message.name
+    #     feedback = state.get("feedback", "").strip()
+
+    #     # TODO: Implement proper feedback handling function
+    #     # For now, stub the feedback processing
+    #     def process_feedback(feedback: str) -> bool:
+    #         """Stub function - will be replaced with LLM call"""
+    #         return feedback.lower() in ["", "yes", "continue", "ok"]
+
+    #     # print the current node we are on
+    #     print("\nstate::go_back_from_ask_human::current_node", source_node)
+
+    #     # If coming from planner, either continue to supervisor or revise plan
+    #     if source_node == "planner":
+    #         if process_feedback(feedback):
+    #             return "supervisor"  # Continue with plan
+    #         else:
+    #             # TODO: Store feedback to be used in plan revision
+    #             return "revise_planner"  # Revise plan
+
+    #     # For all other nodes, go to revision
+    #     print("\nstate::go_back_from_ask_human::next_worker", state["next_worker"])
+    #     return f"revise_{state["next_worker"]}"
 
     def construct_graph(self):
         """Construct the actual Jockey agent as a graph."""
@@ -341,7 +449,8 @@ class Jockey(StateGraph):
         self.add_node("planner", self._planner_node)
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
-        self.add_node("ask_human", self._ask_human)
+        # self.add_node("ask_human", self._ask_human_node)
+        self.add_node("ask_human", self.ask_human)
 
         # connect workers to supervisor
         for worker in self.workers:
@@ -354,39 +463,34 @@ class Jockey(StateGraph):
         self.add_edge("planner", "ask_human")
         self.add_edge("reflect", END)
 
-        # Conditional routing
+        # Conditional routing based on supervisor node's output
         self.add_conditional_edges(
             "supervisor",
             lambda state: state["next_worker"],
             {"REFLECT": "reflect", "planner": "planner", **{worker.name: worker.name for worker in self.workers}},
         )
 
-        # Human feedback routing
-        ask_human_edges = {
-            "revise_planner": "planner",
-            "revise_supervisor": "supervisor",
-            "supervisor": "supervisor",
-            "end": END,
-            **{f"revise_{worker.name}": worker.name for worker in self.workers},
-        }
-
-        # see if revisions are needed
-        ask_human_edges = {
-            "revise_planner": "planner",
-            "revise_supervisor": "supervisor",
-            "end": END,
-            "supervisor": "supervisor",  # Add this edge for the continue case
-        } | {f"revise_{worker.name}": worker.name for worker in self.workers}
-        self.add_conditional_edges("ask_human", self.go_back_from_ask_human, ask_human_edges)
+        # Human feedback routing based on ask_human node's output
+        self.add_conditional_edges(
+            "ask_human",
+            self.ask_human,
+            {
+                "revise_planner": "planner",
+                "revise_supervisor": "supervisor",
+                "supervisor": "supervisor",
+                "end": END,
+                **{f"revise_{worker.name}": worker.name for worker in self.workers},
+            },
+        )
 
 
 def build_jockey_graph(
     planner_prompt: str,
-    
     planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
     supervisor_prompt: str,
     supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
     worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+    ask_human_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI],
 ) -> CompiledStateGraph:
     """Convenience function for creating an instance of Jockey.
 
@@ -417,19 +521,11 @@ def build_jockey_graph(
         supervisor_prompt=supervisor_prompt,
         supervisor_llm=supervisor_llm,
         worker_llm=worker_llm,
+        ask_human_llm=ask_human_llm,
     )
 
-    # This keeps track of conversation history and supports async.
-    # also allows for checkpointing used in human-in-the-loop
     memory = MemorySaver()
 
-    # Compile the StateGraph instance for this instance of Jockey.
-    # list all the nodes that we have
-    # nodes = jockey_graph.nodes.keys()
-    # print(nodes)
-    # breakpoint()
-
-    worker_names: list[str] = [[worker.name] for worker in jockey_graph.workers]
     jockey = jockey_graph.compile(checkpointer=memory, interrupt_before=["ask_human"])
     # Save the graph visualization to a PNG file
     with open("graph.png", "wb") as f:
