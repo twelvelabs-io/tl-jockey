@@ -248,3 +248,4 @@ For a basic example of how to interact with Jockey programmatically, refer to th
 - [Architecture](docs/architecture.md)
 - [Customize Jockey](docs/customize-jockey.md)
 - [Deploy and Use Jockey with the LangGraph API Server](docs/langgraph-api-server.md)
+- [Reference library](docs/reference-library.md)
