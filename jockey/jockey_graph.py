@@ -32,12 +32,17 @@ class FeedbackEntry(TypedDict):
 
 
 class AskHuman(BaseModel):
-    """Route to the appropriate node based on human feedback, and respond with 1 concise sentence feedback to the human"""
+    """Route to the appropriate node based on human feedback"""
 
-    next_node: Literal["planner", "supervisor", "reflect", "video-search", "video-text-generation", "video-editing"] = Field(
-        description="The next node to route to based on the feedback"
+    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node"] = Field(
+        default="current_node",
+        description="""
+        Determine if the human feedback is:
+        1. Requesting changes/revisions -> route to current_node
+        2. Approval of the current plan/step -> route to next appropriate worker
+        """,
     )
-    model_config = {"json_schema_extra": {"required": ["next_node"]}}
+    model_config = {"json_schema_extra": {"required": ["route_to_node"]}}
 
     @classmethod
     def from_response(cls, response):
@@ -131,7 +136,6 @@ class Jockey(StateGraph):
         # collect all @tools from stirrups
         self.all_tools = collect_all_tools()
         self.tool_node = ToolNode(self.all_tools)
-        print(f"[DEBUG] tool_node: {self.tool_node}")
 
         core_workers = self._build_core_workers()
         self.workers = core_workers
@@ -264,7 +268,18 @@ class Jockey(StateGraph):
         if any(map(lambda x: isinstance(self.planner_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
             raise TypeError(f"Planner LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
 
+        # Add feedback context to the prompt
+        feedback_context = ""
+        if state.get("feedback_history"):
+            feedback_context = "\n<feedback_history>\n"
+            for i, entry in enumerate(state["feedback_history"], start=1):
+                feedback_context += f"{i}. Previous plan: {entry['node_content']}\n"
+                feedback_context += f"{i}. Feedback: {entry['feedback']}\n"
+            feedback_context += "</feedback_history>\n"
+            feedback_context += "Please re-evaluate the active plan based on the feedback above."
+
         planner_prompt = ChatPromptTemplate.from_messages([
+            ("system", feedback_context),  # Add feedback context
             ("system", self.planner_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
         ])
@@ -356,18 +371,15 @@ class Jockey(StateGraph):
         return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
 
     def _ask_human_node(state):
-        return state.get("next_node", "supervisor")
+        return state.get("route_to_node", "planner")
 
     async def ask_human(self, state: JockeyState) -> str:
-        """Given the llm's decision to make a tool_call, we route to the appropriate node.
+        """Routes feedback to the current node by default.
+        Only routes to a different node in very specific cases (e.g., explicit "help" command)."""
 
-        we also need to keep track of how many times the human has asked for a revision so the worker nodes don't repeat the same mistakes.
-
-        in the end we discard all previous revision feedback and only keep the latest one.
-        """
-        # initial state
+        # Initial state check
         if not state:
-            return "supervisor"
+            return "planner"
 
         latest_chat_history = state.get("chat_history", [])[-1]
         current_node = latest_chat_history.name  # Get the node that called ask_human
@@ -383,10 +395,10 @@ class Jockey(StateGraph):
         feedback_context = (
             "Previous attempts for this task:\n"
             + "\n".join(
-                f"<history_{entry['node']}_node_{i + 1}>\n"
-                f"<llm_output>{entry['node_content'].strip().replace('\n', '').replace('\t', '')}</llm_output>\n"
+                f"<feedback_history_{i + 1}>\n"
+                f"<prev_llm_output>{entry['node_content'].strip().replace('\n', '').replace('\t', '')}</prev_llm_output>\n"
                 f"<human_feedback>{entry['feedback'].strip().replace('\n', '').replace('\t', '')}</human_feedback>\n"
-                f"</chat_{entry['node']}_{i + 1}>"
+                f"</feedback_history_{i + 1}>"
                 for i, entry in enumerate(node_feedback_history)
             )
             if node_feedback_history
@@ -394,15 +406,24 @@ class Jockey(StateGraph):
         )
 
         # make llm call
-        messages = [("system", feedback_context), ("human", "")]
+        messages = [
+            # (
+            #     "system",
+            #     "",
+            # ),
+            ("human", f"current_node: {current_node}\n{feedback_context}"),
+        ]
         response = await self.ask_human_llm.ainvoke(messages, stop=None, temperature=0)
         try:
             # Parse the LLM response to determine the next node
             ask_human_obj = AskHuman.from_response(response)
-            if ask_human_obj.next_node == "reflect":
+            print("\nroute_to_node", ask_human_obj.route_to_node)
+            if ask_human_obj.route_to_node == "reflect":
                 # Create ToolMessage for reflection
                 return "end"
-            return f"revise_{ask_human_obj.next_node}"
+            if ask_human_obj.route_to_node == "current_node":
+                return f"revise_{current_node}"
+            return f"revise_{ask_human_obj.route_to_node}"
 
         except ValueError as e:
             print(f"Error parsing ask_human response: {e}")
@@ -476,8 +497,6 @@ class Jockey(StateGraph):
             self.ask_human,
             {
                 "revise_planner": "planner",
-                "revise_supervisor": "supervisor",
-                "supervisor": "supervisor",
                 "end": END,
                 **{f"revise_{worker.name}": worker.name for worker in self.workers},
             },

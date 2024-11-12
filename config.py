@@ -22,13 +22,6 @@ def parse_args():
         "-s", "--server", action="store_true", help="Run in server mode"
     )
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-    parser.add_argument(
-        "-i",
-        "--initial-message",
-        type=str,
-        help="Initial message to start the conversation (used for testing)",
-        dest="initial_message",
-    )
 
     args, unknown = parser.parse_known_args()
 
@@ -41,4 +34,3 @@ def parse_args():
 
 args = parse_args()
 DEBUG = args.debug
-FIRST_USER_MESSAGE = args.initial_message

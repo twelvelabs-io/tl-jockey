@@ -15,32 +15,6 @@ from langchain_core.runnables.schema import StreamEvent
 from jockey.jockey_graph import FeedbackEntry
 
 
-# async def process_single_message(message: str):
-#     """Process a single message and exit."""
-#     console = Console()
-
-#     console.print()
-#     console.print(f"[green]👤 Chat: {message}")
-#     user_input = [HumanMessage(content=message, name="user")]
-#     jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
-
-#     try:
-#         last_event = None
-#         stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
-
-#         async for event in stream:
-#             last_event = event
-#             await parse_langchain_events_terminal(event)
-
-#     except JockeyError as e:
-#         console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
-#         jockey_error_event = create_jockey_error_event(session_id, last_event, e)
-#         await parse_langchain_events_terminal(jockey_error_event)
-#         raise
-
-#     console.print()
-
-
 async def run_jockey_terminal():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
     console = Console()
@@ -107,10 +81,9 @@ async def run_jockey_terminal():
                     # send the updated feedback_history to the ask_human node
                     await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history}, as_node="ask_human")
 
-
-                    # # check that the update actually worked
-                    # new_state = jockey.get_state(thread)
-                    # check = new_state.values["feedback_history"]
+                    # check that the update actually worked
+                    new_state = jockey.get_state(thread)
+                    check = new_state.values["feedback_history"]
 
                     # Process the next steps until we need human input again
                     async for event in jockey.astream_events(None, thread, version="v2"):
@@ -118,7 +91,7 @@ async def run_jockey_terminal():
                         await parse_langchain_events_terminal(event)
 
                 # print the current state
-                print("\nstate::run_jockey_terminal::current_state", jockey.get_state(thread))
+                # print("\nstate::run_jockey_terminal::current_state", jockey.get_state(thread))
 
             except asyncio.CancelledError:
                 console.print("\nOperation interrupted")

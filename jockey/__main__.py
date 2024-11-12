@@ -1,5 +1,5 @@
 import asyncio
-from jockey.cli import run_jockey_terminal, run_jockey_server, process_single_message
+from jockey.cli import run_jockey_terminal, run_jockey_server
 from jockey.util import preflight_checks
 from config import args
 
@@ -19,10 +19,7 @@ def main():
 
     # run terminal
     else:
-        if args.initial_message:
-            asyncio.run(process_single_message(args.initial_message))
-        else:
-            asyncio.run(run_jockey_terminal())
+        asyncio.run(run_jockey_terminal())
 
 
 if __name__ == "__main__":
