@@ -15,30 +15,30 @@ from langchain_core.runnables.schema import StreamEvent
 from jockey.jockey_graph import FeedbackEntry
 
 
-async def process_single_message(message: str):
-    """Process a single message and exit."""
-    console = Console()
+# async def process_single_message(message: str):
+#     """Process a single message and exit."""
+#     console = Console()
 
-    console.print()
-    console.print(f"[green]👤 Chat: {message}")
-    user_input = [HumanMessage(content=message, name="user")]
-    jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
+#     console.print()
+#     console.print(f"[green]👤 Chat: {message}")
+#     user_input = [HumanMessage(content=message, name="user")]
+#     jockey_input = {"chat_history": user_input, "made_plan": False, "next_worker": None, "active_plan": None}
 
-    try:
-        last_event = None
-        stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
+#     try:
+#         last_event = None
+#         stream = jockey.astream_events(jockey_input, {"configurable": {"thread_id": session_id}}, version="v2")
 
-        async for event in stream:
-            last_event = event
-            await parse_langchain_events_terminal(event)
+#         async for event in stream:
+#             last_event = event
+#             await parse_langchain_events_terminal(event)
 
-    except JockeyError as e:
-        console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
-        jockey_error_event = create_jockey_error_event(session_id, last_event, e)
-        await parse_langchain_events_terminal(jockey_error_event)
-        raise
+#     except JockeyError as e:
+#         console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
+#         jockey_error_event = create_jockey_error_event(session_id, last_event, e)
+#         await parse_langchain_events_terminal(jockey_error_event)
+#         raise
 
-    console.print()
+#     console.print()
 
 
 async def run_jockey_terminal():
@@ -76,18 +76,11 @@ async def run_jockey_terminal():
                     if not state.next or state.values["next_worker"].lower() == "reflect":
                         break
 
-                    # Debug output
-                    print("\n--latest state--")
                     latest_chat_history = state.values["chat_history"][-1]
-                    # print("\nlatest_chat_history", latest_chat_history)
-                    # print("\nvalues", state.values)
-                    # print("\nstate", state)
-                    print("\nnext_worker", state.values["next_worker"])
-                    print("\nnext", state.next)
 
                     # Get user feedback
                     try:
-                        feedback_user_input = console.input("[green]👤 Feedback: ")
+                        feedback_user_input = console.input("\n[green]👤 Feedback: ")
                     except KeyboardInterrupt:
                         feedback_user_input = "no feedback"
                         console.print("\nExiting Jockey terminal...")
@@ -96,16 +89,28 @@ async def run_jockey_terminal():
                         await parse_langchain_events_terminal(interrupt_event)
                         sys.exit(0)
 
-                    # send user feedback to the ask_human node
+                    # get the current feedback_history and append the new feedback
+                    current_feedback_history: List[FeedbackEntry] = jockey.get_state(thread).values["feedback_history"]
                     feedback_entry: FeedbackEntry = {
                         "node_content": latest_chat_history.content,
                         "node": latest_chat_history.name,
                         "feedback": feedback_user_input,
                     }
-                    feedback: dict[str, list[FeedbackEntry]] = {"feedback_history": [feedback_entry]}
-                    await jockey.aupdate_state(thread, feedback, as_node="ask_human")
-                    print("--State after update--")
-                    print(jockey.get_state(thread))
+
+                    if current_feedback_history[-1].get("feedback") is None:
+                        # if feedback is None, update the last entry
+                        current_feedback_history[-1]["feedback"] = feedback_user_input
+                    else:
+                        # otherwise, append the new entry
+                        current_feedback_history.append(feedback_entry)
+
+                    # send the updated feedback_history to the ask_human node
+                    await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history}, as_node="ask_human")
+
+
+                    # # check that the update actually worked
+                    # new_state = jockey.get_state(thread)
+                    # check = new_state.values["feedback_history"]
 
                     # Process the next steps until we need human input again
                     async for event in jockey.astream_events(None, thread, version="v2"):
