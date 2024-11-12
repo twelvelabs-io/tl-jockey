@@ -48,12 +48,12 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
     handleShow(index, indexOfMessage )
   };
 
-  const formattedDurations =
-    message?.toolsData?.map((video) =>
-      formatTime(Math.round(video.start), Math.round(video.end))
-    ) || [];
+  // const formattedDurations =
+  //   message?.toolsData?.map((video) =>
+  //     formatTime(Math.round(video.start), Math.round(video.end))
+  //   ) || [];
   
-  const videosLengthMoreThan3 = message?.toolsData && message.toolsData.length > 3
+  // const videosLengthMoreThan3 = message?.toolsData && message.toolsData.length > 3
 
   return (
     <>
@@ -63,21 +63,23 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
           }
           <div className={'aiBubble ml-[40px]  whitespace-pre-line gap-4'}>
               <div>
-                {message?.toolsData ? (
+                {message ? (
                       <AIResponseVideoSearch 
-                        videosLengthMoreThan3={videosLengthMoreThan3}
+                        // videosLengthMoreThan3={videosLengthMoreThan3}
                         message={message}
-                        formattedDurations={formattedDurations}
+                        // formattedDurations={formattedDurations}
                         handleVideoClick={handleVideoClick}
-                        showAllVideos={showAllVideos}
-                        setShowAllVideos={setShowAllVideos}
+                        // showAllVideos={showAllVideos}
+                        // setShowAllVideos={setShowAllVideos}
                         />
                   // ) : <SkeletonChatVideoCard/>}
                   ) : ''}
               </div>
+              <div className="mt-[12px]">
               { hasValidMessage ? (
                 <ExtendMessage agent={message.linkText} message={message.text}/>
             ) : <ExtendMessage agent='error' message={message.text}/>}
+            </div>
           </div>
         </div>
       

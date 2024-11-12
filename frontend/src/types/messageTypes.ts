@@ -4,6 +4,10 @@ export interface Message {
     link?: string;
     linkText?: string;
   }
+
+export interface VideoInfo {
+    url: string;
+  }
   
 export interface QuestionMessage extends Message {
     twelveText?: string;

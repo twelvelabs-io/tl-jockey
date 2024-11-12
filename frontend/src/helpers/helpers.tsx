@@ -1,6 +1,6 @@
 import { Dispatch } from 'react';
 import { ActionType } from '../widgets/VideoAssistant/hooks/useChatTypes';
-import { ModalType } from '../types/messageTypes';
+import { ModalType, VideoInfo } from '../types/messageTypes';
 
 const helpersFunctions = {
     updateChatPanelMessages: (
@@ -23,6 +23,18 @@ const helpersFunctions = {
           },
         ],
       });
+    },
+
+    parseCloudFrontUrls : (text: string): VideoInfo[] => {
+      const urls: VideoInfo[] = [];
+      const urlRegex = /https:\/\/[^\s)]+(?:cloudfront|ngrok)[^\s)]+/g;
+      
+      let match;
+      while ((match = urlRegex.exec(text)) !== null) {
+        urls.push({ url: match[0] });
+      }
+      console.log('Found cloudfront/Ngrok server urls:', urls);
+      return urls;
     },
   
     openPanelModal: (
