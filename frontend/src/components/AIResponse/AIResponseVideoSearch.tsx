@@ -15,6 +15,10 @@ interface AIResponseVideoSearch {
 export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message, handleVideoClick }) => {
   const urlsFromMessageText = helpersFunctions.parseCloudFrontUrls(message.text as string)
   const firstParagraphFromMessageText = helpersFunctions.getFirstParagraph(message.text as string)
+
+  if (urlsFromMessageText.length === 0) {
+    return null
+  }
   // TODO: let's use it as a hotfix for now, but for the future it's better to handle a general json instead
   console.log(message.text)
     return (
