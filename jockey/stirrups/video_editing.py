@@ -7,11 +7,6 @@ from jockey.util import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 
-CODEC_FAMILIES = {
-    'mpeg': {'h264', 'hevc', 'mpeg4'},
-    'vp': {'vp8', 'vp9'},
-    'av1': {'av1'}
-}
 
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
@@ -34,78 +29,54 @@ class RemoveSegmentInput(BaseModel):
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
-def are_codecs_compatible(codecs):
-    for family in CODEC_FAMILIES.values():
-        if codecs.issubset(family):
-            return True
-    return False
-
-def check_video_codecs(video_filepaths):
-    codecs = set()
-    for filepath in video_filepaths:
-        probe = ffmpeg.probe(filepath)
-        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
-        if video_stream:
-            codecs.add(video_stream['codec_name'])
-    return codecs
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 def combine_clips(clips: List[Dict], output_filename: str, index_id: str) -> str:
-    """Combine or edit multiple clips together based on their start and end times and video IDs. 
-    The full filepath for the combined clips is returned."""
+    input_streams = []
+    output_dir = os.path.join(os.environ.get("HOST_PUBLIC_DIR", ""))
+    
+    for clip in clips:
+        video_id = clip.video_id
+        start = clip.start
+        end = clip.end
+        video_filepath = os.path.join(output_dir, index_id, f"{video_id}_{start}_{end}.mp4")
+        
+        if not os.path.isfile(video_filepath):
+            download_video(video_id=video_id, index_id=index_id, start=start, end=end)
+        
+
+        print(f"Processing clip: {video_filepath}")
+        
+
+        video_stream = ffmpeg.input(video_filepath).video.filter("setpts", "PTS-STARTPTS")
+        audio_stream = ffmpeg.input(video_filepath).audio.filter("asetpts", "PTS-STARTPTS")
+        input_streams.extend([video_stream, audio_stream])
+    
+    output_filepath = os.path.join(output_dir, index_id, output_filename)
+    
     try:
-        input_streams = []
-        video_filepaths = []        
-
-        for clip in clips:
-            video_id = clip.video_id
-            start = clip.start
-            end = clip.end
-            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
-            video_filepaths.append(video_filepath)
-            if os.path.isfile(video_filepath) is False:
-                try:
-                    download_video(video_id=video_id, index_id=index_id, start=start, end=end)
-                except AssertionError as error:
-                    error_response = {
-                        "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                        "Double check that the Video ID and Index ID are valid and correct.",
-                        "error": str(error)
-                    }
-                    continue
-
-            clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
-            clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
-            clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
-            clip_audio_input_stream = clip_audio_input_stream.filter("asetpts", "PTS-STARTPTS")
-            
-            input_streams.extend([clip_video_input_stream, clip_audio_input_stream])
-
-        output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
-        codecs = check_video_codecs(video_filepaths)
-
-        if not are_codecs_compatible(codecs):
+            print(f"Started ffmpge")
             ffmpeg.concat(*input_streams, v=1, a=1).output(
-                output_filepath, 
-                vcodec="libx264",   
-                acodec="libmp3lame", 
-                video_bitrate="1M",
-                audio_bitrate="192k"
-            ).overwrite_output().run()
-        else:
-            ffmpeg.concat(*input_streams, v=1, a=1).output(
-                output_filepath, 
-                acodec="libmp3lame"
-            ).overwrite_output().run(capture_stdout=True, capture_stderr=True)
-
-        return output_filepath
-    except Exception as error:
-        print(error)
-        error_response = {
-            "message": "There was a video editing error.",
-            "error": str(error)
+                output_filepath,
+                vcodec="libx264",
+                acodec="aac",
+            ).overwrite_output().run(capture_stderr=True)
+            print(f"Finished ffmpge")
+            if os.path.exists(output_filepath) and os.path.getsize(output_filepath) > 0:
+                result_url = f"https://spooky.videos.ngrok.app/{index_id}/{output_filename}"
+                print(f"Successfully created: {result_url}")
+                return result_url
+            else:
+                    raise ValueError("Output file is empty or does not exist")
+            # return f"https://spooky.videos.ngrok.app/{index_id}/{output_filename}"
+        
+    except ffmpeg.Error as e:
+        print("FFmpeg error occurred:")
+        print(e.stderr.decode())
+        return {
+            "message": "FFmpeg encoding error",
+            "error": e.stderr.decode()
         }
-        return error_response
 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
@@ -132,3 +103,4 @@ video_editing_worker_config = {
     "worker_name": "video-editing"
 }
 VideoEditingWorker = Stirrup(**video_editing_worker_config)
+
