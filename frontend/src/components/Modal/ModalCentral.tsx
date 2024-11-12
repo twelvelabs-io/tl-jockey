@@ -6,7 +6,7 @@ import union from '../../../src/icons/union.svg'
 
 import QuestionHeader from './QuestionHeader'
 import { ModalCentralProps, textsModalCentral } from './ModalTypes'
-import ReactHlsPlayer from 'react-hls-player/dist'
+import ReactPlayer from "react-player";
 import Pagination from '../Pagination/Pagination'
 import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat'
 import { ModalType } from '../../types/messageTypes'
@@ -38,7 +38,7 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
   findElementById(panelVideosList, chosenIndex)?.hls.thumbnails_urls[0]
 
   let totalIndexes = modalType === ModalType.MESSAGES ? arrayOfChoosedElements?.length as number : panelVideosList.length
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<ReactPlayer>(null);
   let videoUrl = modalType === ModalType.MESSAGES ? 
     arrayOfChoosedElements?.[chosenIndex as number]?.video_url as string : 
     findElementById(panelVideosList, chosenIndex)?.hls.video_url
@@ -99,14 +99,18 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
             />
           </div>
           <div>
-            <ReactHlsPlayer
-              poster={fallbackImage}
-              src={videoUrl}
+            <ReactPlayer
+              ref={videoRef}
+              url={videoUrl}
               width={'854px'}
               controls={true}
-              height="520px"
-              playerRef={videoRef}
-              className={'rounded'}
+              playing={false}
+              className="rounded"
+              config={{
+                file: {
+                  forceHLS: true,
+                },
+              }}
             />
           </div>
         </div>
