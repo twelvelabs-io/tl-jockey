@@ -19,6 +19,9 @@ interface AIResponseVideoSearch {
 
 export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({urlsFromMessageText, showAllVideos, setShowAllVideos,  message, handleVideoClick, videosLengthMoreThan3 }) => {
   const firstParagraphFromMessageText = helpersFunctions.getFirstParagraph(message.text as string)
+  if (urlsFromMessageText.length === 0) {
+    return null
+  }
   const playerRefs = urlsFromMessageText.map(() => useRef(null))
   console.log(message.text)
     return (

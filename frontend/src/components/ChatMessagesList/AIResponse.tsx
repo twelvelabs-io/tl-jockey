@@ -47,10 +47,9 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
     handleShow(index, indexOfMessage )
   };
 
-  const urlsFromMessageText = helpersFunctions.parseCloudFrontUrls(message.text as string)
-  if (urlsFromMessageText.length === 0) {
-    return null
-  }
+  const urlsFromMessageText = message.linkText === 'REFLECT' ? 
+    helpersFunctions.parseCloudFrontUrls(message.text as string) : 
+    [];
   const videosLengthMoreThan3 = urlsFromMessageText.length !== 0 && urlsFromMessageText.length > 3 
   // TODO: let's use it as a hotfix for now, but for the future it's better to handle a general json instead
   return (
