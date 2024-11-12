@@ -6,26 +6,26 @@ import SeeMoreResultsButton from '../ChatMessagesList/SeeMoreResultsButton';
 import { Message } from '../ChatMessagesList/AIResponse';
 import ReactHlsPlayer from 'react-hls-player';
 import helpersFunctions from '../../helpers/helpers';
+import { VideoInfo } from '../../types/messageTypes';
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 interface AIResponseVideoSearch {
+    urlsFromMessageText: VideoInfo[]
+    showAllVideos: boolean;
+    setShowAllVideos: Dispatch<SetStateAction<boolean>>
+    videosLengthMoreThan3: boolean | undefined
     message: Message
     handleVideoClick: (index: number | undefined) => void
 }
 
-export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message, handleVideoClick }) => {
-  const urlsFromMessageText = helpersFunctions.parseCloudFrontUrls(message.text as string)
+export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({urlsFromMessageText, showAllVideos, setShowAllVideos,  message, handleVideoClick, videosLengthMoreThan3 }) => {
   const firstParagraphFromMessageText = helpersFunctions.getFirstParagraph(message.text as string)
-
-  if (urlsFromMessageText.length === 0) {
-    return null
-  }
-  // TODO: let's use it as a hotfix for now, but for the future it's better to handle a general json instead
+  const playerRefs = urlsFromMessageText.map(() => useRef(null))
   console.log(message.text)
     return (
       <div className="flex flex-col gap-[12px]">
       {message?.text && urlsFromMessageText.length > 0 && (
         <p className="text-[#333431] font-aeonik text-base">
-          {<StreamingTextEffect text={firstParagraphFromMessageText} />}
+          { <StreamingTextEffect text={firstParagraphFromMessageText} />}
         </p>
       )}
       <div className="flex flex-row justify-between items-start gap-[12px]">
@@ -34,14 +34,14 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message
         <Suspense>
             {message?.text && (
               <div className="video-urls-container flex flex-col gap-4">
-                {urlsFromMessageText.map((video, index) => (
+                {urlsFromMessageText.slice(0, showAllVideos ? undefined : 3).map((video, index) => (
                   <ReactHlsPlayer
                     key={index}
                     src={video.url}
                     width={'854px'}
                     controls={true}
                     height="520px"
-                    playerRef={useRef(null)}
+                    playerRef={playerRefs[index]}
                     className={'rounded'}
                   />
                 ))}
@@ -54,6 +54,14 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message
           {/* { message.text && <StreamingTextEffect text={message.text} />} */}
         </div>
       </div>
+      {videosLengthMoreThan3 && (
+        <SeeMoreResultsButton
+          showAllVideos={showAllVideos}
+          setShowAllVideos={setShowAllVideos}
+          message={message}
+          videosUrls={urlsFromMessageText}
+        />
+      )}
       </div>
     )
 }

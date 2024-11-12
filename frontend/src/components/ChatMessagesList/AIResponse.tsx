@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { ReactComponent as AIIcon } from '../../icons/ai.svg';
-import { formatTime } from './formatTime';
 import { ModalType } from '../../types/messageTypes';
 import { ActionType, useChat } from '../../widgets/VideoAssistant/hooks/useChat';
 import { AIResponseVideoSearch } from '../AIResponse/AIResponseVideoSearch';
 import AIResponseHeader from '../AIResponse/AIResponseHeader';
 import SkeletonChatVideoCard from '../../skeletons/SkeletonChatVideoCard';
 import ExtendMessage from './helpers/ExtendMessage';
+import helpersFunctions from '../../helpers/helpers';
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 
 export interface Message {
@@ -48,13 +47,12 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
     handleShow(index, indexOfMessage )
   };
 
-  // const formattedDurations =
-  //   message?.toolsData?.map((video) =>
-  //     formatTime(Math.round(video.start), Math.round(video.end))
-  //   ) || [];
-  
-  // const videosLengthMoreThan3 = message?.toolsData && message.toolsData.length > 3
-
+  const urlsFromMessageText = helpersFunctions.parseCloudFrontUrls(message.text as string)
+  if (urlsFromMessageText.length === 0) {
+    return null
+  }
+  const videosLengthMoreThan3 = urlsFromMessageText.length !== 0 && urlsFromMessageText.length > 3 
+  // TODO: let's use it as a hotfix for now, but for the future it's better to handle a general json instead
   return (
     <>
         <div className={'relative w-[680px]'}>
@@ -65,15 +63,14 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
               <div>
                 {message ? (
                       <AIResponseVideoSearch 
-                        // videosLengthMoreThan3={videosLengthMoreThan3}
+                        urlsFromMessageText={urlsFromMessageText}
+                        videosLengthMoreThan3={videosLengthMoreThan3}
                         message={message}
-                        // formattedDurations={formattedDurations}
                         handleVideoClick={handleVideoClick}
-                        // showAllVideos={showAllVideos}
-                        // setShowAllVideos={setShowAllVideos}
+                        showAllVideos={showAllVideos}
+                        setShowAllVideos={setShowAllVideos}
                         />
-                  // ) : <SkeletonChatVideoCard/>}
-                  ) : ''}
+                  ) : <SkeletonChatVideoCard/>}
               </div>
               <div className="mt-[12px]">
               { hasValidMessage ? (
