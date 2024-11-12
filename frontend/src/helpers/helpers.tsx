@@ -25,6 +25,12 @@ const helpersFunctions = {
       });
     },
 
+    getFirstParagraph : (text: string): string => {
+      if (!text) return '';
+      const paragraphs = text.split('\n\n');
+      return paragraphs[0];
+    },
+
     parseCloudFrontUrls : (text: string): VideoInfo[] => {
       const urls: VideoInfo[] = [];
       const urlRegex = /https:\/\/[^\s)]+(?:cloudfront|ngrok)[^\s)]+/g;

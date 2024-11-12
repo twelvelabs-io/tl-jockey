@@ -12,20 +12,16 @@ interface AIResponseVideoSearch {
     handleVideoClick: (index: number | undefined) => void
 }
 
-const getFirstParagraph = (text: string): string => {
-  if (!text) return '';
-  const paragraphs = text.split('\n\n');
-  return paragraphs[0];
-};
-
 export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message, handleVideoClick }) => {
   const urlsFromMessageText = helpersFunctions.parseCloudFrontUrls(message.text as string)
+  const firstParagraphFromMessageText = helpersFunctions.getFirstParagraph(message.text as string)
+  // TODO: let's use it as a hotfix for now, but for the future it's better to handle a general json instead
   console.log(message.text)
     return (
       <div className="flex flex-col gap-[12px]">
       {message?.text && urlsFromMessageText.length > 0 && (
         <p className="text-[#333431] font-aeonik text-base">
-          {<StreamingTextEffect text={getFirstParagraph(message.text)} />}
+          {<StreamingTextEffect text={firstParagraphFromMessageText} />}
         </p>
       )}
       <div className="flex flex-row justify-between items-start gap-[12px]">
