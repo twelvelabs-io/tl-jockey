@@ -29,8 +29,8 @@ Available workers:
 
 <feedback_format>
 Feedback history is ordered from earliest (1) to latest (n). Each entry shows:
-- Previous plan that was attempted
-- Human feedback received for that plan
+- <previous_plan> that was attempted
+- <human_feedback> received for that plan
 The most recent feedback (highest number) is the most relevant for your next plan.
 </feedback_format>
 

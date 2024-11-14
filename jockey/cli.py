@@ -13,13 +13,12 @@ from jockey.jockey_graph import JockeyState
 from typing import List
 from langchain_core.runnables.schema import StreamEvent
 from jockey.jockey_graph import FeedbackEntry
+from jockey.thread import session_id, thread
 
 
 async def run_jockey_terminal():
     """Quickstart function to create a Jockey instance in the terminal for easy dev work."""
     console = Console()
-    session_id = uuid.uuid4()
-    thread = {"configurable": {"thread_id": session_id}}
 
     try:
         while True:  # Outer loop for new chat messages
@@ -71,7 +70,7 @@ async def run_jockey_terminal():
                         "feedback": feedback_user_input,
                     }
 
-                    if current_feedback_history[-1].get("feedback") is None:
+                    if current_feedback_history[-1].get("feedback") == "":
                         # if feedback is None, update the last entry
                         current_feedback_history[-1]["feedback"] = feedback_user_input
                     else:
