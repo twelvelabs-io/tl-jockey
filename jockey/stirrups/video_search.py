@@ -10,16 +10,9 @@ from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunct
 from jockey.video_utils import get_video_metadata
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
-from config import DEBUG
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
-
-
-def debug_print(*args, **kwargs):
-    """Helper function to print debug messages only when DEBUG is True."""
-    if DEBUG:
-        print("[DEBUG]", *args, **kwargs)
 
 
 class GroupByEnum(str, Enum):
@@ -62,7 +55,6 @@ async def _base_video_search(
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
-    debug_print(f"Starting _base_video_search with query: {query}, index_id: {index_id}")
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
 
     payload = {
@@ -79,9 +71,7 @@ async def _base_video_search(
     if video_filter is not None:
         payload["filter"] = {"id": video_filter}
 
-    debug_print(f"Sending request to {SEARCH_URL} with payload: {json.dumps(payload, indent=2)}")
     video_metadata = requests.post(SEARCH_URL, json=payload, headers=headers)
-    debug_print(f"Response status code: {video_metadata.status_code}")
 
     if video_metadata.status_code != 200:
         print(f"[ERROR] API request failed with status {video_metadata.status_code}: {video_metadata.text}")
@@ -124,19 +114,15 @@ async def _base_video_search(
 
     top_n_results = json.dumps(top_n_results)
 
-    debug_print(f"Processed {len(top_n_results)} results")
     return top_n_results
 
 
 def extract_modalities(search_results):
-    debug_print(f"Extracting modalities from search results: {json.dumps(search_results, indent=2)}")
     modalities = set()
     for result in search_results:
         modules = result.get("modules", [])
-        debug_print(f"Found modules: {modules}")
         for module in modules:
             modalities.add(module.get("type"))
-    debug_print(f"Extracted modalities: {modalities}")
     return list(modalities)
 
 
@@ -149,20 +135,15 @@ async def simple_video_search(
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
-    debug_print(f"Starting simple_video_search with query: {query}")
-
     try:
         search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
-        debug_print(f"Search results type: {type(search_results)}")
 
         if isinstance(search_results, list):
             try:
-                debug_print(f"Attempting to extract modalities from: {search_results}")
                 available_modalities = extract_modalities(search_results)
                 if not available_modalities:
                     print("[WARNING] No modalities were found in search results")
                     return {"success": False, "results": search_results, "available_modalities": available_modalities, "error": "No modalities found"}
-                debug_print(f"Successfully extracted modalities: {available_modalities}")
                 return {"success": True, "results": search_results, "available_modalities": available_modalities}
             except Exception as error:
                 print(f"[ERROR] Failed to extract modalities: {str(error)}")
