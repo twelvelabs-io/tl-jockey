@@ -15,6 +15,7 @@ from jockey.jockey_graph import FeedbackEntry
 from jockey.thread import session_id, thread
 import json
 from tqdm import tqdm
+import time
 
 
 def download_m3u8_videos(event):
@@ -33,12 +34,12 @@ def download_m3u8_videos(event):
         video_url = item.get("video_url")
         video_id = item.get("video_id")
 
-        if (video_id and video_id not in downloaded_videos) or (os.path.exists(os.path.join(source_filepath, f"{video_id}.mp4"))):
+        if (os.path.exists(os.path.join(source_filepath, f"{video_id}.mp4"))) or (video_id and video_id not in downloaded_videos):
             start, end = item.get("start", 0), item.get("end")
             source_file = os.path.join(source_filepath, f"{video_id}.mp4")
 
-            # Download video silently
-            subprocess.run(["yt-dlp", "-o", source_file, video_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Download video showing yt-dlp progress
+            subprocess.run(["yt-dlp", "-o", source_file, video_url, "--progress", "--quiet"])
             downloaded_videos.add(video_id)
 
         # Trim the video if end time is provided
