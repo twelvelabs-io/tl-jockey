@@ -21,8 +21,6 @@ def parse_args():
     parser.add_argument(
         "-s", "--server", action="store_true", help="Run in server mode"
     )
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-
     args, unknown = parser.parse_known_args()
 
     # Handle the case where someone uses the old "server" argument
@@ -33,4 +31,3 @@ def parse_args():
 
 
 args = parse_args()
-DEBUG = args.debug

@@ -2,7 +2,7 @@ import requests
 import json
 import urllib
 import os
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain.tools import tool
 from typing import Dict, List, Union
 from enum import Enum

@@ -5,9 +5,7 @@ from config import args
 
 
 def main():
-    if args.debug:
-        print("[DEBUG] Debug mode enabled")
-        preflight_checks()
+    # preflight_checks()
 
     # clear event_log.txt
     with open("event_log.txt", "w") as f:

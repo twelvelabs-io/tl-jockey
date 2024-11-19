@@ -5,7 +5,7 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from typing import List, Union, Dict
-from langchain.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 
 from jockey.stirrups.errors import JockeyError, ErrorType, NodeType, get_langgraph_errors
 from jockey.stirrups.errors import create_langgraph_error_event, create_jockey_error_event

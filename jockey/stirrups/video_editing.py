@@ -1,7 +1,7 @@
 import os
 import ffmpeg
 from langchain.tools import tool
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import List, Dict, Union
 from jockey.video_utils import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH

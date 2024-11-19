@@ -2,6 +2,10 @@ import os
 import requests
 import ffmpeg
 import urllib.parse
+import tqdm
+import json
+import subprocess
+from jockey.thread import session_id
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
@@ -71,3 +75,52 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
             return error_response
 
     return video_path
+
+
+def download_m3u8_videos(event):
+    """Download and trim M3U8 videos into mp4 files with caching and progress display.
+
+    mp4 files are sorted by start time, then trimmed by end time. they are put into filepath output/{session_id}
+    """
+    # Create session directory if it doesn't exist
+    trimmed_filepath = "output/" + str(session_id)
+    source_filepath = "output/source"
+    os.makedirs(trimmed_filepath, exist_ok=True)
+    os.makedirs(source_filepath, exist_ok=True)
+    downloaded_videos = set()  # Cache of downloaded video URLs for this function call
+
+    for item in tqdm(json.loads(event["data"]["output"]), desc="Processing Videos"):
+        video_url = item.get("video_url")
+        video_id = item.get("video_id")
+
+        if (os.path.exists(os.path.join(source_filepath, f"{video_id}.mp4"))) or (video_id and video_id not in downloaded_videos):
+            start, end = item.get("start", 0), item.get("end")
+            source_file = os.path.join(source_filepath, f"{video_id}.mp4")
+
+            # Download video showing yt-dlp progress
+            subprocess.run(["yt-dlp", "-o", source_file, video_url, "--progress", "--quiet"])
+            downloaded_videos.add(video_id)
+
+        # Trim the video if end time is provided
+        if item.get("end") is not None:
+            start, end = item.get("start", 0), item.get("end")
+            output_file = os.path.join(source_filepath, f"{video_id}.mp4")
+            trimmed_file = os.path.join(trimmed_filepath, f"trimmed-{start}-{end}.mp4")
+            duration = end - start
+
+            # Run ffmpeg silently
+            subprocess.run([
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",  # Only show errors
+                "-ss",
+                str(start),
+                "-i",
+                output_file,
+                "-t",
+                str(duration),
+                "-c",
+                "copy",
+                trimmed_file,
+            ])

@@ -1,7 +1,8 @@
 import functools
 import json
 import os
-from typing import Annotated, Union, Sequence, Dict, TypedDict, List, Literal, OrderedDict
+from typing import Annotated, Union, Sequence, Dict, List, Literal
+from typing_extensions import TypedDict
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
@@ -24,6 +25,7 @@ from langchain_openai import ChatOpenAI
 
 from pydantic import BaseModel, Field
 from jockey.thread import thread
+from langchain_core.callbacks.manager import adispatch_custom_event
 
 
 class FeedbackEntry(TypedDict):
@@ -177,7 +179,7 @@ class Jockey(StateGraph):
         return core_workers
 
     def _build_router(self) -> Dict:
-        """Builds the router that the supervisor uses to route to the appropriate node ina given state.
+        """Builds the router that the supervisor uses to route to the appropriate node in a given state.
 
         Returns:
             Dict: The router definition adhering to the [OpenAI Assistants API](https://platform.openai.com/docs/assistants/overview).
@@ -398,19 +400,21 @@ class Jockey(StateGraph):
 
         # Include feedback history in llm call
         # grab all feedback history for the current node
-        node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
-        feedback_context = (
-            "Previous attempts for this task:\n"
-            + "\n".join(
-                f"<feedback_history_{i + 1}>\n"
-                f"<prev_llm_output>{entry['node_content'].strip().replace('\n', '').replace('\t', '')}</prev_llm_output>\n"
-                f"<human_feedback>{entry['feedback'].strip().replace('\n', '').replace('\t', '')}</human_feedback>\n"
-                f"</feedback_history_{i + 1}>"
-                for i, entry in enumerate(node_feedback_history)
-            )
-            if node_feedback_history
-            else ""
-        )
+        node_feedback_history = [entry for entry in os.stat.get("feedback_history", []) if entry["node"] == current_node]
+        feedback_context = "Previous attempts for this task:\n"
+        if node_feedback_history:
+            for i, entry in enumerate(node_feedback_history):
+                node_content = entry["node_content"].strip().replace("\n", "").replace("\t", "")
+                human_feedback = entry["feedback"].strip().replace("\n", "").replace("\t", "")
+
+                feedback_context += (
+                    f"<feedback_history_{i + 1}>\n"
+                    f"<prev_llm_output>{node_content}</prev_llm_output>\n"
+                    f"<human_feedback>{human_feedback}</human_feedback>\n"
+                    f"</feedback_history_{i + 1}>\n"
+                )
+        else:
+            feedback_context = ""
 
         # make llm call
         messages = [
