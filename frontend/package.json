@@ -16,7 +16,7 @@
     "@types/node": "^16.7.13",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.0.0",
-    "axios": "^1.6.2",
+    "axios": "^1.7.4",
     "bootstrap": "^5.3.2",
     "browserify-zlib": "^0.2.0",
     "cors": "^2.8.5",
@@ -78,7 +78,7 @@
     "eslint-plugin-n": "^15.0.0 || ^16.0.0 ",
     "eslint-plugin-promise": "^6.0.0",
     "eslint-plugin-react": "^7.33.2",
-    "postcss": "^8.4.31",
+    "postcss": "^8.4.33",
     "process": "^0.11.10",
     "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.3.5"
