@@ -38,12 +38,17 @@ class FeedbackEntry(TypedDict):
 class AskHuman(BaseModel):
     """Route to the appropriate node based on human feedback"""
 
-    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node"] = Field(
+    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node", "end"] = Field(
         default="current_node",
         description="""
-        Determine if the human feedback is:
-        1. Requesting changes/revisions -> route to current_node
-        2. Approval of the current plan/step -> route to next appropriate worker
+        First, evaluate whether the <active_plan> has been completed compared to the <feedback_history> and <human_feedback>. empty <human_feedback> means <active_plan> is complete.
+
+        If not, determine if the human feedback is:
+        - Requesting changes/revisions -> route to current_node
+        - approval of the current plan -> route to next appropriate worker based on the <active_plan> and latest <feedback_history> or "end" if the plan is complete
+
+        If the <active_plan> has been completed:
+        - <human_feedback> is approval of the current plan/step -> route to next appropriate worker based on the <active_plan> and latest <feedback_history> or "end" if the plan is complete
         """,
     )
     model_config = {"json_schema_extra": {"required": ["route_to_node"]}}
@@ -347,12 +352,16 @@ class Jockey(StateGraph):
         # This helps with understanding historical context as the chat history grows.
         worker_response = HumanMessage(content=worker_response, name=f"{state['next_worker']}")
 
-        # Update the feedback history only if we need to revise the current node
-        # feedback_history = state.get("feedback_history", [])
-        # feedback_history.append({"node_content": worker_response.content, "node": state["next_worker"], "feedback": ""})
+        # Update the feedback history
+        feedback_history: List[FeedbackEntry] = state.get("feedback_history", [])
+        feedback_history.append({"node_content": worker_response.content, "node": state["next_worker"], "feedback": ""})
 
         # return {"chat_history": [worker_instructions, worker_response], "feedback_history": feedback_history}
-        return {"chat_history": [worker_instructions, worker_response]}
+        return {
+            "chat_history": [worker_instructions, worker_response],
+            "feedback_history": feedback_history,
+            # "next_worker": ,
+        }
 
     async def _reflect_node(self, state: JockeyState) -> Dict:
         """The reflect node in the graph. This node reviews all the context for a given user input before generating a final output.
@@ -435,6 +444,7 @@ class Jockey(StateGraph):
         # make llm call
         messages = [
             ("human", f"current_node: {current_node}\n{feedback_context}"),
+            ("human", f"<active_plan>{state['active_plan']}</active_plan>"),
         ]
 
         response = await self.ask_human_llm.ainvoke(messages, stop=None, temperature=0)
@@ -443,14 +453,7 @@ class Jockey(StateGraph):
             route_to = AskHuman.from_response(response).route_to_node
             # # Dispatch custom event for routing decision
             # await adispatch_custom_event("askh_human_routing", {"from_node": current_node, "route_to": route_to}, config=thread)
-
-            if route_to == "current_node":
-                # revise the current node
-                return f"{current_node}"
-            else:
-                # clear the feedback history for the current node
-                state["feedback_history"] = []
-                return f"{current_node}"
+            return current_node if route_to == "current_node" else route_to
 
         except ValueError as e:
             # Dispatch custom event for error
@@ -487,7 +490,8 @@ class Jockey(StateGraph):
             self.ask_human,
             {
                 "planner": "planner",
-                "reflect": END,
+                "end": END,
+                "reflect": "reflect",
                 **{f"{worker.name}": worker.name for worker in self.workers},
             },
         )

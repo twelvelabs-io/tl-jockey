@@ -39,8 +39,8 @@ async def run_jockey_terminal():
                 async for event in jockey.astream_events(input=jockey_input, config=thread, version="v2"):
                     # event["chat_history"][-1].pretty_print()
                     events.append(event)
-                    if event["event"] == "on_tool_end":
-                        download_m3u8_videos(event)
+                    # if event["event"] == "on_tool_end":
+                    # download_m3u8_videos(event)
                     await parse_langchain_events_terminal(event)
 
                 # go here when we are interrupted by the ask_human node
@@ -66,18 +66,18 @@ async def run_jockey_terminal():
 
                     # get the current feedback_history and append the new feedback
                     current_feedback_history: List[FeedbackEntry] = jockey.get_state(thread).values["feedback_history"]
-                    feedback_entry: FeedbackEntry = {
-                        "node_content": latest_chat_history.content,
-                        "node": latest_chat_history.name,
-                        "feedback": feedback_user_input,
-                    }
+                    # feedback_entry: FeedbackEntry = {
+                    #     "node_content": latest_chat_history.content,
+                    #     "node": latest_chat_history.name,
+                    #     "feedback": feedback_user_input,
+                    # }
 
-                    if current_feedback_history[-1].get("feedback") == "":
+                    # if current_feedback_history[-1].get("feedback") == "":
                         # if feedback is None, update the last entry
-                        current_feedback_history[-1]["feedback"] = feedback_user_input
-                    else:
+                    current_feedback_history[-1]["feedback"] = feedback_user_input
+                    # else:
                         # otherwise, append the new entry
-                        current_feedback_history.append(feedback_entry)
+                        # current_feedback_history.append(feedback_entry)
 
                     # send the updated feedback_history to the ask_human node
                     await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history}, as_node="ask_human")
@@ -88,9 +88,9 @@ async def run_jockey_terminal():
 
                     # Process the next steps until we need human input again
                     async for event in jockey.astream_events(input=None, config=thread, version="v2"):
-                        if event["event"] == "on_tool_end":
-                            # let's handle the m3u8 video
-                            download_m3u8_videos(event)
+                        # if event["event"] == "on_tool_end":
+                        # let's handle the m3u8 video
+                        # download_m3u8_videos(event)
                         await parse_langchain_events_terminal(event)
 
                 # print the current state
