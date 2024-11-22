@@ -30,11 +30,11 @@ AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KE
 OPENAI_ENVIRONMENT_VARIABLES = set(["OPENAI_API_KEY"])
 ALL_JOCKEY_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES | AZURE_ENVIRONMENT_VARIABLES | OPENAI_ENVIRONMENT_VARIABLES
 LOCAL_LANGGRAPH_URL = "http://localhost:8000"
+console = Console()
 
 
 async def parse_langchain_events_terminal(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
-    console = Console()
 
     with open("event_log.txt", "a") as f:
         f.write(f"{event}\n")

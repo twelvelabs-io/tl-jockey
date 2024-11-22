@@ -1,7 +1,7 @@
 import functools
 import json
 import os
-from typing import Annotated, Union, Sequence, Dict, List, Literal
+from typing import Annotated, Union, Sequence, Dict, List, Literal, Any, Optional
 from typing_extensions import TypedDict
 from langchain_openai.chat_models.base import BaseChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
@@ -26,6 +26,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from jockey.thread import thread
 from langchain_core.callbacks.manager import adispatch_custom_event
+# from langgraph.types import StreamWriter
 
 
 class FeedbackEntry(TypedDict):
@@ -394,13 +395,28 @@ class Jockey(StateGraph):
         if not human_feedback_input:
             raise ValueError("No feedback provided to ask_human node")
 
+        # Dispatch custom event for human feedback received
+        # await adispatch_custom_event(
+        #     "human_feedback_received",
+        #     {
+        #         "current_node": current_node,
+        #         "feedback": human_feedback_input[-1].get("feedback", ""),
+        #         "node_content": human_feedback_input[-1].get("node_content", ""),
+        #     },
+        #     config={
+        #         "callbacks": thread["callbacks"],
+        #         "metadata": {"source": "jockey"},
+        #         "tags": ["jockey", "custom_event"],
+        #     },
+        # )
+
         # go to the next node if the human feedback is empty
         if not human_feedback_input[-1].get("feedback"):
             return state["next_worker"]
 
         # Include feedback history in llm call
         # grab all feedback history for the current node
-        node_feedback_history = [entry for entry in os.stat.get("feedback_history", []) if entry["node"] == current_node]
+        node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
         feedback_context = "Previous attempts for this task:\n"
         if node_feedback_history:
             for i, entry in enumerate(node_feedback_history):
@@ -425,7 +441,9 @@ class Jockey(StateGraph):
 
         try:
             route_to = AskHuman.from_response(response).route_to_node
-            print("\nroute_to", route_to)
+            # # Dispatch custom event for routing decision
+            # await adispatch_custom_event("askh_human_routing", {"from_node": current_node, "route_to": route_to}, config=thread)
+
             if route_to == "current_node":
                 # revise the current node
                 return f"{current_node}"
@@ -435,6 +453,8 @@ class Jockey(StateGraph):
                 return f"{current_node}"
 
         except ValueError as e:
+            # Dispatch custom event for error
+            # await adispatch_custom_event("ask_human_error", {"error": str(e), "current_node": current_node}, config=thread)
             print(f"Error parsing ask_human response: {e}")
             return "supervisor"
 
@@ -514,7 +534,6 @@ def build_jockey_graph(
     )
 
     memory = MemorySaver()
-
     jockey = jockey_graph.compile(checkpointer=memory, interrupt_before=["ask_human"])
 
     # Save the graph visualization to a PNG file

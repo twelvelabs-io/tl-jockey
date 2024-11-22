@@ -36,7 +36,7 @@ async def run_jockey_terminal():
             events: List[StreamEvent] = []
             try:
                 # Stream until we hit the ask_human breakpoint
-                async for event in jockey.astream_events(jockey_input, thread, version="v2"):
+                async for event in jockey.astream_events(input=jockey_input, config=thread, version="v2"):
                     # event["chat_history"][-1].pretty_print()
                     events.append(event)
                     if event["event"] == "on_tool_end":
@@ -87,8 +87,7 @@ async def run_jockey_terminal():
                     check = new_state.values["feedback_history"]
 
                     # Process the next steps until we need human input again
-                    async for event in jockey.astream_events(None, thread, version="v2"):
-                        events.append(event)
+                    async for event in jockey.astream_events(input=None, config=thread, version="v2"):
                         if event["event"] == "on_tool_end":
                             # let's handle the m3u8 video
                             download_m3u8_videos(event)
