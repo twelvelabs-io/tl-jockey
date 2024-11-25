@@ -29,19 +29,14 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 # from langgraph.types import StreamWriter
 
 
-class FeedbackEntry(TypedDict):
-    node_content: str
-    node: str
-    feedback: str
-
-
 class AskHuman(BaseModel):
     """Route to the appropriate node based on human feedback"""
 
     route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node", "end"] = Field(
         default="current_node",
         description="""
-        First, evaluate whether the <active_plan> has been completed compared to the <feedback_history> and <human_feedback>. empty <human_feedback> means <active_plan> is complete.
+        First, evaluate whether the <active_plan> has been completed compared to the <feedback_history> and <human_feedback>.
+        An empty <human_feedback> means the <active_plan> is complete, and the next node should be "reflect".
 
         If not, determine if the human feedback is:
         - Requesting changes/revisions -> route to current_node
@@ -81,7 +76,12 @@ class AskHuman(BaseModel):
         raise ValueError(f"Unable to parse response type: {type(response)}\nResponse: {response}")
 
 
-# TODO: Migrate to pydantic BaseModel -- fixing previously encountered errors when doing so.
+class FeedbackEntry(TypedDict):
+    node_content: str
+    node: str
+    feedback: str
+
+
 class JockeyState(TypedDict):
     """Used to track the state between nodes in the graph."""
 
@@ -287,10 +287,14 @@ class Jockey(StateGraph):
             feedback_context += "</feedback_history>\n"
             feedback_context += "Please re-evaluate the active plan based on the feedback above."
 
+        # escape {} in feedback_context by replacing with {{}}
+        # https://python.langchain.com/docs/troubleshooting/errors/INVALID_PROMPT_INPUT/
+        feedback_context = feedback_context.replace("{", "{{").replace("}", "}}")
+
         # Create the prompt template with properly escaped system messages
         planner_prompt = ChatPromptTemplate.from_messages([
             ("system", feedback_context),
-            ("system", self.planner_prompt.replace("{", "{{").replace("}", "}}")),  # Escape all curly braces
+            ("system", self.planner_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
         ])
         planner_chain: Runnable = planner_prompt | self.planner_llm
@@ -390,7 +394,9 @@ class Jockey(StateGraph):
         return state.get("route_to_node", "planner")
 
     async def ask_human(self, state: JockeyState) -> str:
-        """Routes feedback to the current node by default.
+        """
+        This is a routing node. It returns the next node to route to based on the human feedback.
+        Routes feedback to the current node by default.
         Only routes to a different node in very specific cases (e.g., explicit "help" command)."""
         # Initial state check
         if not state:
@@ -474,7 +480,7 @@ class Jockey(StateGraph):
         for worker in self.workers:
             worker_node = functools.partial(self._worker_node, worker=worker)
             self.add_node(worker.name, worker_node)
-            self.add_edge(worker.name, "ask_human")
+            self.add_edge(worker.name, "supervisor")
 
         # core flow
         self.set_entry_point("supervisor")
