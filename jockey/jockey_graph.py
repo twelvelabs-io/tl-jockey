@@ -3,7 +3,7 @@ import json
 import os
 from typing import Annotated, Union, Sequence, Dict, List, Literal, Any, Optional
 from typing_extensions import TypedDict
-from langchain_openai.chat_models.base import BaseChatOpenAI
+from langchain_openai.chat_models.base import ChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -99,38 +99,38 @@ class Jockey(StateGraph):
     supervisor: Runnable
     router: Dict
     planner_prompt: str
-    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    planner_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
     supervisor_prompt: str
-    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
-    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    worker_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
     worker_instructor: Runnable
     _compiled_instance = None  # Class variable to store compiled instance
 
     def __init__(
         self,
-        planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+        planner_llm: Union[ChatOpenAI, AzureChatOpenAI],
         planner_prompt: str,
-        supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+        supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
         supervisor_prompt: str,
-        worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+        worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
         ask_human_llm: Union[AzureChatOpenAI, ChatOpenAI],
     ) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
         Args:
-            planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            planner_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
                 The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
             planner_prompt (str):
                 String version of the system prompt for the planner.
 
-            supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            supervisor_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
                 The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
             supervisor_prompt (str):
                 String version of the system prompt for the supervisor.
 
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            worker_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
                 The LLM used for the worker nodes. It is recommended this be a GPT-4 class LLM or better.
         """
 
@@ -164,7 +164,7 @@ class Jockey(StateGraph):
         """Builds the core workers that are managed and called by the supervisor.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            worker_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
                 The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.
@@ -172,8 +172,8 @@ class Jockey(StateGraph):
         Returns:
             Sequence[AgentExecutor]: The core workers of a Jockey instance.
         """
-        if any(map(lambda x: isinstance(self.worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Worker LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.worker_llm).__name__}")
+        if any(map(lambda x: isinstance(self.worker_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"Worker LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.worker_llm).__name__}")
 
         video_search_worker = VideoSearchWorker.build_worker(worker_llm=self.worker_llm)
         video_text_generation_worker = VideoTextGenerationWorker.build_worker(worker_llm=self.worker_llm)
@@ -219,8 +219,8 @@ class Jockey(StateGraph):
         Returns:
             Runnable: The supervisor of the Jockey instance.
         """
-        if any(map(lambda x: isinstance(self.supervisor_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Supervisor LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.supervisor_llm).__name__}")
+        if any(map(lambda x: isinstance(self.supervisor_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"Supervisor LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.supervisor_llm).__name__}")
 
         supervisor_prompt = ChatPromptTemplate.from_messages([("system", self.supervisor_prompt), MessagesPlaceholder(variable_name="chat_history")])
 
@@ -274,8 +274,8 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
-        if any(map(lambda x: isinstance(self.planner_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Planner LLM must be one of: BaseChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
+        if any(map(lambda x: isinstance(self.planner_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"Planner LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
 
         # Add feedback context to the prompt
         feedback_context = ""
@@ -505,11 +505,11 @@ class Jockey(StateGraph):
 
 def build_jockey_graph(
     planner_prompt: str,
-    planner_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
+    planner_llm: Union[ChatOpenAI, AzureChatOpenAI],
     supervisor_prompt: str,
-    supervisor_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
-    worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI],
-    ask_human_llm: Union[BaseChatOpenAI, AzureChatOpenAI, ChatOpenAI],
+    supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
+    worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
+    ask_human_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI],
 ) -> CompiledStateGraph:
     """Convenience function for creating an instance of Jockey.
 
@@ -517,16 +517,16 @@ def build_jockey_graph(
         planner_prompt (str):
             String version of the system prompt for the planner.
 
-        planner_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+        planner_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
             The LLM used for the planner node. It is recommended this be a GPT-4 class LLM.
 
         supervisor_prompt (str):
             String version of the system prompt for the supervisor.
 
-        supervisor_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+        supervisor_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
             The LLM used for the supervisor. It is recommended this be a GPT-4 class LLM or better.
 
-        worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+        worker_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
             The LLM used for the planner node. It is recommended this be a GPT-4 class LLM or better.
 
     Returns:

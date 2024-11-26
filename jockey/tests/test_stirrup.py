@@ -213,5 +213,5 @@ async def test_toolcall_langgraph_error(stirrup, mock_tool, mock_console):
 #         stirrup.build_worker(mock_llm)
 
 #     # Verify the error message
-#     expected_error = f"LLM type must be one of: [BaseChatOpenAI, AzureChatOpenAI]. Got type: {UnsupportedLLM.__name__}."
+#     expected_error = f"LLM type must be one of: [ChatOpenAI, AzureChatOpenAI]. Got type: {UnsupportedLLM.__name__}."
 #     assert str(exc_info.value) == expected_error

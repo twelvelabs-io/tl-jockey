@@ -3,7 +3,7 @@ from langchain_core.runnables import Runnable
 from langchain.tools import BaseTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai.chat_models.azure import AzureChatOpenAI
-from langchain_openai.chat_models.base import BaseChatOpenAI
+from langchain_openai.chat_models.base import ChatOpenAI
 from typing import List, Union, Dict
 from pydantic import BaseModel
 
@@ -68,11 +68,11 @@ class Stirrup(BaseModel):
 
         return tool_calls
 
-    def build_worker(self, worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Runnable:
+    def build_worker(self, worker_llm: Union[ChatOpenAI, AzureChatOpenAI]) -> Runnable:
         """Build a useable worker for a Jockey instance.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]):
+            worker_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
                 The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better.
 
         Raises:
@@ -81,8 +81,8 @@ class Stirrup(BaseModel):
         Returns:
             Runnable: A Runnable that is used as a worker node in the graph of a Jockey instance.
         """
-        if any(map(lambda x: isinstance(worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"LLM type must be one of: [BaseChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
+        if any(map(lambda x: isinstance(worker_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"LLM type must be one of: [ChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
 
         with open(self.worker_prompt_file_path, "r") as worker_prompt_file:
             worker_prompt = worker_prompt_file.read()
