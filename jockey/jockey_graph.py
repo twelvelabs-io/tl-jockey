@@ -32,15 +32,15 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 class AskHuman(BaseModel):
     """Route to the appropriate node based on human feedback"""
 
-    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node", "end"] = Field(
+    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node"] = Field(
         default="current_node",
         description="""
+        If the <human_feedback> states to abruptly ends/stops/finish, route to "reflect".
         First, evaluate whether the <active_plan> has been completed compared to the <feedback_history> and <human_feedback>.
-        An empty <human_feedback> means the <active_plan> is complete, and the next node should be "reflect".
 
         If not, determine if the human feedback is:
         - Requesting changes/revisions -> route to current_node
-        - approval of the current plan -> route to next appropriate worker based on the <active_plan> and latest <feedback_history> or "end" if the plan is complete
+        - approval of the current plan -> route to next appropriate worker based on the <active_plan> and latest <feedback_history> or "reflect" if the plan is completed
 
         If the <active_plan> has been completed:
         - <human_feedback> is approval of the current plan/step -> route to next appropriate worker based on the <active_plan> and latest <feedback_history> or "end" if the plan is complete
@@ -312,7 +312,7 @@ class Jockey(StateGraph):
         return {
             "chat_history": [planner_response],
             "active_plan": planner_response,
-            "next_worker": "video-search",
+            "next_worker": state["next_worker"],
             "made_plan": True,
             "feedback_history": feedback_history,
         }
@@ -364,7 +364,7 @@ class Jockey(StateGraph):
         return {
             "chat_history": [worker_instructions, worker_response],
             "feedback_history": feedback_history,
-            # "next_worker": ,
+            # "next_worker": state["next_worker"],
         }
 
     async def _reflect_node(self, state: JockeyState) -> Dict:
@@ -427,7 +427,7 @@ class Jockey(StateGraph):
 
         # go to the next node if the human feedback is empty
         if not human_feedback_input[-1].get("feedback"):
-            return state["next_worker"]
+            return {"next_worker": state.get("next_worker")}
 
         # Include feedback history in llm call
         # grab all feedback history for the current node
@@ -457,9 +457,10 @@ class Jockey(StateGraph):
 
         try:
             route_to = AskHuman.from_response(response).route_to_node
-            # # Dispatch custom event for routing decision
-            # await adispatch_custom_event("askh_human_routing", {"from_node": current_node, "route_to": route_to}, config=thread)
-            return current_node if route_to == "current_node" else route_to
+
+            # update the state of the next_worker
+            state["next_worker"] = current_node if route_to == "current_node" else route_to
+            return {"next_worker": current_node if route_to == "current_node" else route_to}
 
         except ValueError as e:
             # Dispatch custom event for error
@@ -475,28 +476,33 @@ class Jockey(StateGraph):
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
         self.add_node("ask_human", self.ask_human)
+        # self.add_node("updater", self._updater_node)
 
         # connect workers to supervisor
         for worker in self.workers:
             worker_node = functools.partial(self._worker_node, worker=worker)
             self.add_node(worker.name, worker_node)
-            self.add_edge(worker.name, "supervisor")
+            self.add_edge(worker.name, "ask_human")
 
         # core flow
         self.set_entry_point("supervisor")
         self.add_edge("planner", "ask_human")
+        # self.add_edge("updater", "ask_human")
         self.add_edge("reflect", END)
 
         # Conditional routing based on supervisor node's output
-        self.add_conditional_edges("supervisor", lambda state: state["next_worker"], {"REFLECT": "reflect", "planner": "planner"})
+        self.add_conditional_edges(
+            "supervisor",
+            lambda state: state["next_worker"],
+            {"REFLECT": "reflect", "planner": "planner"},
+        )
 
         # Human feedback routing based on ask_human node's output
         self.add_conditional_edges(
             "ask_human",
-            self.ask_human,
+            lambda state: state["next_worker"],
             {
                 "planner": "planner",
-                "end": END,
                 "reflect": "reflect",
                 **{f"{worker.name}": worker.name for worker in self.workers},
             },
