@@ -45,42 +45,20 @@ async def run_jockey_terminal():
 
                 # go here when we are interrupted by the ask_human node
                 while True:
-                    state = jockey.get_state(thread)
-
-                    # If we've reached a terminal state or reflection, break to get new chat input
-                    if not state.next or state.values["next_worker"].lower() == "reflect":
-                        break
-
-                    latest_chat_history = state.values["chat_history"][-1]
-
                     # Get user feedback
                     try:
                         feedback_user_input = console.input("\n[green]👤 Feedback: ")
                     except KeyboardInterrupt:
                         feedback_user_input = "no feedback"
                         console.print("\nExiting Jockey terminal...")
-                        # process in events log
                         interrupt_event = create_interrupt_event(session_id, events[-1])
                         await parse_langchain_events_terminal(interrupt_event)
                         sys.exit(0)
 
-                    # get the current feedback_history and append the new feedback
+                    # update the feedback_history with the new feedback
                     current_feedback_history: List[FeedbackEntry] = jockey.get_state(thread).values["feedback_history"]
-                    # feedback_entry: FeedbackEntry = {
-                    #     "node_content": latest_chat_history.content,
-                    #     "node": latest_chat_history.name,
-                    #     "feedback": feedback_user_input,
-                    # }
-
-                    # if current_feedback_history[-1].get("feedback") == "":
-                        # if feedback is None, update the last entry
                     current_feedback_history[-1]["feedback"] = feedback_user_input
-                    # else:
-                        # otherwise, append the new entry
-                        # current_feedback_history.append(feedback_entry)
-
-                    # send the updated feedback_history to the ask_human node
-                    await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history}, as_node="ask_human")
+                    await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history})
 
                     # check that the update actually worked
                     new_state = jockey.get_state(thread)
@@ -92,9 +70,6 @@ async def run_jockey_terminal():
                         # let's handle the m3u8 video
                         # download_m3u8_videos(event)
                         await parse_langchain_events_terminal(event)
-
-                # print the current state
-                # print("\nstate::run_jockey_terminal::current_state", jockey.get_state(thread))
 
             except asyncio.CancelledError:
                 console.print("\nOperation interrupted")
