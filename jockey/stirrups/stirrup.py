@@ -93,6 +93,7 @@ class Stirrup(BaseModel):
         worker_prompt = ChatPromptTemplate.from_messages([
             ("system", worker_prompt),
             MessagesPlaceholder("worker_task"),
+            MessagesPlaceholder("clip_info"),
         ])
 
         worker_llm_with_tools = worker_llm.bind_tools(self.tools)

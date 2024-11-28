@@ -7,6 +7,7 @@ from jockey.video_utils import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
+import uuid
 
 
 class Clip(BaseModel):
@@ -36,8 +37,12 @@ class RemoveSegmentInput(BaseModel):
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
-    """Combine or edit multiple clips together based on their start and end times and video IDs.
-    The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
+    # """Combine or edit multiple clips together based on their start and end times and video IDs.
+    # The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
+
+    # Add a random UUID to the output filename to avoid overwriting existing files
+    output_filename += f"_{uuid.uuid4().hex}.mp4"
+
     try:
         # Input validation first
         for clip in clips:
@@ -96,7 +101,7 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
 
 @tool("remove-segment", args_schema=RemoveSegmentInput)
 async def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, Dict]:
-    """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned. Return a Union str if successful, or a Dict if an error occurs."""
+    # """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned. Return a Union str if successful, or a Dict if an error occurs."""
     try:
         output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
         left_cut_video_stream = (
