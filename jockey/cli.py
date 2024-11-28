@@ -45,6 +45,9 @@ async def run_jockey_terminal():
 
                 # go here when we are interrupted by the ask_human node
                 while True:
+                    if jockey.get_state(thread).values["next_worker"] == "reflect":
+                        break
+
                     # Get user feedback
                     try:
                         feedback_user_input = console.input("\n[green]👤 Feedback: ")
