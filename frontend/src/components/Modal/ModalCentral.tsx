@@ -102,8 +102,8 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
             <ReactPlayer
               ref={videoRef}
               url={videoUrl}
-              width="100%"
-              height="auto"
+              width="850px"
+              height="560px"
               controls={true}
               playing={false}
               light={fallbackImage || false}
