@@ -106,6 +106,7 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
               height="auto"
               controls={true}
               playing={false}
+              light={fallbackImage || false}
               className="rounded"
               config={{
                 file: {
