@@ -29,17 +29,19 @@ Available workers:
 
 <feedback_format>
 Feedback history is ordered from earliest (1) to latest (n). Each entry shows:
+
 - <previous_plan> that was attempted
 - <human_feedback> received for that plan
-The most recent feedback (highest number) is the most relevant for your next plan.
-</feedback_format>
+  The most recent feedback (highest number) is the most relevant for your next plan.
+  </feedback_format>
 
 <instructions>
 1. Review feedback history from earliest to latest
 2. If latest feedback indicates content change, create entirely new plan
 3. If latest feedback suggests approach change, modify existing plan
-4. Format steps as: "**worker-name**: Description"
+4. Format steps ONLY as: "**worker-name**: Description"
 5. Ensure each step's output feeds into subsequent steps
+6. Do not include explanatory text - only output the plan steps
 </instructions>
 
 <rules>

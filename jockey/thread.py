@@ -46,6 +46,7 @@ class JockeyCallbackHandler(AsyncCallbackHandler):
 
         return event
 
+
 # Create the callback handler instance
 handler = JockeyCallbackHandler()
 
@@ -56,7 +57,7 @@ session_id = uuid.uuid4()
 
 # Create the thread configuration
 thread: RunnableConfig = {
-    "configurable": {"thread_id": session_id, "stream_mode": ["custom", "events", "updates"]},
+    "configurable": {"thread_id": session_id, "stream_mode": ["updates"]},
     "callbacks": [handler],  # Use the handler directly instead of manager.handlers
     "tags": ["jockey"],  # Add some tags for better event filtering
     "metadata": {"source": "jockey"},  # Add metadata for better event tracking

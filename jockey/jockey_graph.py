@@ -24,30 +24,26 @@ from langgraph.graph.state import CompiledStateGraph
 from langchain_openai import ChatOpenAI
 
 from pydantic import BaseModel, Field
-from jockey.thread import thread
-from langchain_core.callbacks.manager import adispatch_custom_event
 # from langgraph.types import StreamWriter
 
 
 class AskHuman(BaseModel):
     """Route to the appropriate node based on human feedback"""
 
-    route_to_node: Literal["planner", "reflect", "video-search", "video-text-generation", "video-editing", "current_node", "supervisor"] = Field(
+    route_to_node: Literal["planner", "video-search", "video-text-generation", "video-editing", "current_node", "supervisor", "reflect"] = Field(
         default="current_node",
         description="""
-        First, check if the <human_feedback> indicates a desire to end/stop/finish -> route to "reflect".
+        First, check if <human_feedback> indicates end/stop/finish -> route to "reflect".
 
-        Next, evaluate the <active_plan> completion status by comparing steps in the plan to the <feedback_history>:
+        Compare <active_plan> completion against <feedback_history>:
+        1. If COMPLETED (all steps have approved feedback) -> "reflect"
+        2. If NOT completed, then if <human_feedback> requests:
+           - changes/revisions -> "current_node"
+           - approval -> route to next worker per <active_plan>
+           - numeric changes -> "planner"
 
-        1. If the plan is COMPLETED (all steps have corresponding approved entries in feedback_history):
-            - Route to "reflect" regardless of the current feedback
-
-        2. If the plan is NOT completed:
-            - If feedback requests changes/revisions -> route to "current_node"
-            - If feedback approves current step -> route to next worker based on <active_plan>
-
-        Note: Only route to a worker if there are explicitly remaining steps in the <active_plan> that haven't been completed.
-        When in doubt about completion, route to "reflect".
+        Route to workers only if explicit remaining steps exist.
+        Default to "reflect" if completion status unclear.
         """,
     )
     model_config = {"json_schema_extra": {"required": ["route_to_node"]}}
@@ -103,10 +99,10 @@ class Jockey(StateGraph):
     supervisor: Runnable
     router: Dict
     planner_prompt: str
-    planner_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    planner_llm: Union[ChatOpenAI, AzureChatOpenAI]
     supervisor_prompt: str
-    supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
-    worker_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI]
+    supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI]
+    worker_llm: Union[ChatOpenAI, AzureChatOpenAI]
     worker_instructor: Runnable
     _compiled_instance = None  # Class variable to store compiled instance
 
@@ -157,12 +153,10 @@ class Jockey(StateGraph):
         self.worker_instructor = self._build_worker_instructor()
         self.construct_graph()
 
-    @classmethod
-    def get_compiled_instance(cls):
-        """Get the current compiled Jockey graph instance."""
-        if cls._compiled_instance is None:
-            raise RuntimeError("Compiled Jockey graph has not been initialized")
-        return cls._compiled_instance
+    def __getattr__(self, name: str) -> Any:
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'State' object has no attribute '{name}'")
 
     def _build_core_workers(self) -> Sequence[AgentExecutor]:
         """Builds the core workers that are managed and called by the supervisor.
@@ -286,8 +280,10 @@ class Jockey(StateGraph):
         if state.get("feedback_history"):
             feedback_context = "\n<feedback_history>\n"
             for i, entry in enumerate(state["feedback_history"], start=1):
-                feedback_context += f"{i}. <previous_plan> {entry['node_content']}\n </previous_plan>\n"
-                feedback_context += f"{i}. <human_feedback> {entry['feedback']}\n </human_feedback>\n"
+                feedback_context += f"<feedback_history_{i}>\n"
+                feedback_context += f"<previous_plan> {entry['node_content']}</previous_plan>\n"
+                feedback_context += f"<human_feedback> {entry['feedback']}</human_feedback>\n"
+                feedback_context += f"</feedback_history_{i}>\n"
             feedback_context += "</feedback_history>\n"
             feedback_context += "Please re-evaluate the active plan based on the feedback above."
 

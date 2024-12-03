@@ -139,7 +139,7 @@ def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, A
     """Create a Jockey error event dictionary matching LangChain's event structure."""
     return {
         "event": "on_error",
-        "name": f"JockeyError::{error.error_data.error_type.value if error else 'Unknown'}",
+        "name": f"JockeyError::{error}",
         "run_id": str(run_id),
         "data": {
             "message": str(error) if error else "Jockey error occurred",
@@ -147,11 +147,11 @@ def create_jockey_error_event(run_id: str | None = None, last_event: Dict[str, A
             "event_type": last_event.get("event") if last_event else None,
             "node": last_event.get("metadata", {}).get("langgraph_node") if last_event else None,
             "error_details": {
-                "node": error.error_data.node.value if error else None,
-                "error_type": error.error_data.error_type.value if error else None,
-                "function_name": error.error_data.function_name.value if error and error.error_data.function_name else None,
-                "details": error.error_data.details if error else None,
-                "error_message": error.error_data.error_message if error else None,
+                "node": error.error_data.node.value if error.error_data else None,
+                "error_type": error.error_data.error_type.value if error.error_data else None,
+                "function_name": error.error_data.function_name.value if error.error_data and error.error_data.function_name else None,
+                "details": error.error_data.details if error.error_data else None,
+                "error_message": error.error_data.error_message if error.error_data else None,
             },
         },
         "tags": last_event.get("tags", []) if last_event else [],

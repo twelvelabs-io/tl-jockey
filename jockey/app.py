@@ -87,28 +87,8 @@ else:
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
 
 
-# planner_llm = planner_llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
-# worker_llm = worker_llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
-# supervisor_llm = supervisor_llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
 ask_human_llm = ask_human_llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
 
-# llm = ChatOpenAI(model="gpt-4o-mini")
-# llm = llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
-
-# # Format the input as messages
-# messages = [("human", "i don't like the video can you re-search it?")]
-# # messages2 = [("human", "combine-clips is broken")]
-# # messages3 = [("human", "i don't like the video can you re-edit it?")]
-
-# responses = []
-# for m in [messages]:
-#     response = ask_human_llm.invoke(
-#         m,
-#         stop=None,
-#         temperature=0,
-#         seed=None,
-#     )
-#     print(response)
 try:
     jockey: CompiledStateGraph = build_jockey(
         planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm, ask_human_llm=ask_human_llm

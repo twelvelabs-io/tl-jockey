@@ -52,15 +52,16 @@ async def run_jockey_terminal():
                     try:
                         feedback_user_input = console.input("\n[green]👤 Feedback: ")
                     except KeyboardInterrupt:
-                        feedback_user_input = "no feedback"
                         console.print("\nExiting Jockey terminal...")
                         interrupt_event = create_interrupt_event(session_id, events[-1])
                         await parse_langchain_events_terminal(interrupt_event)
                         sys.exit(0)
 
-                    # update the feedback_history with the new feedback
+                    # 1. get the feedback history
                     current_feedback_history: List[FeedbackEntry] = jockey.get_state(thread).values["feedback_history"]
+                    # 2. update the feedback_history with the new feedback
                     current_feedback_history[-1]["feedback"] = feedback_user_input
+                    # 3. update the state with the new feedback history
                     await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history})
 
                     # check that the update actually worked
