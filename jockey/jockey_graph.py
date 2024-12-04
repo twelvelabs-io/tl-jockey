@@ -188,7 +188,7 @@ class Jockey(StateGraph):
         Returns:
             Dict: The router definition adhering to the [OpenAI Assistants API](https://platform.openai.com/docs/assistants/overview).
         """
-        router_options = [worker.name for worker in self.workers] + ["reflect", "supervisor", "planner"]
+        router_options = [worker.name for worker in self.workers] + ["reflect", "supervisor", "planner"] + [w.name for w in self.workers]
         router = {
             "name": "route",
             "description": "Determine whether to choose the next active worker or reflect.",
@@ -300,6 +300,14 @@ class Jockey(StateGraph):
         planner_chain: Runnable = planner_prompt | self.planner_llm
         planner_response = await planner_chain.ainvoke(state)
 
+        planner_response_ordered = planner_response.content.split("\n\n")
+        for i, pr in enumerate(planner_response_ordered):
+            if pr.startswith("**"):
+                pr = str(i + 1) + ". " + pr
+                planner_response_ordered[i] = pr
+
+        planner_response.content = "\n".join(planner_response_ordered)
+
         # We return the response from the planner as a special human with the name of "planner".
         # This helps with understanding historical context as the chat history grows.
         planner_response = HumanMessage(content=planner_response.content, name="planner")
@@ -332,7 +340,7 @@ class Jockey(StateGraph):
         try:
             # see build_worker_instructor() for more details for the instructor prompt
             # note that we only need to pass in active_plan (MessagesPlaceholder) and next_worker (see prompts/instructor.md)
-            worker_instructions = await self.worker_instructor.ainvoke({"active_plan": state["active_plan"], "next_worker": state["next_worker"]})
+            worker_instructions = await self.worker_instructor.ainvoke({"active_plan": state["active_plan"], "next_worker": state["next_worker"], "feedback_history": state["feedback_history"]})
             worker_instructions = HumanMessage(content=worker_instructions.content, name="instructor")
         except JockeyError as error:
             raise error
@@ -483,7 +491,11 @@ class Jockey(StateGraph):
         self.add_conditional_edges(
             "supervisor",
             lambda state: state["next_worker"],
-            {"reflect": "reflect", "planner": "planner"},
+            {
+                "reflect": "reflect",
+                "planner": "planner",
+                **{f"{worker.name}": worker.name for worker in self.workers},
+            },
         )
 
         # Human feedback routing based on ask_human node's output

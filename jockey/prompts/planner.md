@@ -42,6 +42,7 @@ Feedback history is ordered from earliest (1) to latest (n). Each entry shows:
 4. Format steps ONLY as: "**worker-name**: Description"
 5. Ensure each step's output feeds into subsequent steps
 6. Do not include explanatory text - only output the plan steps
+7. You must always video-search before video-text-generation or video-editing
 </instructions>
 
 <rules>
