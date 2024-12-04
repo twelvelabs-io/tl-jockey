@@ -340,7 +340,11 @@ class Jockey(StateGraph):
         try:
             # see build_worker_instructor() for more details for the instructor prompt
             # note that we only need to pass in active_plan (MessagesPlaceholder) and next_worker (see prompts/instructor.md)
-            worker_instructions = await self.worker_instructor.ainvoke({"active_plan": state["active_plan"], "next_worker": state["next_worker"], "feedback_history": state["feedback_history"]})
+            worker_instructions = await self.worker_instructor.ainvoke({
+                "active_plan": state["active_plan"],
+                "next_worker": state["next_worker"],
+                "feedback_history": state["feedback_history"],
+            })
             worker_instructions = HumanMessage(content=worker_instructions.content, name="instructor")
         except JockeyError as error:
             raise error
@@ -460,8 +464,6 @@ class Jockey(StateGraph):
             return {"next_worker": current_node if route_to == "current_node" else route_to}
 
         except ValueError as e:
-            # Dispatch custom event for error
-            # await adispatch_custom_event("ask_human_error", {"error": str(e), "current_node": current_node}, config=thread)
             print(f"Error parsing ask_human response: {e}")
             return "supervisor"
 

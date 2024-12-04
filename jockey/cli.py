@@ -12,7 +12,7 @@ from typing import List
 from langchain_core.runnables.schema import StreamEvent
 from jockey.jockey_graph import FeedbackEntry
 from jockey.thread import session_id, thread
-from jockey.video_utils import download_m3u8_videos
+# from jockey.video_utils import download_m3u8_videos
 
 
 async def run_jockey_terminal():
@@ -29,7 +29,7 @@ async def run_jockey_terminal():
 
             # Prepare input for processing
             messages = [HumanMessage(content=user_input, name="user")]
-            jockey_input = {"chat_history": messages, "made_plan": False, "next_worker": None, "active_plan": None}
+            jockey_input = {"chat_history": messages, "made_plan": False, "next_worker": None, "active_plan": None, "feedback_history": []}
 
             # Process until we need human input
             events: List[StreamEvent] = []
@@ -63,9 +63,9 @@ async def run_jockey_terminal():
                     # 3. update the state with the new feedback history
                     await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history})
 
-                    # check that the update actually worked
-                    new_state = jockey.get_state(thread)
-                    check = new_state.values["feedback_history"]
+                    # 4. check that the update actually worked
+                    # new_state = jockey.get_state(thread)
+                    # check = new_state.values["feedback_history"]
 
                     # Process the next steps until we need human input again
                     async for event in jockey.astream_events(input=None, config=thread, version="v2"):
