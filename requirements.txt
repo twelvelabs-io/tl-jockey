@@ -45,10 +45,10 @@ langchain==0.3.7
 langchain-core==0.3.19
 langchain-openai==0.2.9
 langchain-text-splitters==0.3.2
-langgraph==0.2.52
+langgraph==0.2.56
 langgraph-checkpoint==2.0.7
 langgraph-cli==0.1.52
-langgraph-sdk==0.1.33
+langgraph-sdk==0.1.42
 langsmith==0.1.129
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
