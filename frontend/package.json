@@ -86,10 +86,12 @@
 		"tailwindcss": "^3.3.5"
 	},
 	"prettier": {
-		"tabWidth": 4,
+		"tabWidth": 2,
 		"useTabs": true,
 		"semi": false,
 		"trailingComma": "es5",
-		"printWidth": 150
+		"printWidth": 150,
+		"bracketSpacing": false,
+		"singleQuote": true
 	}
 }
