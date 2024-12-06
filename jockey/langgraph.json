@@ -1,0 +1,17 @@
+{
+    "graphs": {
+        "jockey": "jockey.app:jockey"
+    },
+    "env": ".env",
+    "dependencies": [
+        "."
+    ],
+    "dockerfile_lines": [
+        "RUN apt-get update && apt-get install -y wget xz-utils",
+        "RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz",
+        "RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz.md5",
+        "RUN md5sum -c ffmpeg-git-amd64-static.tar.xz.md5",
+        "RUN tar xvf ffmpeg-git-amd64-static.tar.xz",
+        "RUN mv ffmpeg-git-*-amd64-static/ffmpeg ffmpeg-git-*-amd64-static/ffprobe /usr/local/bin/"
+    ]
+}

@@ -25,7 +25,7 @@ gevent==24.2.1
 greenlet==3.1.1
 grequests==0.7.0
 h11==0.14.0
-httpcore==1.0.5
+httpcore==1.0.5n
 httpx==0.27.2
 httpx-sse==0.4.0
 idna==3.10
@@ -47,7 +47,7 @@ langchain-openai==0.2.9
 langchain-text-splitters==0.3.2
 langgraph==0.2.56
 langgraph-checkpoint==2.0.7
-langgraph-cli==0.1.52
+langgraph-cli==0.1.61
 langgraph-sdk==0.1.42
 langsmith==0.1.129
 markdown-it-py==3.0.0

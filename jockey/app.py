@@ -4,9 +4,11 @@ from typing import Union
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from jockey.jockey_graph import build_jockey_graph
 from jockey.util import check_environment_variables
-from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
+
+from jockey.model_config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 from langgraph.graph.state import CompiledStateGraph
 from jockey.jockey_graph import AskHuman
+from typing import Optional
 
 
 def build_jockey(
@@ -88,11 +90,14 @@ else:
 
 
 ask_human_llm = ask_human_llm.bind_tools([AskHuman], strict=True, response_format=AskHuman)
-
-try:
-    jockey: CompiledStateGraph = build_jockey(
-        planner_llm=planner_llm, supervisor_llm=supervisor_llm, worker_llm=worker_llm, ask_human_llm=ask_human_llm
-    )
-except Exception as error:
-    print(f"Error building Jockey: {error}")
-    sys.exit(1)
+jockey: Optional[CompiledStateGraph] = None
+# try:
+jockey: CompiledStateGraph = build_jockey(
+    planner_llm=planner_llm,
+    supervisor_llm=supervisor_llm,
+    worker_llm=worker_llm,
+    ask_human_llm=ask_human_llm,
+)
+# except Exception as error:
+#     print(f"Error building Jockey: {error}")
+#     sys.exit(1)

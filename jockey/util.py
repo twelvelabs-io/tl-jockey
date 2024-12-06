@@ -20,10 +20,9 @@ from openai import (
     UnprocessableEntityError,
     OpenAI,
 )
-from config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 from openai import AzureOpenAI
 import time
-
+from jockey.model_config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 
 REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
 AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])

@@ -1,7 +1,7 @@
 import asyncio
 from jockey.cli import run_jockey_terminal, run_jockey_server
 from jockey.util import preflight_checks
-from config import args
+from jockey.model_config import args
 
 
 def main():
