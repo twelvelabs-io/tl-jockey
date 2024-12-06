@@ -255,8 +255,7 @@ Jockey uses a nested structure for events. At the top level, each event contains
 }
 ```
 
-
-### Retrieve the Next Agent
+### Retrieving the Next Agent
 
 To retrieve the next agent in the processing chain:
 
