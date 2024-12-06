@@ -1,9 +1,11 @@
 {
     "graphs": {
-        "jockey": "jockey.app:jockey"
+        "jockey": "jockey/app.py:jockey"
     },
     "env": ".env",
-    "dependencies": ["."],
+    "dependencies": [
+        "."
+    ],
     "dockerfile_lines": [
         "RUN apt-get update && apt-get install -y wget xz-utils",
         "RUN wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz",

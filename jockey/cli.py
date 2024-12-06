@@ -102,12 +102,30 @@ async def run_jockey_terminal():
 
 def run_jockey_server():
     """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
-    We use the default version of Jockey for this."""
+    We use the default version of Jockey for this.
+
+    https://langchain-ai.github.io/langgraph/cloud/reference/cli/
+    """
     jockey_package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
     langgraph_json_file_path = os.path.join(jockey_package_dir, "langgraph.json")
     compose_file_path = os.path.join(jockey_package_dir, "compose.yaml")
 
-    langgraph_cli_command = ["langgraph", "up", "-c", langgraph_json_file_path, "-d", compose_file_path, "--recreate", "--verbose"]
+    # Add debugging options
+    debug_port = 5678
+    langgraph_cli_command = [
+        "langgraph",
+        "up",
+        "-c",
+        langgraph_json_file_path,
+        "-d",
+        compose_file_path,
+        "--recreate",
+        "--verbose",
+        "--debug-port",
+        str(debug_port),
+        "--debugger-base-url",
+        f"http://127.0.0.1:{debug_port}",
+    ]
 
     print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
 
