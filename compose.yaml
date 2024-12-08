@@ -1,5 +1,44 @@
 services:
   langgraph-api:
+    depends_on:
+      langgraph-postgres:
+        condition: service_healthy
+      langgraph-redis:
+        condition: service_healthy
+    networks:
+      - jockey_internal  
+      - default         
+    ports:
+      - "8123:8000"
     volumes:
-      - ${HOST_PUBLIC_DIR}:/var/www/jockey/public
-      - ${HOST_VECTOR_DB_DIR}:/var/lib/jockey/vector_db
+      - ${HOST_PUBLIC_DIR}:/app/public
+      - ${HOST_VECTOR_DB_DIR}:/app/vector_db
+
+  langgraph-postgres:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jockey_internal
+    expose:
+      - "5432"  
+
+  langgraph-redis:
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jockey_internal
+    expose:
+      - "6379" 
+      
+networks:
+  jockey_internal:
+    driver: bridge
+    internal: true  
+  default:             
+    driver: bridge 
