@@ -78,20 +78,19 @@ async def run_jockey_terminal():
                 console.print("\nOperation interrupted")
                 interrupt_event = create_interrupt_event(session_id, events[-1])
                 await parse_langchain_events_terminal(interrupt_event)
-                return
 
-            except get_langgraph_errors() as e:
-                console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
-                print("error", e)
-                langgraph_error_event = create_langgraph_error_event(session_id, events[-1], e)
-                await parse_langchain_events_terminal(langgraph_error_event)
-                return
+            # except get_langgraph_errors() as e:
+            #     console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
+            #     print("error", e)
+            #     langgraph_error_event = create_langgraph_error_event(session_id, events[-1], e)
+            #     await parse_langchain_events_terminal(langgraph_error_event)
+            #     return
 
-            except JockeyError as e:
-                console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
-                jockey_error_event = create_jockey_error_event(session_id, events[-1], e)
-                await parse_langchain_events_terminal(jockey_error_event)
-            # return
+            # except JockeyError as e:
+            #     console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
+            #     jockey_error_event = create_jockey_error_event(session_id, events[-1], e)
+            #     await parse_langchain_events_terminal(jockey_error_event)
+            #     return
 
         console.print()
 
