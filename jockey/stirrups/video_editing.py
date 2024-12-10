@@ -99,39 +99,39 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
         raise jockey_error
 
 
-@tool("remove-segment", args_schema=RemoveSegmentInput)
-async def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, Dict]:
-    # """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned. Return a Union str if successful, or a Dict if an error occurs."""
-    try:
-        output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
-        left_cut_video_stream = (
-            ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
-        )
-        left_cut_audio_stream = (
-            ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
-        )
-        right_cut_video_stream = (
-            ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
-        )
-        right_cut_audio_stream = (
-            ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
-        )
-        streams = [left_cut_video_stream, left_cut_audio_stream, right_cut_video_stream, right_cut_audio_stream]
-        ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
-        return output_filepath
-    except Exception as error:
-        jockey_error = JockeyError.create(
-            node=NodeType.WORKER,
-            error_type=ErrorType.VIDEO,
-            function_name=WorkerFunction.REMOVE_SEGMENT,
-            details=f"Error: {str(error)}",
-        )
-        raise jockey_error
+# @tool("remove-segment", args_schema=RemoveSegmentInput)
+# async def remove_segment(video_filepath: str, start: float, end: float) -> Union[str, Dict]:
+#     # """Remove a segment from a video at specified start and end times. The full filepath for the edited video is returned. Return a Union str if successful, or a Dict if an error occurs."""
+#     try:
+#         output_filepath = f"{os.path.splitext(video_filepath)[0]}_clipped.mp4"
+#         left_cut_video_stream = (
+#             ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=0, end=start).filter("setpts", "PTS-STARTPTS")
+#         )
+#         left_cut_audio_stream = (
+#             ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=0, end=start).filter("asetpts", "PTS-STARTPTS")
+#         )
+#         right_cut_video_stream = (
+#             ffmpeg.input(filename=video_filepath, loglevel="quiet").video.filter("trim", start=end).filter("setpts", "PTS-STARTPTS")
+#         )
+#         right_cut_audio_stream = (
+#             ffmpeg.input(filename=video_filepath, loglevel="quiet").audio.filter("atrim", start=end).filter("asetpts", "PTS-STARTPTS")
+#         )
+#         streams = [left_cut_video_stream, left_cut_audio_stream, right_cut_video_stream, right_cut_audio_stream]
+#         ffmpeg.concat(*streams, v=1, a=1).output(filename=output_filepath, acodec="libmp3lame").overwrite_output().run()
+#         return output_filepath
+#     except Exception as error:
+#         jockey_error = JockeyError.create(
+#             node=NodeType.WORKER,
+#             error_type=ErrorType.VIDEO,
+#             function_name=WorkerFunction.REMOVE_SEGMENT,
+#             details=f"Error: {str(error)}",
+#         )
+#         raise jockey_error
 
 
 # Construct a valid worker for a Jockey instance.
 video_editing_worker_config = {
-    "tools": [combine_clips, remove_segment],
+    "tools": [combine_clips],
     "worker_prompt_file_path": DEFAULT_VIDEO_EDITING_FILE_PATH,
     "worker_name": "video-editing",
 }

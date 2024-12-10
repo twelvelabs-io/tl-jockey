@@ -4,7 +4,7 @@ import urllib
 import os
 from pydantic import BaseModel, Field
 from langchain.tools import tool
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Literal
 from enum import Enum
 from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction, create_jockey_error_event
 from jockey.video_utils import get_video_metadata
@@ -16,34 +16,36 @@ SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
 
 
 class GroupByEnum(str, Enum):
-    """Helps to ensure the video-search worker selects a valid `group_by` option."""
-
-    CLIP = "clip"
-    VIDEO = "video"
+    CLIP: str = "clip"
+    VIDEO: str = "video"
 
 
 class SearchOptionsEnum(str, Enum):
-    """Helps to ensure the video-search worker selects valid `search_options`."""
-
-    VISUAL = "visual"
-    CONVERSATION = "conversation"
-    TEXT_IN_VIDEO = "text_in_video"
-    LOGO = "logo"
+    VISUAL: str = "visual"
+    AUDIO: str = "audio"
+    CONVERSATION: str = "conversation"
+    TEXT_IN_VIDEO: str = "text_in_video"
+    LOGO: str = "logo"
 
 
 class MarengoSearchInput(BaseModel):
-    """Help to ensure the video-search worker provides valid arguments to any tool it calls."""
+    """Create a valid input for the video-search api based on the <active_plan> and <tool_call>"""
 
-    query: Union[str, dict] = Field(description="Search query to run on a collection of videos.")
-    index_id: str = Field(description="Index ID which contains a collection of videos.")
-    top_n: int = Field(description="Get the top N clips or videos as search results.", default=3)
-    group_by: GroupByEnum = Field(description="Search for clips or videos.", default=GroupByEnum.CLIP)
-    search_options: List[SearchOptionsEnum] = Field(
-        description="Which modalities to consider when running a query on a collections of videos.",
-        default=[SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
+    query: Union[str, dict] = Field(
+        description="query text to run on a collection of videos, based on the <active_plan> and <tool_call>. Example: 'A man walking a dog'",
+    )
+    index_id: str = Field(description="parse the <active_plan> to determine the index_id")
+    top_n: int = Field(
+        description="parse the <active_plan> to determine the top_n (default: 3, lt: 50)",
+    )
+    group_by: Literal["clip", "video"] = Field(
+        description="group videos by video or clip",
+    )
+    search_options: List[Literal["visual", "audio", "conversation", "text_in_video", "logo"]] = Field(
+        description="Determine which modalities would be suitable given the <active_plan>",
     )
     video_filter: Union[List[str], None] = Field(
-        description="Filter search results to only include results from video IDs in this list.", default=None
+        description="Filter search results to only include results from video IDs in this list. If <video_filter> is not provided, return None",
     )
 
 
@@ -52,7 +54,7 @@ async def _base_video_search(
     index_id: str,
     top_n: int = 3,
     group_by: GroupByEnum = GroupByEnum.CLIP,
-    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
+    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION, SearchOptionsEnum.AUDIO],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
@@ -132,7 +134,7 @@ async def simple_video_search(
     index_id: str,
     top_n: int = 3,
     group_by: GroupByEnum = GroupByEnum.CLIP,
-    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
+    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION, SearchOptionsEnum.AUDIO],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     try:

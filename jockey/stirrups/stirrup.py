@@ -52,19 +52,9 @@ class Stirrup(BaseModel):
             base_tool: BaseTool = tool_map[tool_call["name"]]
             try:
                 tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
-            except get_langgraph_errors() as e:
-                tool_call["output"] = f"{e.__class__.__name__}: {str(e)}" if e else "Unknown"
-                raise
-            except JockeyError:
-                raise
             except Exception as e:
-                tool_call["output"] = f"Error: {str(e)}"
-                raise JockeyError.create(
-                    node=NodeType.WORKER,
-                    error_type=ErrorType.UNKNOWN,
-                    function_name=tool_call["name"],
-                    details=f"Unexpected error in tool execution: {str(e)}",
-                )
+                print(f"[DEBUG] Error in tool call: {e}")
+                raise
 
         return tool_calls
 

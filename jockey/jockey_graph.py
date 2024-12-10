@@ -1,15 +1,14 @@
 import functools
 import json
 import os
-from typing import Annotated, Union, Sequence, Dict, List, Literal, Any, Optional
+from typing import Annotated, Union, Sequence, Dict, List, Literal, Any
 from typing_extensions import TypedDict
 from langchain_openai.chat_models.base import ChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.runnables import Runnable
-from langchain_core.messages.ai import AIMessage
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.memory import MemorySaver
@@ -21,59 +20,51 @@ from jockey.util import parse_langchain_events_terminal
 from langgraph.prebuilt import ToolNode
 from jockey.stirrups import collect_all_tools
 from langgraph.graph.state import CompiledStateGraph
-from langchain_openai import ChatOpenAI
-
+from textwrap import dedent
+from openai import OpenAI
+from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
-# from langgraph.types import StreamWriter
+from jockey.stirrups.video_search import MarengoSearchInput, VideoSearchWorker, GroupByEnum, SearchOptionsEnum
+from jockey.stirrups.video_editing import VideoEditingWorker
 
 
-class AskHuman(BaseModel):
-    """Route to the appropriate node based on human feedback"""
+class PlannerResponse(BaseModel):
+    """Route to the appropriate node, and the tool to call"""
 
-    route_to_node: Literal["planner", "video-search", "video-text-generation", "video-editing", "current_node", "supervisor", "reflect"] = Field(
-        default="current_node",
+    route_to_node: Literal["planner", "video-search", "video-text-generation", "video-editing", "reflect"] = Field(
         description="""
-        First, check if <human_feedback> indicates end/stop/finish -> route to "reflect".
-
-        Compare <active_plan> completion against <feedback_history>:
-        1. If COMPLETED (all steps have approved feedback) -> "reflect"
-        2. If NOT completed, then if <human_feedback> requests:
-           - changes/revisions -> "current_node"
-           - approval -> route to next worker per <active_plan>
-           - numeric changes -> "planner"
-
-        Route to workers only if explicit remaining steps exist.
-        Default to "reflect" if completion status unclear.
+        Available workers:
+        <worker name="video-search", tools="simple-video-search">
+            Purpose: Search for N clips/videos matching a natural language query
+            Input: Index ID, search query, number of clips needed
+            Output: List of clips with video IDs and timestamps (start/end in seconds)
+        </worker>
+        <worker name="video-editing", tools="combine-clips">
+            Purpose: Edit and combine video clips
+            Input: List of video IDs with start/end times
+            Output: Filepath of edited video
+        </worker>
         """,
     )
-    model_config = {"json_schema_extra": {"required": ["route_to_node"]}}
-
-    @classmethod
-    def from_response(cls, response):
-        """Helper method to parse LangChain LLM response"""
-        # Case 1: Direct Pydantic model (ideal case with strict=True)
-        if isinstance(response, cls):
-            return response
-
-        # Case 2: AIMessage with tool_calls
-        if hasattr(response, "additional_kwargs") and "tool_calls" in response.additional_kwargs:
-            tool_call = response.additional_kwargs["tool_calls"][0]
-            args = json.loads(tool_call["function"]["arguments"])
-            return cls(**args)
-
-        # Case 3: AIMessage with parsed content
-        if hasattr(response, "additional_kwargs") and "parsed" in response.additional_kwargs:
-            return response.additional_kwargs["parsed"]
-
-        # Case 4: AIMessage with JSON string content
-        if hasattr(response, "content"):
-            try:
-                data = json.loads(response.content)
-                return cls(**data)
-            except json.JSONDecodeError:
-                pass
-
-        raise ValueError(f"Unable to parse response type: {type(response)}\nResponse: {response}")
+    tool_call: Literal["simple-video-search", "combine-clips", "none"] = Field(
+        description="""
+        Define the tool required by the route_to_node. If no tool is required, use 'none'.
+        """,
+    )
+    plan: str = Field(
+        description="""
+        <instructions>
+            1. Format steps ONLY as: "**worker-name**: Description"
+            2. Do not include explanatory text - only output the planner steps
+            3. You must always video-search before video-text-generation or video-editing
+        </instructions>
+        <rules>
+            1. ALWAYS include Index ID in worker tasks
+            2. ONLY use Index IDs provided by the user
+            3. Each step must include complete, and concise context
+        </rules>
+        """,
+    )
 
 
 class FeedbackEntry(TypedDict):
@@ -89,6 +80,7 @@ class JockeyState(TypedDict):
     chat_history: Annotated[Sequence[BaseMessage], add_messages]
     made_plan: bool = False
     active_plan: Union[str, HumanMessage, None]
+    tool_call: Union[str, None]
     feedback_history: List[FeedbackEntry]  # earlist [] latest
 
 
@@ -110,10 +102,10 @@ class Jockey(StateGraph):
         self,
         planner_llm: Union[ChatOpenAI, AzureChatOpenAI],
         planner_prompt: str,
+        instructor_prompt: str,
         supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
         supervisor_prompt: str,
         worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
-        ask_human_llm: Union[AzureChatOpenAI, ChatOpenAI],
     ) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
@@ -135,12 +127,13 @@ class Jockey(StateGraph):
         """
 
         super().__init__(state_schema=JockeyState)
+        self.openai_client = OpenAI()
         self.planner_prompt = planner_prompt
+        self.instructor_prompt = instructor_prompt
         self.planner_llm = planner_llm
         self.supervisor_prompt = supervisor_prompt
         self.supervisor_llm = supervisor_llm
         self.worker_llm = worker_llm
-        self.ask_human_llm = ask_human_llm
 
         # collect all @tools from stirrups
         self.all_tools = collect_all_tools()
@@ -235,12 +228,14 @@ class Jockey(StateGraph):
                 "active_plan": state.get("active_plan", "No active plan"),
                 "made_plan": state.get("made_plan", False),
             }
-            return await supervisor.ainvoke(state_with_defaults)
+            route_to_node = await supervisor.ainvoke(state_with_defaults)
+            return route_to_node
 
         return wrapped_supervisor
 
     def _build_worker_instructor(self) -> Runnable:
         """Constructs the worker_instructor which generates singular tasks for a given step in a plan generated by the planner node.
+
 
         Returns:
             Runnable: The worker_instructor of the Jockey instance.
@@ -272,57 +267,61 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
-        if any(map(lambda x: isinstance(self.planner_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Planner LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
+        # if any(map(lambda x: isinstance(self.planner_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+        #     raise TypeError(f"Planner LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
 
         # Add feedback context to the prompt
-        feedback_context = ""
-        if state.get("feedback_history"):
-            feedback_context = "\n<feedback_history>\n"
-            for i, entry in enumerate(state["feedback_history"], start=1):
-                feedback_context += f"<feedback_history_{i}>\n"
-                feedback_context += f"<previous_plan> {entry['node_content']}</previous_plan>\n"
-                feedback_context += f"<human_feedback> {entry['feedback']}</human_feedback>\n"
-                feedback_context += f"</feedback_history_{i}>\n"
-            feedback_context += "</feedback_history>\n"
-            feedback_context += "Please re-evaluate the active plan based on the feedback above."
+        # feedback_context = ""
+        # if state.get("feedback_history"):
+        #     feedback_context = "\n<feedback_history>\n"
+        #     for i, entry in enumerate(state["feedback_history"], start=1):
+        #         feedback_context += f"<feedback_history_{i}>\n"
+        #         feedback_context += f"<previous_plan> {entry['node_content']}</previous_plan>\n"
+        #         feedback_context += f"<human_feedback> {entry['feedback']}</human_feedback>\n"
+        #         feedback_context += f"</feedback_history_{i}>\n"
+        #     feedback_context += "</feedback_history>\n"
+        #     feedback_context += "Please re-evaluate the active plan based on the feedback above."
 
         # escape {} in feedback_context by replacing with {{}}
         # https://python.langchain.com/docs/troubleshooting/errors/INVALID_PROMPT_INPUT/
-        feedback_context = feedback_context.replace("{", "{{").replace("}", "}}")
+        # feedback_context = feedback_context.replace("{", "{{").replace("}", "}}")
 
-        # Create the prompt template with properly escaped system messages
-        planner_prompt = ChatPromptTemplate.from_messages([
-            ("system", feedback_context),
-            ("system", self.planner_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-        ])
-        planner_chain: Runnable = planner_prompt | self.planner_llm
-        planner_response = await planner_chain.ainvoke(state)
+        completion = self.openai_client.beta.chat.completions.parse(
+            model=OPENAI_MODELS["planner"],
+            messages=[
+                {"role": "system", "content": dedent(self.planner_prompt)},
+                {"role": "user", "content": dedent(f"<chat_history>{state['chat_history']}</chat_history>")},
+                {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
+            ],
+            response_format=PlannerResponse,
+        )
 
-        planner_response_ordered = planner_response.content.split("\n\n")
-        for i, pr in enumerate(planner_response_ordered):
-            if pr.startswith("**"):
-                pr = str(i + 1) + ". " + pr
-                planner_response_ordered[i] = pr
+        planner_response: PlannerResponse = completion.choices[0].message.parsed
+        # planner_response_ordered = planner_response.content.split("\n\n")
+        # for i, pr in enumerate(planner_response_ordered):
+        #     if pr.startswith("**"):
+        #         pr = str(i + 1) + ". " + pr
+        #         planner_response_ordered[i] = pr
 
-        planner_response.content = "\n".join(planner_response_ordered)
+        # planner_response.content = "\n".join(planner_response_ordered)
 
         # We return the response from the planner as a special human with the name of "planner".
         # This helps with understanding historical context as the chat history grows.
-        planner_response = HumanMessage(content=planner_response.content, name="planner")
+        print(f"[DEBUG] Planner response: {planner_response}")
+        lc_planner_response = HumanMessage(content=planner_response.plan, name="planner")
         # We update the graph state to ensure the supervisor has access to the `active_plan` and is selected as the `next_worker`
         # The supervisor is also made aware that the planner was called via `made_plan`
 
-        feedback_history = state.get("feedback_history", [])
-        feedback_history.append({"node_content": planner_response.content, "node": "planner", "feedback": ""})
+        # feedback_history = state.get("feedback_history", [])
+        # feedback_history.append({"node_content": planner_response.content, "node": "planner", "feedback": ""})
 
         return {
-            "chat_history": [planner_response],
-            "active_plan": planner_response,
-            "next_worker": state["next_worker"],
+            "chat_history": [lc_planner_response],
+            "active_plan": lc_planner_response,
+            "next_worker": planner_response.route_to_node,
+            "tool_call": planner_response.tool_call if planner_response.tool_call != "none" else None,
             "made_plan": True,
-            "feedback_history": feedback_history,
+            # "feedback_history": feedback_history,
         }
 
     async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
@@ -336,51 +335,59 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
+        worker_schemas = {"video-search": MarengoSearchInput}  # future: add more schemas here
 
         try:
-            # see build_worker_instructor() for more details for the instructor prompt
-            # note that we only need to pass in active_plan (MessagesPlaceholder) and next_worker (see prompts/instructor.md)
-            worker_instructions = await self.worker_instructor.ainvoke({
-                "active_plan": state["active_plan"],
-                "next_worker": state["next_worker"],
-                "feedback_history": state["feedback_history"],
-            })
-            worker_instructions = HumanMessage(content=worker_instructions.content, name="instructor")
-        except JockeyError as error:
-            raise error
+            completion = self.openai_client.beta.chat.completions.parse(
+                model=OPENAI_MODELS["worker"],
+                messages=[
+                    {"role": "system", "content": dedent(self.instructor_prompt)},
+                    {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
+                    {"role": "user", "content": dedent(f"<tool_call>{state['tool_call']}</tool_call>")},
+                ],
+                response_format=worker_schemas[state["next_worker"]],
+            )
+
+            worker_inputs: Union[MarengoSearchInput] = completion.choices[0].message.parsed
+            print(f"[DEBUG] Worker inputs: {worker_inputs}")
         except Exception as error:
-            error_event = create_jockey_error_event(error=error)
-            await parse_langchain_events_terminal(error_event)
+            print(f"[DEBUG] Error in worker_node: {error}")
             raise error
 
-        # This sends the single task generated by the instructor to the selected worker.
+        # let's make a call to the stirrup
+        ai_message = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": state["tool_call"],
+                    "args": {
+                        "query": worker_inputs.query,
+                        "index_id": worker_inputs.index_id,
+                        "top_n": worker_inputs.top_n,
+                        "group_by": worker_inputs.group_by,
+                        "search_options": worker_inputs.search_options,
+                        "video_filter": worker_inputs.video_filter,
+                    },
+                    "id": f"call_{os.urandom(12).hex()}",
+                    "type": "tool_call",
+                }
+            ],
+        )
+
         try:
-            clip_info = ""
-            if state.get("next_worker") == "video-editing":
-                clip_info = state.get("chat_history")[-1].content.replace("{", "{{").replace("}", "}}")
-            worker_response = await worker.ainvoke({"worker_task": [worker_instructions], "clip_info": [clip_info]})
-        except JockeyError as error:
-            raise error
+            worker_response = await VideoSearchWorker._call_tools(ai_message)
         except Exception as error:
-            error_event = create_jockey_error_event(error=error)
-            await parse_langchain_events_terminal(error_event)
+            print(f"[DEBUG] Error in worker_node: {error}")
             raise error
-        # Convert response to string first to ensure it can be used as content for a HumanMessage
+
         worker_response = json.dumps(worker_response, indent=2)
-        # We return the response from the worker as a special human with the name of the worker.
-        # This helps with understanding historical context as the chat history grows.
         worker_response = HumanMessage(content=worker_response, name=f"{state['next_worker']}")
 
-        # Update the feedback history
-        feedback_history: List[FeedbackEntry] = state.get("feedback_history", [])
-        feedback_history.append({"node_content": worker_response.content, "node": state["next_worker"], "feedback": ""})
-
-        # return {"chat_history": [worker_instructions, worker_response], "feedback_history": feedback_history}
         return {
-            "chat_history": [worker_instructions, worker_response],
-            "feedback_history": feedback_history,
+            "chat_history": [worker_response],
             "active_plan": state["active_plan"],
-            # "next_worker": state["next_worker"],
+            "tool_call": None,
+            "next_worker": "reflect",
         }
 
     async def _reflect_node(self, state: JockeyState) -> Dict:
@@ -404,10 +411,12 @@ class Jockey(StateGraph):
         reflect_response = await reflect_chain.ainvoke(state)
         # NOTE: We reset the `active_plan` and `made_plan` variables of teh graph state for extra safety.
 
-        return {"chat_history": [reflect_response], "active_plan": None, "made_plan": False}
-
-    def _ask_human_node(state):
-        return state.get("route_to_node", "planner")
+        return {
+            "chat_history": [reflect_response],
+            "active_plan": None,
+            "made_plan": False,
+            "tool_call": None,
+        }
 
     async def ask_human(self, state: JockeyState) -> str:
         """
@@ -427,45 +436,45 @@ class Jockey(StateGraph):
             raise ValueError("No feedback provided to ask_human node")
 
         # go to the next node if the human feedback is empty
-        if not human_feedback_input[-1].get("feedback"):
-            return {"next_worker": state.get("next_worker")}
+        # if not human_feedback_input[-1].get("feedback"):
+        #     return {"next_worker": state.get("next_worker")}
 
         # Include feedback history in llm call
         # grab all feedback history for the current node
-        node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
-        feedback_context = "Previous attempts for this task:\n"
-        if node_feedback_history:
-            for i, entry in enumerate(node_feedback_history):
-                node_content = entry["node_content"].strip().replace("\n", "").replace("\t", "")
-                human_feedback = entry["feedback"].strip().replace("\n", "").replace("\t", "")
+        # node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
+        # feedback_context = "Previous attempts for this task:\n"
+        # if node_feedback_history:
+        #     for i, entry in enumerate(node_feedback_history):
+        #         node_content = entry["node_content"].strip().replace("\n", "").replace("\t", "")
+        #         human_feedback = entry["feedback"].strip().replace("\n", "").replace("\t", "")
 
-                feedback_context += (
-                    f"<feedback_history_{i + 1}>\n"
-                    f"<prev_llm_output>{node_content}</prev_llm_output>\n"
-                    f"<human_feedback>{human_feedback}</human_feedback>\n"
-                    f"</feedback_history_{i + 1}>\n"
-                )
-        else:
-            feedback_context = ""
+        #         feedback_context += (
+        #             f"<feedback_history_{i + 1}>\n"
+        #             f"<prev_llm_output>{node_content}</prev_llm_output>\n"
+        #             f"<human_feedback>{human_feedback}</human_feedback>\n"
+        #             f"</feedback_history_{i + 1}>\n"
+        #         )
+        # else:
+        #     feedback_context = ""
 
         # make llm call
         messages = [
-            ("human", f"current_node: {current_node}\n{feedback_context}"),
-            ("human", f"<active_plan>{state['active_plan']}</active_plan>"),
+            ("human", f"<active_plan>{state['active_plan'].content}</active_plan>"),
+            ("human", f"<node>{state['active_plan'].name}</node>"),
         ]
 
         response = await self.ask_human_llm.ainvoke(messages, stop=None, temperature=0)
 
-        try:
-            route_to = AskHuman.from_response(response).route_to_node
+        # try:
+        #     route_to = AskHuman.from_response(response).route_to_node
 
-            # update the state of the next_worker
-            state["next_worker"] = current_node if route_to == "current_node" else route_to
-            return {"next_worker": current_node if route_to == "current_node" else route_to}
+        #     # update the state of the next_worker
+        #     state["next_worker"] = current_node if route_to == "current_node" else route_to
+        #     return {"next_worker": current_node if route_to == "current_node" else route_to}
 
-        except ValueError as e:
-            print(f"Error parsing ask_human response: {e}")
-            return "supervisor"
+        # except ValueError as e:
+        #     print(f"Error parsing ask_human response: {e}")
+        #     return "supervisor"
 
     def construct_graph(self):
         """Construct the actual Jockey agent as a graph."""
@@ -474,19 +483,18 @@ class Jockey(StateGraph):
         self.add_node("planner", self._planner_node)
         self.add_node("supervisor", self.supervisor)
         self.add_node("reflect", self._reflect_node)
-        self.add_node("ask_human", self.ask_human)
+        # self.add_node("ask_human", self.ask_human)
         # self.add_node("updater", self._updater_node)
 
         # connect workers to supervisor
         for worker in self.workers:
             worker_node = functools.partial(self._worker_node, worker=worker)
             self.add_node(worker.name, worker_node)
-            self.add_edge(worker.name, "ask_human")
+            self.add_edge(worker.name, "reflect")
 
         # core flow
         self.set_entry_point("supervisor")
-        self.add_edge("planner", "ask_human")
-        # self.add_edge("updater", "ask_human")
+        # self.add_edge("planner", "ask_human")
         self.add_edge("reflect", END)
 
         # Conditional routing based on supervisor node's output
@@ -496,19 +504,17 @@ class Jockey(StateGraph):
             {
                 "reflect": "reflect",
                 "planner": "planner",
-                **{f"{worker.name}": worker.name for worker in self.workers},
+                # **{f"{worker.name}": worker.name for worker in self.workers},
             },
         )
 
         # Human feedback routing based on ask_human node's output
         self.add_conditional_edges(
-            "ask_human",
+            "planner",
             lambda state: state["next_worker"],
             {
-                "planner": "planner",
-                "supervisor": "supervisor",
-                "reflect": "reflect",
                 **{f"{worker.name}": worker.name for worker in self.workers},
+                "reflect": "reflect",
             },
         )
 
@@ -519,7 +525,7 @@ def build_jockey_graph(
     supervisor_prompt: str,
     supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
     worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
-    ask_human_llm: Union[ChatOpenAI, AzureChatOpenAI, ChatOpenAI],
+    instructor_prompt: str,
 ) -> CompiledStateGraph:
     """Convenience function for creating an instance of Jockey.
 
@@ -550,11 +556,11 @@ def build_jockey_graph(
         supervisor_prompt=supervisor_prompt,
         supervisor_llm=supervisor_llm,
         worker_llm=worker_llm,
-        ask_human_llm=ask_human_llm,
+        instructor_prompt=instructor_prompt,
     )
 
     memory = MemorySaver()
-    jockey = jockey_graph.compile(checkpointer=memory, interrupt_before=["ask_human"])
+    jockey = jockey_graph.compile(checkpointer=memory)
 
     # Save the graph visualization to a PNG file
     with open("graph.png", "wb") as f:
