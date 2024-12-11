@@ -12,6 +12,7 @@ OPENAI_MODELS = {
     "supervisor": "gpt-4o-2024-08-06",
     "worker": "gpt-4o-mini-2024-07-18",
     "ask_human": "gpt-4o-mini-2024-07-18",
+    "reflect": "gpt-4o-mini-2024-07-18",
 }
 
 

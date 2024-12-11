@@ -23,6 +23,7 @@ from openai import (
 from openai import AzureOpenAI
 import time
 from jockey.model_config import AZURE_DEPLOYMENTS, OPENAI_MODELS
+from langchain_core.messages.ai import AIMessageChunk
 
 REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
 AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
@@ -50,6 +51,8 @@ async def parse_langchain_events_terminal(event: dict):
             console.print(f"[yellow]{content}", end="")
         elif content and "supervisor" in event["tags"]:
             console.print(f"[white]{content}", end="")
+        elif content and "reflect" in event["tags"]:
+            console.print(f"[cyan]{content}", end="")
 
     elif event["event"] == "on_tool_start":
         tool = event["name"]

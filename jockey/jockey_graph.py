@@ -15,8 +15,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from jockey.stirrups.video_search import VideoSearchWorker
 from jockey.stirrups.video_text_generation import VideoTextGenerationWorker
 from jockey.stirrups.video_editing import VideoEditingWorker
-from jockey.stirrups.errors import JockeyError, create_jockey_error_event
-from jockey.util import parse_langchain_events_terminal
 from langgraph.prebuilt import ToolNode
 from jockey.stirrups import collect_all_tools
 from langgraph.graph.state import CompiledStateGraph
@@ -24,8 +22,7 @@ from textwrap import dedent
 from openai import OpenAI
 from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
-from jockey.stirrups.video_search import MarengoSearchInput, VideoSearchWorker, GroupByEnum, SearchOptionsEnum
-from jockey.stirrups.video_editing import VideoEditingWorker
+from jockey.stirrups.video_search import MarengoSearchInput
 
 
 class PlannerResponse(BaseModel):
@@ -106,6 +103,8 @@ class Jockey(StateGraph):
         supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
         supervisor_prompt: str,
         worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
+        reflect_llm: Union[ChatOpenAI, AzureChatOpenAI],
+        reflect_prompt: str,
     ) -> None:
         """Constructs and compiles Jockey as a StateGraph instance.
 
@@ -128,6 +127,8 @@ class Jockey(StateGraph):
 
         super().__init__(state_schema=JockeyState)
         self.openai_client = OpenAI()
+        self.reflect_llm = reflect_llm
+        self.reflect_prompt = dedent(reflect_prompt)
         self.planner_prompt = planner_prompt
         self.instructor_prompt = instructor_prompt
         self.planner_llm = planner_llm
@@ -139,8 +140,7 @@ class Jockey(StateGraph):
         self.all_tools = collect_all_tools()
         self.tool_node = ToolNode(self.all_tools)
 
-        core_workers = self._build_core_workers()
-        self.workers = core_workers
+        self.workers = self._build_core_workers()
         self.router = self._build_router()
         self.supervisor = self._build_supervisor()
         self.worker_instructor = self._build_worker_instructor()
@@ -169,11 +169,7 @@ class Jockey(StateGraph):
         video_search_worker = VideoSearchWorker.build_worker(worker_llm=self.worker_llm)
         video_text_generation_worker = VideoTextGenerationWorker.build_worker(worker_llm=self.worker_llm)
         video_editing_worker = VideoEditingWorker.build_worker(worker_llm=self.worker_llm)
-        core_workers = [video_search_worker, video_text_generation_worker, video_editing_worker]
-
-        # print(f"[DEBUG] Core workers: {core_workers}")
-        # exit()
-        return core_workers
+        return [video_search_worker, video_text_generation_worker, video_editing_worker]
 
     def _build_router(self) -> Dict:
         """Builds the router that the supervisor uses to route to the appropriate node in a given state.
@@ -336,6 +332,11 @@ class Jockey(StateGraph):
             Dict: Updated state of the graph.
         """
         worker_schemas = {"video-search": MarengoSearchInput}  # future: add more schemas here
+        worker_to_stirrup = {
+            "video-search": VideoSearchWorker,
+            "video-text-generation": VideoTextGenerationWorker,
+            "video-editing": VideoEditingWorker,
+        }
 
         try:
             completion = self.openai_client.beta.chat.completions.parse(
@@ -355,27 +356,29 @@ class Jockey(StateGraph):
             raise error
 
         # let's make a call to the stirrup
-        ai_message = AIMessage(
-            content="",
-            tool_calls=[
-                {
-                    "name": state["tool_call"],
-                    "args": {
-                        "query": worker_inputs.query,
-                        "index_id": worker_inputs.index_id,
-                        "top_n": worker_inputs.top_n,
-                        "group_by": worker_inputs.group_by,
-                        "search_options": worker_inputs.search_options,
-                        "video_filter": worker_inputs.video_filter,
-                    },
-                    "id": f"call_{os.urandom(12).hex()}",
-                    "type": "tool_call",
-                }
-            ],
-        )
+        ai_message = None
+        if state["tool_call"] and state["next_worker"] == "video-search":
+            ai_message = AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": state["tool_call"],
+                        "args": {
+                            "query": worker_inputs.query,
+                            "index_id": worker_inputs.index_id,
+                            "top_n": worker_inputs.top_n,
+                            "group_by": worker_inputs.group_by,
+                            "search_options": worker_inputs.search_options,
+                            "video_filter": worker_inputs.video_filter,
+                        },
+                        "id": f"call_{os.urandom(12).hex()}",
+                        "type": "tool_call",
+                    }
+                ],
+            )
 
         try:
-            worker_response = await VideoSearchWorker._call_tools(ai_message)
+            worker_response = await worker_to_stirrup[state["next_worker"]]._call_tools(ai_message)
         except Exception as error:
             print(f"[DEBUG] Error in worker_node: {error}")
             raise error
@@ -386,7 +389,6 @@ class Jockey(StateGraph):
         return {
             "chat_history": [worker_response],
             "active_plan": state["active_plan"],
-            "tool_call": None,
             "next_worker": "reflect",
         }
 
@@ -399,23 +401,20 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
-        # TODO: Create specific reflection prompt -- this is just a placeholder.
         reflect_prompt = ChatPromptTemplate.from_messages([
-            ("system", self.supervisor_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("system", "Given the above context provide your final response."),
+            ("system", self.reflect_prompt),
         ])
-        reflect_chain = reflect_prompt | self.supervisor_llm
-        # We add a tag for easier parsing of events.
-        reflect_chain = reflect_chain.with_config({"tags": ["reflect"]})
-        reflect_response = await reflect_chain.ainvoke(state)
-        # NOTE: We reset the `active_plan` and `made_plan` variables of teh graph state for extra safety.
-
+        reflect_chain = reflect_prompt | self.reflect_llm
+        reflect_response = await reflect_chain.ainvoke({
+            "tool_call": state["tool_call"],
+            "chat_history": state["chat_history"],
+            "active_plan": state["active_plan"],
+        })
         return {
             "chat_history": [reflect_response],
             "active_plan": None,
-            "made_plan": False,
             "tool_call": None,
+            "made_plan": False,
         }
 
     async def ask_human(self, state: JockeyState) -> str:
@@ -526,6 +525,8 @@ def build_jockey_graph(
     supervisor_llm: Union[ChatOpenAI, AzureChatOpenAI],
     worker_llm: Union[ChatOpenAI, AzureChatOpenAI],
     instructor_prompt: str,
+    reflect_llm: Union[ChatOpenAI, AzureChatOpenAI],
+    reflect_prompt: str,
 ) -> CompiledStateGraph:
     """Convenience function for creating an instance of Jockey.
 
@@ -557,6 +558,8 @@ def build_jockey_graph(
         supervisor_llm=supervisor_llm,
         worker_llm=worker_llm,
         instructor_prompt=instructor_prompt,
+        reflect_llm=reflect_llm,
+        reflect_prompt=reflect_prompt,
     )
 
     memory = MemorySaver()
