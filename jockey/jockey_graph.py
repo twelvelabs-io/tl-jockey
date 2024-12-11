@@ -350,9 +350,8 @@ class Jockey(StateGraph):
             )
 
             worker_inputs: Union[MarengoSearchInput] = completion.choices[0].message.parsed
-            print(f"[DEBUG] Worker inputs: {worker_inputs}")
+            # print(f"[DEBUG] Worker inputs: {worker_inputs}")
         except Exception as error:
-            print(f"[DEBUG] Error in worker_node: {error}")
             raise error
 
         # let's make a call to the stirrup
@@ -406,9 +405,9 @@ class Jockey(StateGraph):
         ])
         reflect_chain = reflect_prompt | self.reflect_llm
         reflect_response = await reflect_chain.ainvoke({
+            "active_plan": state["active_plan"] if state["active_plan"] else state["chat_history"][-1].content,
             "tool_call": state["tool_call"],
             "chat_history": state["chat_history"],
-            "active_plan": state["active_plan"],
         })
         return {
             "chat_history": [reflect_response],

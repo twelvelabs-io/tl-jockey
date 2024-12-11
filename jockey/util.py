@@ -78,6 +78,21 @@ async def parse_langchain_events_terminal(event: dict):
             console.print()
             console.print(f"[cyan]🏇 Jockey: ", end="")
 
+    elif event["event"] == "on_chain_end":
+        # Only process events from the planner node
+        metadata = event.get("metadata", {})
+        langgraph_node = metadata.get("langgraph_node")
+
+        if langgraph_node != "planner":
+            return
+
+        # Check for the specific data structure we want to process
+        output = event["data"].get("output")
+        if not isinstance(output, str):  # The second event has a string output
+            return
+
+        console.print(Padding(f"[yellow]🏇 Planner: {output}", (1, 0)), end="")
+
 
 def check_environment_variables():
     """Check that a .env file contains the required environment variables.

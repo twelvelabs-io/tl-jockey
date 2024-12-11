@@ -114,7 +114,6 @@ def run_jockey_server():
     compose_file_path = os.path.join(jockey_package_dir, "compose.yaml")
 
     # Add debugging options
-    debug_port = 5678
     langgraph_cli_command = [
         "langgraph",
         "up",
@@ -124,10 +123,6 @@ def run_jockey_server():
         compose_file_path,
         "--recreate",
         "--verbose",
-        "--debug-port",
-        str(debug_port),
-        "--debugger-base-url",
-        f"http://127.0.0.1:{debug_port}",
     ]
 
     print(f"Using langgraph-cli command:\n\t {str.join(' ', langgraph_cli_command)}")
