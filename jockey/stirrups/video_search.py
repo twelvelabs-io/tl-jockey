@@ -22,7 +22,6 @@ class GroupByEnum(str, Enum):
 
 class SearchOptionsEnum(str, Enum):
     VISUAL: str = "visual"
-    AUDIO: str = "audio"
     CONVERSATION: str = "conversation"
     TEXT_IN_VIDEO: str = "text_in_video"
     LOGO: str = "logo"
@@ -38,10 +37,10 @@ class MarengoSearchInput(BaseModel):
     top_n: int = Field(
         description="parse the <active_plan> to determine the top_n (default: 3, lt: 50)",
     )
-    group_by: Literal["clip", "video"] = Field(
-        description="group videos by video or clip",
+    group_by: Literal["clip"] = Field(
+        description="group videos by clip",
     )
-    search_options: List[Literal["visual", "audio", "conversation", "text_in_video", "logo"]] = Field(
+    search_options: List[Literal["visual", "conversation", "text_in_video", "logo"]] = Field(
         description="Determine which modalities would be suitable given the <active_plan>",
     )
     video_filter: Union[List[str], None] = Field(
@@ -54,7 +53,7 @@ async def _base_video_search(
     index_id: str,
     top_n: int = 3,
     group_by: GroupByEnum = GroupByEnum.CLIP,
-    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION, SearchOptionsEnum.AUDIO],
+    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
@@ -134,7 +133,7 @@ async def simple_video_search(
     index_id: str,
     top_n: int = 3,
     group_by: GroupByEnum = GroupByEnum.CLIP,
-    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION, SearchOptionsEnum.AUDIO],
+    search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     try:

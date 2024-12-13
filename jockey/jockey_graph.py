@@ -7,7 +7,7 @@ from langchain_openai.chat_models.base import ChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
 from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, FunctionMessage
 from langchain_core.runnables import Runnable
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
@@ -23,11 +23,61 @@ from openai import OpenAI
 from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
 from jockey.stirrups.video_search import MarengoSearchInput
+from jockey.stirrups.video_editing import CombineClipsInput, SimplifiedCombineClipsInput, Clip
+import copy
+
+
+def add_clips(left: Dict[str, List[Clip]], right: Dict[str, List[Clip]]) -> Dict[str, List[Clip]]:
+    """Merges two dictionaries of clips, maintaining unique tool_call_ids and preventing duplicates.
+
+    Args:
+        left: The base dictionary of clips.
+        right: The dictionary of clips to merge into the base dictionary.
+
+    Returns:
+        A new dictionary with unique clips from `right` merged into `left`.
+        If a tool_call_id in `right` exists in `left`, only new unique clips
+        will be appended to the existing list.
+
+    Examples:
+        >>> clips1 = {"call_1": [Clip(video_id="1", start=0, end=10)]}
+        >>> clips2 = {"call_2": [Clip(video_id="2", start=5, end=15)]}
+        >>> add_clips(clips1, clips2)
+        {'call_1': [Clip(video_id="1", start=0, end=10)],
+         'call_2': [Clip(video_id="2", start=5, end=15)]}
+    """
+    # Create a new dictionary to store merged results
+    merged = left.copy()
+
+    # Merge clips from right into the merged dictionary
+    for tool_call_id, clips in right.items():
+        if tool_call_id in merged:
+            # Ensure we're working with lists before extending
+            if not isinstance(merged[tool_call_id], list):
+                merged[tool_call_id] = [merged[tool_call_id]]
+            if not isinstance(clips, list):
+                clips = [clips]
+
+            # Create a set of existing clips for efficient comparison
+            existing_clips = {(clip.start, clip.end) for clip in merged[tool_call_id]}
+
+            # Only add clips that don't already exist
+            new_clips = [clip for clip in clips if (clip.start, clip.end) not in existing_clips]
+
+            # Extend with only the new unique clips
+            merged[tool_call_id].extend(new_clips)
+        else:
+            # If tool_call_id is new, ensure clips is a list
+            merged[tool_call_id] = clips if isinstance(clips, list) else [clips]
+
+    return merged
+
+
+class SupervisorResponse(BaseModel):
+    route_to_node: Literal["planner", "reflect"] = Field()
 
 
 class PlannerResponse(BaseModel):
-    """Route to the appropriate node, and the tool to call"""
-
     route_to_node: Literal["planner", "video-search", "video-text-generation", "video-editing", "reflect"] = Field(
         description="""
         Available workers:
@@ -41,12 +91,12 @@ class PlannerResponse(BaseModel):
             Input: List of video IDs with start/end times
             Output: Filepath of edited video
         </worker>
-        """,
+        """
     )
     tool_call: Literal["simple-video-search", "combine-clips", "none"] = Field(
         description="""
         Define the tool required by the route_to_node. If no tool is required, use 'none'.
-        """,
+        """
     )
     plan: str = Field(
         description="""
@@ -60,7 +110,19 @@ class PlannerResponse(BaseModel):
             2. ONLY use Index IDs provided by the user
             3. Each step must include complete, and concise context
         </rules>
-        """,
+        """
+    )
+    index_id: str = Field(
+        description="""
+        parse the index_id from the <latest_user_message>
+        """
+    )
+    clip_keys: List[str] = Field(
+        description="""
+        clips are currently stored in <clips_from_search> 
+        You are to return only the key(s) relevant to clips necessary for the video-editing step outlined in <latest_user_message>
+        if ambiguous, only return the latest clip_keys
+        """
     )
 
 
@@ -79,6 +141,9 @@ class JockeyState(TypedDict):
     active_plan: Union[str, HumanMessage, None]
     tool_call: Union[str, None]
     feedback_history: List[FeedbackEntry]  # earlist [] latest
+    clips_from_search: Annotated[Dict[str, List[Clip]], add_clips]
+    index_id: Annotated[str, lambda left, right: right if right else left]  # for now let's assume per chat we only have 1 index_id
+    relevant_clip_keys: List[str]
 
 
 class Jockey(StateGraph):
@@ -141,8 +206,7 @@ class Jockey(StateGraph):
         self.tool_node = ToolNode(self.all_tools)
 
         self.workers = self._build_core_workers()
-        self.router = self._build_router()
-        self.supervisor = self._build_supervisor()
+        # self.router = self._build_router()
         self.worker_instructor = self._build_worker_instructor()
         self.construct_graph()
 
@@ -171,64 +235,6 @@ class Jockey(StateGraph):
         video_editing_worker = VideoEditingWorker.build_worker(worker_llm=self.worker_llm)
         return [video_search_worker, video_text_generation_worker, video_editing_worker]
 
-    def _build_router(self) -> Dict:
-        """Builds the router that the supervisor uses to route to the appropriate node in a given state.
-
-        Returns:
-            Dict: The router definition adhering to the [OpenAI Assistants API](https://platform.openai.com/docs/assistants/overview).
-        """
-        router_options = [worker.name for worker in self.workers] + ["reflect", "supervisor", "planner"] + [w.name for w in self.workers]
-        router = {
-            "name": "route",
-            "description": "Determine whether to choose the next active worker or reflect.",
-            "parameters": {
-                "title": "routeSchema",
-                "type": "object",
-                "properties": {
-                    "next_worker": {
-                        "title": "Next Worker",
-                        "anyOf": [
-                            {"enum": router_options},
-                        ],
-                    },
-                },
-                "required": ["next_worker"],
-            },
-        }
-        return router
-
-    def _build_supervisor(self) -> Runnable:
-        """Builds the supervisor which acts as the routing agent.
-
-        Raises:
-            TypeError: If the supervisor_llm instance type isn't currently supported.
-
-        Returns:
-            Runnable: The supervisor of the Jockey instance.
-        """
-        if any(map(lambda x: isinstance(self.supervisor_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"Supervisor LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.supervisor_llm).__name__}")
-
-        supervisor_prompt = ChatPromptTemplate.from_messages([("system", self.supervisor_prompt), MessagesPlaceholder(variable_name="chat_history")])
-
-        # This constructs the supervisor agent and determines the possible node routing.
-        # Note: The JsonOutputFunctionsParser forces the response from invoking this agent into the format of {"next_worker": ROUTER_ENUM}
-        supervisor = (
-            supervisor_prompt | self.supervisor_llm.bind_functions(functions=[self.router], function_call="route") | JsonOutputFunctionsParser()
-        )
-
-        # Wrap the supervisor to handle missing state variables
-        async def wrapped_supervisor(state: JockeyState) -> Dict:
-            state_with_defaults = {
-                "chat_history": state["chat_history"],
-                "active_plan": state.get("active_plan", "No active plan"),
-                "made_plan": state.get("made_plan", False),
-            }
-            route_to_node = await supervisor.ainvoke(state_with_defaults)
-            return route_to_node
-
-        return wrapped_supervisor
-
     def _build_worker_instructor(self) -> Runnable:
         """Constructs the worker_instructor which generates singular tasks for a given step in a plan generated by the planner node.
 
@@ -251,6 +257,26 @@ class Jockey(StateGraph):
         worker_instructor = worker_instructor.with_config({"tags": ["instructor"]})
         return worker_instructor
 
+    def _supervisor_node(self, state: JockeyState) -> Dict:
+        """Builds the supervisor which acts as the routing agent.
+
+        Raises:
+            TypeError: If the supervisor_llm instance type isn't currently supported.
+
+        Returns:
+            Runnable: The supervisor of the Jockey instance.
+        """
+        completion = self.openai_client.beta.chat.completions.parse(
+            model=OPENAI_MODELS["supervisor"],
+            messages=[
+                {"role": "system", "content": dedent(self.supervisor_prompt)},
+                {"role": "user", "content": dedent(f"<chat_history>{state['chat_history']}</chat_history>")},
+            ],
+            response_format=SupervisorResponse,
+        )
+        supervisor_response: SupervisorResponse = completion.choices[0].message.parsed
+        return {"next_worker": supervisor_response.route_to_node}
+
     async def _planner_node(self, state: JockeyState) -> Dict:
         """The planner_node in the StateGraph instance. The planner is responsible to generating a plan for a given user request.
 
@@ -263,24 +289,17 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
-        # if any(map(lambda x: isinstance(self.planner_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
-        #     raise TypeError(f"Planner LLM must be one of: ChatOpenAI, AzureChatOpenAI. Got: {type(self.planner_llm).__name__}")
+        latest_user_message = state["chat_history"][-1].content
 
-        # Add feedback context to the prompt
-        # feedback_context = ""
-        # if state.get("feedback_history"):
-        #     feedback_context = "\n<feedback_history>\n"
-        #     for i, entry in enumerate(state["feedback_history"], start=1):
-        #         feedback_context += f"<feedback_history_{i}>\n"
-        #         feedback_context += f"<previous_plan> {entry['node_content']}</previous_plan>\n"
-        #         feedback_context += f"<human_feedback> {entry['feedback']}</human_feedback>\n"
-        #         feedback_context += f"</feedback_history_{i}>\n"
-        #     feedback_context += "</feedback_history>\n"
-        #     feedback_context += "Please re-evaluate the active plan based on the feedback above."
+        # Remove `thumbnail_url` and `video_url` from each Clip
+        clips_from_search_copy = copy.deepcopy(state["clips_from_search"]) if state["clips_from_search"] else {}
+        if clips_from_search_copy:
+            [setattr(clip, "thumbnail_url", None) or setattr(clip, "video_url", None) for clips in clips_from_search_copy.values() for clip in clips]
 
-        # escape {} in feedback_context by replacing with {{}}
-        # https://python.langchain.com/docs/troubleshooting/errors/INVALID_PROMPT_INPUT/
-        # feedback_context = feedback_context.replace("{", "{{").replace("}", "}}")
+        # retrieve available tool_call_ids
+        available_tool_call_ids: List[str] = list(clips_from_search_copy.keys())
+        if available_tool_call_ids:
+            PlannerResponse.model_fields["clip_keys"].annotation = List[Literal.__getitem__(tuple(available_tool_call_ids))]
 
         completion = self.openai_client.beta.chat.completions.parse(
             model=OPENAI_MODELS["planner"],
@@ -288,36 +307,39 @@ class Jockey(StateGraph):
                 {"role": "system", "content": dedent(self.planner_prompt)},
                 {"role": "user", "content": dedent(f"<chat_history>{state['chat_history']}</chat_history>")},
                 {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
+                {"role": "user", "content": dedent(f"<latest_user_message>{latest_user_message}</latest_user_message>")},
+                {"role": "user", "content": dedent(f"<clips_from_search>{clips_from_search_copy}</clips_from_search>")},
             ],
+            temperature=0,
             response_format=PlannerResponse,
         )
-
         planner_response: PlannerResponse = completion.choices[0].message.parsed
-        # planner_response_ordered = planner_response.content.split("\n\n")
-        # for i, pr in enumerate(planner_response_ordered):
-        #     if pr.startswith("**"):
-        #         pr = str(i + 1) + ". " + pr
-        #         planner_response_ordered[i] = pr
 
-        # planner_response.content = "\n".join(planner_response_ordered)
+        # let's replace the planner_response.plan with the actual clips to prevent the LLM from hallucinating
+        # this is a temporary solution until openai allows us to make some fields optional, however everything is required for now
+        # https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
+        if planner_response.route_to_node == "video-editing":
+            call_tool_ids: List[str] = [key for key in state["clips_from_search"].keys() if key.startswith("call_")]
+            clips_from_search = [clip for tool_id in planner_response.clip_keys for clip in state["clips_from_search"][tool_id]]
+            # remove unneeded fields like thumbnail_url and video_url in chat_history
+            [setattr(clip, "thumbnail_url", None) or setattr(clip, "video_url", None) for clip in clips_from_search]
+            planner_response.plan = str(clips_from_search)
 
         # We return the response from the planner as a special human with the name of "planner".
         # This helps with understanding historical context as the chat history grows.
         print(f"[DEBUG] Planner response: {planner_response}")
-        lc_planner_response = HumanMessage(content=planner_response.plan, name="planner")
+        lc_planner_response = AIMessage(content=planner_response.plan, name="planner")
         # We update the graph state to ensure the supervisor has access to the `active_plan` and is selected as the `next_worker`
         # The supervisor is also made aware that the planner was called via `made_plan`
-
-        # feedback_history = state.get("feedback_history", [])
-        # feedback_history.append({"node_content": planner_response.content, "node": "planner", "feedback": ""})
 
         return {
             "chat_history": [lc_planner_response],
             "active_plan": lc_planner_response,
+            "index_id": planner_response.index_id if not state["index_id"] else state["index_id"],
             "next_worker": planner_response.route_to_node,
             "tool_call": planner_response.tool_call if planner_response.tool_call != "none" else None,
             "made_plan": True,
-            # "feedback_history": feedback_history,
+            "relevant_clip_keys": planner_response.clip_keys,
         }
 
     async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
@@ -331,7 +353,8 @@ class Jockey(StateGraph):
         Returns:
             Dict: Updated state of the graph.
         """
-        worker_schemas = {"video-search": MarengoSearchInput}  # future: add more schemas here
+        worker_schemas = {"video-search": MarengoSearchInput, "video-editing": SimplifiedCombineClipsInput}
+
         worker_to_stirrup = {
             "video-search": VideoSearchWorker,
             "video-text-generation": VideoTextGenerationWorker,
@@ -343,34 +366,41 @@ class Jockey(StateGraph):
                 model=OPENAI_MODELS["worker"],
                 messages=[
                     {"role": "system", "content": dedent(self.instructor_prompt)},
-                    {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
+                    {
+                        "role": "user",
+                        "content": dedent(f"<active_plan>{state['active_plan'].content}\nnode{state['active_plan'].name}</active_plan>"),
+                    },
                     {"role": "user", "content": dedent(f"<tool_call>{state['tool_call']}</tool_call>")},
                 ],
                 response_format=worker_schemas[state["next_worker"]],
             )
 
-            worker_inputs: Union[MarengoSearchInput] = completion.choices[0].message.parsed
+            worker_inputs: Union[MarengoSearchInput, SimplifiedCombineClipsInput] = completion.choices[0].message.parsed
             # print(f"[DEBUG] Worker inputs: {worker_inputs}")
         except Exception as error:
             raise error
 
-        # let's make a call to the stirrup
+        # let's make a call to the stirrup to execute the tool call
         ai_message = None
-        if state["tool_call"] and state["next_worker"] == "video-search":
+        tool_call_id = f"call_{os.urandom(12).hex()}"
+
+        # craft the args for the tool call
+        args = {}
+        if state["next_worker"] == "video-search":
+            args = worker_inputs.model_dump()
+        elif state["next_worker"] == "video-editing" and state["tool_call"] == "combine-clips":
+            args = worker_inputs.model_dump()
+            args["clips"] = [clip for key in state["relevant_clip_keys"] for clip in state["clips_from_search"][key]]
+            args["index_id"] = state["index_id"]
+
+        if state["tool_call"]:
             ai_message = AIMessage(
                 content="",
                 tool_calls=[
                     {
                         "name": state["tool_call"],
-                        "args": {
-                            "query": worker_inputs.query,
-                            "index_id": worker_inputs.index_id,
-                            "top_n": worker_inputs.top_n,
-                            "group_by": worker_inputs.group_by,
-                            "search_options": worker_inputs.search_options,
-                            "video_filter": worker_inputs.video_filter,
-                        },
-                        "id": f"call_{os.urandom(12).hex()}",
+                        "args": args,
+                        "id": tool_call_id,
                         "type": "tool_call",
                     }
                 ],
@@ -382,13 +412,20 @@ class Jockey(StateGraph):
             print(f"[DEBUG] Error in worker_node: {error}")
             raise error
 
-        worker_response = json.dumps(worker_response, indent=2)
-        worker_response = HumanMessage(content=worker_response, name=f"{state['next_worker']}")
+        # add clips to state['clips_from_search']
+        clips_from_search = state.get("clips_from_search", {})
+        if state["next_worker"] == "video-search":
+            clips_from_search[tool_call_id] = [Clip(**clip) for clip in json.loads(worker_response[0]["output"])]
+
+        # state["clips_from_search"] = state["clips_from_search"] if state["next_worker"] == "video-search" else None
+        worker_response_json = json.dumps(worker_response, indent=2, default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o))
+        worker_response_msg = FunctionMessage(name=f"{state['next_worker']}", content=worker_response_json)
 
         return {
-            "chat_history": [worker_response],
+            "chat_history": [worker_response_msg],
             "active_plan": state["active_plan"],
             "next_worker": "reflect",
+            "clips_from_search": clips_from_search,
         }
 
     async def _reflect_node(self, state: JockeyState) -> Dict:
@@ -416,73 +453,13 @@ class Jockey(StateGraph):
             "made_plan": False,
         }
 
-    async def ask_human(self, state: JockeyState) -> str:
-        """
-        This is a routing node. It returns the next node to route to based on the human feedback.
-        Routes feedback to the current node by default.
-        Only routes to a different node in very specific cases (e.g., explicit "help" command)."""
-        # Initial state check
-        if not state:
-            return "planner"
-
-        latest_chat_history = state.get("chat_history", [])[-1]
-        current_node = latest_chat_history.name  # Get the node that called ask_human
-
-        # confirm that we have user input sent from the cli or client
-        human_feedback_input = state.get("feedback_history", [])
-        if not human_feedback_input:
-            raise ValueError("No feedback provided to ask_human node")
-
-        # go to the next node if the human feedback is empty
-        # if not human_feedback_input[-1].get("feedback"):
-        #     return {"next_worker": state.get("next_worker")}
-
-        # Include feedback history in llm call
-        # grab all feedback history for the current node
-        # node_feedback_history = [entry for entry in state.get("feedback_history", []) if entry["node"] == current_node]
-        # feedback_context = "Previous attempts for this task:\n"
-        # if node_feedback_history:
-        #     for i, entry in enumerate(node_feedback_history):
-        #         node_content = entry["node_content"].strip().replace("\n", "").replace("\t", "")
-        #         human_feedback = entry["feedback"].strip().replace("\n", "").replace("\t", "")
-
-        #         feedback_context += (
-        #             f"<feedback_history_{i + 1}>\n"
-        #             f"<prev_llm_output>{node_content}</prev_llm_output>\n"
-        #             f"<human_feedback>{human_feedback}</human_feedback>\n"
-        #             f"</feedback_history_{i + 1}>\n"
-        #         )
-        # else:
-        #     feedback_context = ""
-
-        # make llm call
-        messages = [
-            ("human", f"<active_plan>{state['active_plan'].content}</active_plan>"),
-            ("human", f"<node>{state['active_plan'].name}</node>"),
-        ]
-
-        response = await self.ask_human_llm.ainvoke(messages, stop=None, temperature=0)
-
-        # try:
-        #     route_to = AskHuman.from_response(response).route_to_node
-
-        #     # update the state of the next_worker
-        #     state["next_worker"] = current_node if route_to == "current_node" else route_to
-        #     return {"next_worker": current_node if route_to == "current_node" else route_to}
-
-        # except ValueError as e:
-        #     print(f"Error parsing ask_human response: {e}")
-        #     return "supervisor"
-
     def construct_graph(self):
         """Construct the actual Jockey agent as a graph."""
 
         # create nodes
         self.add_node("planner", self._planner_node)
-        self.add_node("supervisor", self.supervisor)
+        self.add_node("supervisor", self._supervisor_node)
         self.add_node("reflect", self._reflect_node)
-        # self.add_node("ask_human", self.ask_human)
-        # self.add_node("updater", self._updater_node)
 
         # connect workers to supervisor
         for worker in self.workers:
@@ -492,7 +469,6 @@ class Jockey(StateGraph):
 
         # core flow
         self.set_entry_point("supervisor")
-        # self.add_edge("planner", "ask_human")
         self.add_edge("reflect", END)
 
         # Conditional routing based on supervisor node's output
@@ -502,11 +478,9 @@ class Jockey(StateGraph):
             {
                 "reflect": "reflect",
                 "planner": "planner",
-                # **{f"{worker.name}": worker.name for worker in self.workers},
             },
         )
 
-        # Human feedback routing based on ask_human node's output
         self.add_conditional_edges(
             "planner",
             lambda state: state["next_worker"],

@@ -12,7 +12,9 @@ from typing import List
 from langchain_core.runnables.schema import StreamEvent
 from jockey.jockey_graph import FeedbackEntry
 from jockey.thread import session_id, thread
+
 # from jockey.video_utils import download_m3u8_videos
+from jockey.stirrups.video_editing import Clip
 
 
 async def run_jockey_terminal():
@@ -25,17 +27,21 @@ async def run_jockey_terminal():
             console.print()
             user_input = console.input("[green]👤 Chat: ")
             if not user_input.strip():
-                return
+                user_input = "find 2 dunking videos in the index 670514a1e5620307b898b0c5"
+                print(user_input)
+                # return
 
             # Prepare input for processing
             messages = [HumanMessage(content=user_input, name="user")]
+            clips_from_search = {}
             jockey_input = {
                 "chat_history": messages,
                 "made_plan": False,
                 "next_worker": None,
                 "active_plan": None,
                 "tool_call": None,
-                "feedback_history": [],
+                "clips_from_search": clips_from_search,
+                "relevant_clip_keys": [],
             }
 
             # Process until we need human input
@@ -53,50 +59,6 @@ async def run_jockey_terminal():
                 console.print("\nOperation interrupted")
                 interrupt_event = create_interrupt_event(session_id, events[-1])
                 await parse_langchain_events_terminal(interrupt_event)
-                # go here when we are interrupted by the ask_human node
-                # while True:
-                # if jockey.get_state(thread).values["next_worker"] == "reflect":
-                # break
-
-                # Get user feedback
-                # try:
-                #     feedback_user_input = console.input("\n[green]👤 Feedback: ")
-                # except KeyboardInterrupt:
-                #     console.print("\nExiting Jockey terminal...")
-                #     interrupt_event = create_interrupt_event(session_id, events[-1])
-                #     await parse_langchain_events_terminal(interrupt_event)
-                #     sys.exit(0)
-
-                # 1. get the feedback history
-                # current_feedback_history: List[FeedbackEntry] = jockey.get_state(thread).values["feedback_history"]
-                # 2. update the feedback_history with the new feedback
-                # current_feedback_history[-1]["feedback"] = feedback_user_input
-                # 3. update the state with the new feedback history
-                # await jockey.aupdate_state(thread, {"feedback_history": current_feedback_history})
-
-                # 4. check that the update actually worked
-                # new_state = jockey.get_state(thread)
-                # check = new_state.values["feedback_history"]
-
-                # Process the next steps until we need human input again
-                # async for event in jockey.astream_events(input=None, config=thread, version="v2"):
-                #     # if event["event"] == "on_tool_end":
-                #     # let's handle the m3u8 video
-                #     # download_m3u8_videos(event)
-                #     await parse_langchain_events_terminal(event)
-
-            # except get_langgraph_errors() as e:
-            #     console.print(f"\n🚨🚨🚨[red]LangGraph Error: {str(e)}[/red]")
-            #     print("error", e)
-            #     langgraph_error_event = create_langgraph_error_event(session_id, events[-1], e)
-            #     await parse_langchain_events_terminal(langgraph_error_event)
-            #     return
-
-            # except JockeyError as e:
-            #     console.print(f"\n🚨🚨🚨[red]Jockey Error: {str(e)}[/red]")
-            #     jockey_error_event = create_jockey_error_event(session_id, events[-1], e)
-            #     await parse_langchain_events_terminal(jockey_error_event)
-            #     return
 
     except KeyboardInterrupt:
         console.print("\nExiting Jockey terminal...")

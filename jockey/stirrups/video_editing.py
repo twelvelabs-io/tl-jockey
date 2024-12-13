@@ -13,14 +13,29 @@ import uuid
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
 
-    index_id: str = Field(description="A UUID for the index a video belongs to. This is different from the video_id.")
-    video_id: str = Field(description="A UUID for the video a clip belongs to.")
+    score: float = Field(description="The score of the clip from the search.")
     start: float = Field(description="The start time of the clip in seconds.")
     end: float = Field(description="The end time of the clip in seconds.")
+    metadata: list = Field(description="The metadata of the clip from the search.")
+    video_id: str = Field(description="A UUID for the video a clip belongs to.")
+    confidence: str
+    thumbnail_url: str
+    video_url: str
+    video_title: str
+
+    def __json__(self):
+        """Make Clip JSON serializable."""
+        return self.model_dump()
 
 
+# sent to openai tool call
+class SimplifiedCombineClipsInput(BaseModel):
+    output_filename: str = Field(description="The output filename of the combined clips. Must be in the form: [filename].mp4")
+
+
+# used by the worker
 class CombineClipsInput(BaseModel):
-    """Helps to ensure the video-editing worker providers all required information for clips when using the `combine_clips` tool."""
+    """Ensure the video-editing worker has required inputs for the `@combine_clips` tool."""
 
     clips: List[Clip] = Field(description="List of clips to be edited together. Each clip must have start and end times and a Video ID.")
     output_filename: str = Field(description="The output filename of the combined clips. Must be in the form: [filename].mp4")

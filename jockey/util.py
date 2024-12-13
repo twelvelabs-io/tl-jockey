@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+from typing import Dict, List
 import requests
 from dotenv import find_dotenv, load_dotenv
 from rich.padding import Padding
@@ -24,6 +25,7 @@ from openai import AzureOpenAI
 import time
 from jockey.model_config import AZURE_DEPLOYMENTS, OPENAI_MODELS
 from langchain_core.messages.ai import AIMessageChunk
+
 
 REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
 AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
@@ -58,7 +60,19 @@ async def parse_langchain_events_terminal(event: dict):
         tool = event["name"]
         console.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
         console.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
-        console.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
+        try:
+            # Convert input data to a serializable format
+            input_data = event["data"]["input"]
+            if isinstance(input_data, dict):
+                # If it's a dictionary, try to convert any non-serializable objects to strings
+                serializable_input = {k: str(v) if hasattr(v, "__dict__") else v for k, v in input_data.items()}
+            else:
+                # If it's not a dictionary, convert the whole thing to string
+                serializable_input = str(input_data)
+            console.print(Padding(JSON(json.dumps(serializable_input), indent=2), (1, 6)))
+        except Exception as e:
+            # Fallback to string representation if JSON serialization fails
+            console.print(Padding(str(input_data), (1, 6)))
 
     elif event["event"] == "on_tool_end":
         tool = event["name"]
