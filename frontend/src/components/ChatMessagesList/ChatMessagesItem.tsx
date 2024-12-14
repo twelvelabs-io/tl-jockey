@@ -9,6 +9,7 @@ import InitialResponse from './InitialResponse';
 import { ErrorBoundary } from 'react-error-boundary';
 import Loading from '../Loading/Loading';
 import { useChat } from '../../widgets/VideoAssistant/hooks/useChat';
+import { QuestionMessage } from '../../types/messageTypes';
 
 interface ErrorFallBackProps {
   error: Error
@@ -23,12 +24,12 @@ const ErrorFallback:React.FC<ErrorFallBackProps> = ({ error  }) => (
 const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message,  index,  handleShow }) => {
   const [state, dispatch] = useChat()
   const { statusMessages, loading, arrayMessages } = state
-  const previousMessageText = arrayMessages[arrayMessages.length - 2]?.text;
-  const lastElement = previousMessageText === message?.text; 
+  const lastUserMessage = [...arrayMessages].reverse().find(msg => msg?.sender === 'user');
+  const lastElement = lastUserMessage?.text === message?.text;
   if (!message) { 
     return <p>No messages available</p>; 
   }
-
+  
   const isUserMessage = message.sender === 'user'
   const initialMessage = message.sender === 'initial'
 
@@ -39,13 +40,13 @@ const ChatMessagesItem: React.FC<ChatMessagesItemProps> = ({ message,  index,  h
               <div key={index} className={`${isUserMessage ? ' flex-row gap-2 justify-start items-start flex' : 'flex-row gap-2 justify-start items-start flex'}`}>
                   {isUserMessage 
                     ? <UserResponse 
-                      message={message.text} 
+                      message={message} 
                       isUserMessage={isUserMessage} 
                       statusMessages={statusMessages}
                       loading={loading}
                       lastElement={lastElement}
                       />
-                    : (initialMessage ? <InitialResponse message={message.text} /> : <AIResponse message={message} handleShow={handleShow}/>)
+                    : (initialMessage ? <InitialResponse message={message.text} /> : <AIResponse message={message as QuestionMessage} handleShow={handleShow}/>)
                   }
               </div>
             </Suspense>

@@ -6,6 +6,7 @@ import answers from '../../info/answers.json'
 import { ActionType } from '../VideoAssistant/hooks/useChatTypes'
 import { ChatFormProps } from './ChatFormTypes'
 import { useChat } from '../VideoAssistant/hooks/useChat'
+import Loading from '../../components/Loading/Loading'
 
 const ChatForm: React.FC<ChatFormProps> = ({
   submitButtonRef,
@@ -13,7 +14,8 @@ const ChatForm: React.FC<ChatFormProps> = ({
   setAutofillApi,
   handleChatApi,
   showAutofillQuestions,
-  setShowAutofillQuestions
+  setShowAutofillQuestions,
+  inputBoxStyle
 }) => {
   const [ state, dispatch] = useChat()
   const {inputBox, responseText, selectedFile, loading } = state
@@ -34,7 +36,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
   const handleChat = async (): Promise<void> => {
     if (selectedFile !== null && selectedFile !== undefined) {
       dispatch({ type: ActionType.SET_LINK_URL, payload: link })
-      dispatch({ type: ActionType.SET_LOADING, payload: true })
+      // dispatch({ type: ActionType.SET_LOADING, payload: true })
       try {
         dispatch({
           type: ActionType.SET_ARRAY_MESSAGES,
@@ -68,10 +70,10 @@ const ChatForm: React.FC<ChatFormProps> = ({
               }
             ]
           })
-          dispatch({ type: ActionType.SET_LOADING, payload: false })
+          // dispatch({ type: ActionType.SET_LOADING, payload: false })
         }, randomDelay)
       } catch (error) {
-        dispatch({ type: ActionType.SET_LOADING, payload: false })
+        // dispatch({ type: ActionType.SET_LOADING, payload: false })
         console.error('Error sending chat request:', error)
       }
     }
@@ -81,16 +83,16 @@ const ChatForm: React.FC<ChatFormProps> = ({
   const handleInputClick = (): void => {
     setShowAutofillQuestions(true)
   }
-
+  const placeholderText = inputBoxStyle === 'red' ? 'Provide feedback for Jockey' : 'Type here';
   return (
     <div className={'flex flex-row w-[240px] sm:w-[440px] md:w-[680px] lg:w-[680px] absolute bottom-[48px]'}>
       <Input
-        disabled={selectedFile === undefined || loading}
+        disabled={loading}
         onChange={handleInputChange}
-        placeholder='Type here'
+        placeholder={placeholderText}
         onClick={handleInputClick}
         value={inputBox}
-        className={'w-full shadow-sm h-[44px] border-1 border-solid border-[#D4D5D2] pl-3 pr-3 pt-2 pb-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none'}
+        className={`w-full shadow-sm rounded h-[44px] border-1 border-solid pl-3 pr-3 pt-2 pb-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none border-[${inputBoxStyle}]`}
       />
       <SubmitButton
         value={inputBox}

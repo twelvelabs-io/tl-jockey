@@ -6,5 +6,6 @@ export interface ChatFormProps {
     setAutofillApi: (file: boolean) => void
     handleChatApi: () => void
     showAutofillQuestions: boolean
-    setShowAutofillQuestions: (show: boolean) => void
+    setShowAutofillQuestions: (show: boolean) => void,
+    inputBoxStyle: string
 }

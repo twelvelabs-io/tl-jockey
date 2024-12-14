@@ -1,6 +1,6 @@
 import { Dispatch } from 'react';
 import { ActionType } from '../widgets/VideoAssistant/hooks/useChatTypes';
-import { ModalType } from '../types/messageTypes';
+import { ModalType, VideoInfo } from '../types/messageTypes';
 
 const helpersFunctions = {
     updateChatPanelMessages: (
@@ -23,6 +23,17 @@ const helpersFunctions = {
           },
         ],
       });
+    },
+
+    parseCloudFrontUrls : (text: string): VideoInfo[] => {
+      const urls: VideoInfo[] = [];
+      const urlRegex = /https:\/\/[^\s)]+cloudfront[^\s)]*?\.m3u8\b/g;
+
+      let match;
+      while ((match = urlRegex.exec(text)) !== null) {
+        urls.push({ url: match[0] });
+      }
+      return urls;
     },
   
     openPanelModal: (
