@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@langchain/core": "^0.3.20",
+    "motion": "^11.13.5"
+  }
+}

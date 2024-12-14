@@ -1,13 +1,47 @@
 import {Client, ThreadState} from '@langchain/langgraph-sdk'
-import {BaseMessage, HumanMessage, MessageFieldWithRole} from '@langchain/core/messages'
+import {BaseMessage, HumanMessage, MessageFieldWithRole, ToolMessage} from '@langchain/core/messages'
 import _ from 'lodash'
 import process from 'process'
-
+import { getOpenAISummary } from './hooks'
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 interface FeedbackEntry {
 	node_content: string
 	node: string
 	feedback: string
 }
+
+interface VideoSearchResult {
+	score: number;
+	start: number;
+	end: number;
+	metadata: Array<{
+	  type: string;
+	  text?: string;
+	}>;
+	video_id: string;
+	confidence: string;
+	thumbnail_url: string;
+	modules: Array<{
+	  type: string;
+	  confidence: string;
+	}>;
+	video_url: string;
+	video_title: string;
+  }
+
+  interface ToolCallOutput {
+	name: string;
+	args: {
+	  query: string;
+	  index_id: string;
+	  top_n: number;
+	  group_by: string;
+	  search_options: string[];
+	};
+	id: string;
+	type: string;
+	output: string; 
+  }
 
 interface JockeyState {
 	next_worker: string | null
@@ -17,7 +51,7 @@ interface JockeyState {
 	feedback_history: FeedbackEntry[]
 }
 
-export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any) => {
+export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any, setInputBoxColor: any) => {
 	dispatch({type: ActionType.SET_LOADING, payload: true})
 
 	const client = new Client({
@@ -35,13 +69,63 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 			{
 				role: 'human',
 				name: 'user',
-				content: 'find 2 dunking videos in the index 670514a1e5620307b898b0c5',
+				content: `${inputBox} in the index 670514a1e5620307b898b0c5`,
 			},
 		],
 		made_plan: false,
 		active_plan: null,
 		feedback_history: [],
 	}
+
+	function parseJsonString(jsonString: any): ToolMessage {
+		try {
+		  const jsonObject = JSON.parse(jsonString);
+		  const contentArray = JSON.parse(jsonObject.content) as ToolCallOutput[];
+		  const videoResults = JSON.parse(contentArray[0].output) as VideoSearchResult[];
+		  
+		  return new ToolMessage({
+			content: JSON.stringify(videoResults),
+			tool_call_id: jsonObject.id,
+			name: jsonObject.name,
+			additional_kwargs: {
+			  videoResults: videoResults
+			}
+		  });
+		} catch (error) {
+		  console.error("Error decoding JSON:", error);
+		  return new ToolMessage({
+			content: "Error parsing content",
+			tool_call_id: "error",
+			name: "error",
+			additional_kwargs: {}
+		  });
+		}
+	  }
+
+	  function parseThinkingAction(jsonString: any) {
+		try {
+		  const jsonObject = JSON.parse(jsonString);
+		  const contentArray = JSON.parse(jsonObject.content) as ToolCallOutput[];
+		  const query = contentArray[0].args.query;
+		  console.log("Thinking action:", query);
+		  
+		  dispatch({
+			type: ActionType.UPDATE_LAST_USER_MESSAGE,
+			payload: {
+			  asrTest: query
+			}
+		  });
+
+		} catch (error) {
+		  console.error("Error decoding JSON:", error);
+		  return new ToolMessage({
+			content: "Error parsing content",
+			tool_call_id: "error",
+			name: "error",
+			additional_kwargs: {}
+		  });
+		}
+	  }
 
 	const processStream = async (input: JockeyState | null) => {
 		let accumulatedTokens = ''
@@ -52,21 +136,58 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 			interruptBefore: ['ask_human'],
 		})) {
 			if (chunk.event === 'updates') {
-				console.log(JSON.stringify(chunk.data), '\n')
+				// console.log("chunk.data:", chunk.data)
+				const videoSearchData = chunk.data["video-search"];
+				if (videoSearchData && videoSearchData["chat_history"]) {
+					const contentArray = videoSearchData["chat_history"];
+					const content = JSON.stringify(contentArray[contentArray.length - 1]);
+					const cleanedJson = parseJsonString(content);
+					console.log("cleanedJson:", cleanedJson);
+					const summary = await getOpenAISummary(cleanedJson.content);
+					if (cleanedJson) {
+						dispatch({
+							type: ActionType.SET_ARRAY_MESSAGES,
+							payload: [
+								{
+									sender: 'ai',
+									text: cleanedJson.content,
+									link: summary,
+									linkText: "details",
+									twelveText: cleanedJson.content,
+									asrTest: '',
+									lameText: '',
+									question: inputBox,
+									toolsData: cleanedJson.additional_kwargs.videoResults
+								}
+							]
+						});
+						dispatch({
+							type: ActionType.SET_LOADING,
+							payload: false
+						});
+					}
+				} else {
+					console.error("video-search data or chat_history is undefined");
+				}
 			}
-			if (chunk.event === 'events' && chunk.data.event === 'on_chat_model_stream') {
-				const newContent: string = chunk.data.data.chunk.content
-
-        // TODO: set the ui state here
-				accumulatedTokens += newContent
-				console.log(accumulatedTokens)
+			if (chunk.event === 'events') {
+				if (chunk.data?.data?.output?.chat_history) {
+					try {
+						const contentArray = chunk.data?.data?.output["chat_history"];
+						const content = JSON.stringify(contentArray[contentArray.length - 1]);
+						parseThinkingAction(content);
+					} catch (error) {
+						console.error("Error parsing event content:", error);
+					}
+				}
 			}
 		}
 	}
 
 	const handleFeedback = async () => {
-		// TODO: fix this part
-		const feedback = prompt('Enter your feedback:') ?? ''
+		// const feedback = prompt('Enter your feedback:') ?? ''
+		setInputBoxColor('red')
+		const feedback = inputBox
 
 		try {
 			const state = await client.threads.getState(thread.thread_id)
@@ -79,16 +200,20 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 			console.error('Error updating feedback:', error)
 		}
 	}
-
+	setInputBoxColor('#D4D5D2')
 	await processStream(jockeyInput) // initial
 	while (true) {
 		// break if we encounter reflect
 		const state = await client.threads.getState(thread.thread_id)
-		if ((state.values as {next_worker: string}).next_worker === 'reflect') break
+		if ((state.values as {next_worker: string}).next_worker === 'video-search') break
 
 		await handleFeedback()
 		await processStream(null)
 	}
+	    dispatch({
+        type: ActionType.CLEAR_STATUS_MESSAGES,
+        payload: [],
+      });
 }
 
 //   dispatch({

@@ -16,7 +16,7 @@ const ChatMessagesList: React.FC<ChatMessagesListProps> = ({arrayMessages, handl
 
   return (
     <ErrorBoundary fallback={<div>Something went wrong. Please refresh or try again later.</div>}>
-      <div ref={chatContainerRef} className={'flex flex-col gap-[20px] overflow-y-auto max-h-50vh pb-[80px]w-[680px]'}>
+      <div ref={chatContainerRef} className={'flex flex-col gap-[20px] overflow-y-auto max-h-50vh pb-[80px] w-[680px]'}>
         { arrayMessages?.map((message, index) => (
             <ChatMessagesItem
               message={message}

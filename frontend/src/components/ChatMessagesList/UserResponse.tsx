@@ -2,14 +2,15 @@
 import React from 'react';
 import { ReactComponent as UserIcon } from '../../icons/user.svg';
 import Loading from '../Loading/Loading';
+import ThinkingComponent from '../ThinkingComponent/ThinkingComponent';
 import { QuestionMessage } from '../../types/messageTypes';
 
 interface UserResponseProps {
-  message: string;
+  message: QuestionMessage;
   isUserMessage: boolean;
   statusMessages: string[]
   loading: boolean; 
-  lastElement: boolean
+  lastElement: boolean;
 }
 const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, statusMessages, loading, lastElement }) => {
     return (
@@ -23,17 +24,23 @@ const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, sta
               </div>
         </div>
         <div className={`ml-[40px] mr-[194px] whitespace-pre-line ${isUserMessage ? 'userBubble' : 'aiBubble'}`}>
-               {message}
+               {message.text}
          </div>
          <div className={`flex flex-row gap-2 items-center mt-3 relative `}>
-            { lastElement && loading &&
+            {/* { lastElement && loading &&
               <Loading/>
-            }
+            } */}
             { lastElement && statusMessages.map((statusMessage, index) => (
               <p key={index} className={'text-[#6F706D] font-aeonik text-[12px] absolute left-[40px]'}>
                 {statusMessage}
               </p>
             ))}
+           {lastElement && loading && (
+              <ThinkingComponent 
+                searchTerm={message?.asrTest} 
+                isLoading={loading}
+              />
+          )}
          </div>
       </div>)
 };

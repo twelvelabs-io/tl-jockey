@@ -56,10 +56,26 @@ function reducer (state: State, action: Action): State {
     case ActionType.SET_STATUS_MESSAGES:
       return { ...state, statusMessages: [...state.statusMessages, ...action.payload] }
     case ActionType.CHANGE_ARRAY_MESSAGE:
-      const newArrayMessages = [...state.arrayMessages];
-      const newMessage = action.payload[0]; // Assuming payload is an array, extract the first element
-      newArrayMessages[newArrayMessages.length - 1] = newMessage; // Change only the last element
-      return { ...state, arrayMessages: newArrayMessages }
+      const { index, message } = action.payload; // Destructure index and message from payload
+      const updatedArrayMessages = [...state.arrayMessages];
+      if (index >= 0 && index < updatedArrayMessages.length) {
+        updatedArrayMessages[index] = message; // Update the specific element
+      }
+      return { ...state, arrayMessages: updatedArrayMessages };
+    case ActionType.UPDATE_LAST_USER_MESSAGE:
+        const messages = [...state.arrayMessages];
+        // Find the last message where sender is 'user'
+        const lastUserIndex = messages.map(msg => msg.sender).lastIndexOf('user');
+        
+        if (lastUserIndex >= 0) {
+          // Update only the specified fields from the payload
+          messages[lastUserIndex] = {
+            ...messages[lastUserIndex],
+            ...action.payload
+          };
+          return { ...state, arrayMessages: messages };
+        }
+        return state;
     case ActionType.REMOVE_INITIAL_MESSAGE:
         if (state.arrayMessages.length > 0 && state.arrayMessages[0].sender === "initial") {
           const newArrayMessages = [...state.arrayMessages];

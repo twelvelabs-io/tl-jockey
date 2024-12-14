@@ -42,3 +42,26 @@ import keys from "./keys";
     });
   }
 
+  export async function getOpenAISummary(jsonData) {
+    const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+    const openAIEndpoint = 'https://api.openai.com/v1/chat/completions';
+  
+    try {
+      const response = await axios.post(openAIEndpoint, {
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: `Provide a concise summary of the following: ${jsonData}. In the output don't refer to JSON at all` }],
+        max_tokens: 100,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openAIKey}`,
+        },
+      });
+  
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      console.error('Error fetching summary from OpenAI:', error);
+      throw error;
+    }
+  }
+

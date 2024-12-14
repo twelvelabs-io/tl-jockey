@@ -4,15 +4,29 @@ export interface Message {
     link?: string;
     linkText?: string;
   }
+
+export interface VideoInfo {
+    url: string;
+  }
   
-export interface QuestionMessage extends Message {
+  export interface QuestionMessage extends Message {
     twelveText?: string;
     asrTest?: string;
     lameText?: string;
     question: string;
-    toolsData?: ToolsData []
-    handleShow: (index: number | undefined, question: string) => void
-  }
+    toolsData: {
+        end: number;
+        start: number;
+        thumbnail_url: string | undefined;
+        video_url: string;
+        metadata: {
+            type: string;
+            text: string;
+        }[];
+        video_title: string;
+    }[];
+    handleShow: (index: number | undefined, question: string) => void;
+}
 
 export interface PanelVideos {
     hls: {
