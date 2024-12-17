@@ -58,7 +58,6 @@ session_id = uuid.uuid4()
 # Create the thread configuration
 thread: RunnableConfig = {
     "configurable": {"thread_id": session_id, "stream_mode": ["updates", "events"]},
-    "callbacks": [handler],  # Use the handler directly instead of manager.handlers
-    "tags": ["jockey"],  # Add some tags for better event filtering
-    "metadata": {"source": "jockey"},  # Add metadata for better event tracking
+    "tags": ["jockey"],
+    "metadata": {"source": "jockey"},
 }
