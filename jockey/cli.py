@@ -10,7 +10,6 @@ import asyncio
 import sys
 from typing import List
 from langchain_core.runnables.schema import StreamEvent
-from jockey.jockey_graph import FeedbackEntry
 from jockey.thread import session_id, thread
 
 # from jockey.video_utils import download_m3u8_videos
@@ -22,7 +21,8 @@ async def run_jockey_terminal():
     console = Console()
 
     try:
-        while True:  # Outer loop for new chat messages
+        # Outer loop for new chat messages
+        while True:
             # Get initial user input
             console.print()
             user_input = console.input("[green]👤 Chat: ")
@@ -32,16 +32,15 @@ async def run_jockey_terminal():
                 # return
 
             # Prepare input for processing
-            messages = [HumanMessage(content=user_input, name="user")]
-            clips_from_search = {}
             jockey_input = {
-                "chat_history": messages,
+                "chat_history": [HumanMessage(content=user_input, name="user")],
                 "made_plan": False,
                 "next_worker": None,
                 "active_plan": None,
                 "tool_call": None,
-                "clips_from_search": clips_from_search,
+                "clips_from_search": {},
                 "relevant_clip_keys": [],
+                "index_id": None,
             }
 
             # Process until we need human input
@@ -68,7 +67,6 @@ async def run_jockey_terminal():
 def run_jockey_server():
     """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
     We use the default version of Jockey for this.
-
     https://langchain-ai.github.io/langgraph/cloud/reference/cli/
     """
     jockey_package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
