@@ -2,69 +2,62 @@ import {Client, ThreadState} from '@langchain/langgraph-sdk'
 import {BaseMessage, HumanMessage, MessageFieldWithRole, ToolMessage} from '@langchain/core/messages'
 import _ from 'lodash'
 import process from 'process'
-import { getOpenAISummary } from './hooks'
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
-interface FeedbackEntry {
-	node_content: string
-	node: string
-	feedback: string
+import fs from 'fs'
+import {StreamEvent} from '@langchain/core/dist/tracers/event_stream'
+interface Clip {
+	score: number
+	start: number
+	end: number
+	metadata: Array<{type: string; text?: string}>
+	video_id: string
+	confidence: string
+	thumbnail_url: string
+	modules?: Array<{type: string; confidence: string}>
+	video_url: string
+	video_title: string
 }
 
-interface VideoSearchResult {
-	score: number;
-	start: number;
-	end: number;
-	metadata: Array<{
-	  type: string;
-	  text?: string;
-	}>;
-	video_id: string;
-	confidence: string;
-	thumbnail_url: string;
-	modules: Array<{
-	  type: string;
-	  confidence: string;
-	}>;
-	video_url: string;
-	video_title: string;
-  }
+interface PlannerResponse {
+	route_to_node: 'planner' | 'video-search' | 'video-text-generation' | 'video-editing' | 'reflect'
+	tool_call: 'simple-video-search' | 'combine-clips' | 'none'
+	plan: string
+	index_id: string
+	clip_keys: string[]
+}
 
-  interface ToolCallOutput {
-	name: string;
-	args: {
-	  query: string;
-	  index_id: string;
-	  top_n: number;
-	  group_by: string;
-	  search_options: string[];
-	};
-	id: string;
-	type: string;
-	output: string; 
-  }
+// same as backend's PlannerResponse type
+interface VideoSearchInput {
+	query: string
+	index_id: string
+	top_n: number
+	group_by: string
+	search_options: Array<'visual' | 'conversation' | 'text_in_video' | 'logo'>
+	video_filter: string | null
+}
 
 interface JockeyState {
+	[key: string]: any // Add this line
 	next_worker: string | null
 	chat_history: BaseMessage[] | BaseMessage | MessageFieldWithRole[] | MessageFieldWithRole //see  python's Annotated[Sequence[BaseMessage], add_messages]
 	made_plan: boolean
 	active_plan: string | BaseMessage | null
-	feedback_history: FeedbackEntry[]
+	clips_from_search: Record<string, Clip[]>
+	relevant_clip_keys: string[]
+	tool_call: string | null
+	index_id: string
 }
 
 export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any, setInputBoxColor: any) => {
 	dispatch({type: ActionType.SET_LOADING, payload: true})
 
-	const client = new Client({
-		apiUrl: process.env.REACT_APP_LANGGRAPH_API_URL,
-	})
-	const indexID = process.env.REACT_APP_API_INDEX_ID
+	const client = new Client({apiUrl: process.env.REACT_APP_LANGGRAPH_API_URL})
 	const assistants = await client.assistants.search()
 	const assistant = assistants[0]
 	const thread = await client.threads.create()
-	const runs = await client.runs.list(thread.thread_id)
+	// const indexID = process.env.REACT_APP_API_INDEX_ID
+	// const runs = await client.runs.list(thread.thread_id)
 
-	const jockeyInput: JockeyState = {
-		next_worker: null,
+	const initJockeyInput: JockeyState = {
 		chat_history: [
 			{
 				role: 'human',
@@ -73,147 +66,124 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 			},
 		],
 		made_plan: false,
+		next_worker: null,
 		active_plan: null,
-		feedback_history: [],
+		clips_from_search: {} as Record<string, Clip[]>,
+		relevant_clip_keys: [] as string[],
+		tool_call: null,
+		index_id: null,
 	}
 
-	function parseJsonString(jsonString: any): ToolMessage {
+	function parseSearchResults(rawData: StreamEvent) {
+		const output = rawData.data.output
+		const parsedOutput = JSON.parse(output) as Clip[]
+
+		// const toolMessage = new ToolMessage({
+		// 	content: JSON.stringify(output.clips_from_search),
+		// 	tool_call_id: latestChatId,
+		// 	name: 'video-search',
+		// 	additional_kwargs: {videoResults: clips},
+		// })
+		// // set the array messages
+		// dispatch({
+		// 	type: ActionType.SET_ARRAY_MESSAGES,
+		// 	payload: [
+		// 		{
+		// 			sender: 'ai',
+		// 			text: toolMessage.content,
+		// 			linkText: 'details',
+		// 			link: '', // set this in "events"
+		// 			twelveText: toolMessage.content,
+		// 			asrTest: '',
+		// 			lameText: '',
+		// 			question: inputBox,
+		// 			toolsData: toolMessage.additional_kwargs.videoResults,
+		// 		},
+		// 	],
+		// })
+
+		// // set loading to false
+		// dispatch({
+		// 	type: ActionType.SET_LOADING,
+		// 	payload: false,
+		// })
+	}
+
+	function parseSearchParams(rawData: StreamEvent) {
+		const input = rawData.data.input as VideoSearchInput
+
 		try {
-		  const jsonObject = JSON.parse(jsonString);
-		  const contentArray = JSON.parse(jsonObject.content) as ToolCallOutput[];
-		  const videoResults = JSON.parse(contentArray[0].output) as VideoSearchResult[];
-		  
-		  return new ToolMessage({
-			content: JSON.stringify(videoResults),
-			tool_call_id: jsonObject.id,
-			name: jsonObject.name,
-			additional_kwargs: {
-			  videoResults: videoResults
-			}
-		  });
+			dispatch({
+				type: ActionType.UPDATE_LAST_USER_MESSAGE,
+				payload: {
+					asrTest: input.query,
+				},
+			})
 		} catch (error) {
-		  console.error("Error decoding JSON:", error);
-		  return new ToolMessage({
-			content: "Error parsing content",
-			tool_call_id: "error",
-			name: "error",
-			additional_kwargs: {}
-		  });
+			console.error('Error decoding JSON:', error)
+			return new ToolMessage({
+				content: 'Error parsing content',
+				tool_call_id: 'error',
+				name: 'error',
+				additional_kwargs: {},
+			})
 		}
-	  }
+	}
 
-	  function parseThinkingAction(jsonString: any) {
-		try {
-		  const jsonObject = JSON.parse(jsonString);
-		  const contentArray = JSON.parse(jsonObject.content) as ToolCallOutput[];
-		  const query = contentArray[0].args.query;
-		  console.log("Thinking action:", query);
-		  
-		  dispatch({
-			type: ActionType.UPDATE_LAST_USER_MESSAGE,
-			payload: {
-			  asrTest: query
-			}
-		  });
-
-		} catch (error) {
-		  console.error("Error decoding JSON:", error);
-		  return new ToolMessage({
-			content: "Error parsing content",
-			tool_call_id: "error",
-			name: "error",
-			additional_kwargs: {}
-		  });
-		}
-	  }
-
-	const processStream = async (input: JockeyState | null) => {
+	const processStream = async (input: JockeyState) => {
 		let accumulatedTokens = ''
 
 		for await (const chunk of client.runs.stream(thread.thread_id, assistant.assistant_id, {
-			input: input as any,
+			input: input as JockeyState,
 			streamMode: ['updates', 'events'],
-			interruptBefore: ['ask_human'],
 		})) {
-			if (chunk.event === 'updates') {
-				// console.log("chunk.data:", chunk.data)
-				const videoSearchData = chunk.data["video-search"];
-				if (videoSearchData && videoSearchData["chat_history"]) {
-					const contentArray = videoSearchData["chat_history"];
-					const content = JSON.stringify(contentArray[contentArray.length - 1]);
-					const cleanedJson = parseJsonString(content);
-					console.log("cleanedJson:", cleanedJson);
-					const summary = await getOpenAISummary(cleanedJson.content);
-					if (cleanedJson) {
-						dispatch({
-							type: ActionType.SET_ARRAY_MESSAGES,
-							payload: [
-								{
-									sender: 'ai',
-									text: cleanedJson.content,
-									link: summary,
-									linkText: "details",
-									twelveText: cleanedJson.content,
-									asrTest: '',
-									lameText: '',
-									question: inputBox,
-									toolsData: cleanedJson.additional_kwargs.videoResults
-								}
-							]
-						});
-						dispatch({
-							type: ActionType.SET_LOADING,
-							payload: false
-						});
-					}
-				} else {
-					console.error("video-search data or chat_history is undefined");
-				}
-			}
+			// console.log(JSON.stringify(chunk, null, 2))
+			// parse static updates
+			if (chunk.data.event === 'on_tool_start') parseSearchParams(chunk.data as StreamEvent)
+			if (chunk.data.event === 'on_tool_end') parseSearchResults(chunk.data as StreamEvent)
+
+			// parse streaming updates
 			if (chunk.event === 'events') {
-				if (chunk.data?.data?.output?.chat_history) {
-					try {
-						const contentArray = chunk.data?.data?.output["chat_history"];
-						const content = JSON.stringify(contentArray[contentArray.length - 1]);
-						parseThinkingAction(content);
-					} catch (error) {
-						console.error("Error parsing event content:", error);
-					}
+				if (chunk.data?.metadata?.langgraph_node === 'reflect' && chunk.data.event === 'on_chat_model_stream') {
+					const token = chunk.data?.data?.chunk?.content
+					console.log('token:', token)
+					// TODO: stream token back to the frontend, and handle token states
+					// dispatch({type: ActionType.SET_ARRAY_MESSAGES, payload: [{sender: 'ai', text: token, question: inputBox}]})
+					// const summary = 'summary'
+					// if (cleanedJson) {
+					// 	dispatch({
+					// 		type: ActionType.SET_ARRAY_MESSAGES,
+					// 		payload: [
+					// 			{
+					// 				sender: 'ai',
+					// 				text: cleanedJson.content,
+					// 				link: summary,
+					// 				linkText: 'details',
+					// 				twelveText: cleanedJson.content,
+					// 				asrTest: '',
+					// 				lameText: '',
+					// 				question: inputBox,
+					// 				toolsData: cleanedJson.additional_kwargs.videoResults,
+					// 			},
+					// 		],
+					// 	})
+					// 	dispatch({
+					// 		type: ActionType.SET_LOADING,
+					// 		payload: false,
+					// 	})
+					// }
 				}
 			}
 		}
 	}
 
-	const handleFeedback = async () => {
-		// const feedback = prompt('Enter your feedback:') ?? ''
-		setInputBoxColor('red')
-		const feedback = inputBox
-
-		try {
-			const state = await client.threads.getState(thread.thread_id)
-			const feedbackHistory = (state.values as {feedback_history: FeedbackEntry[]}).feedback_history
-			const updatedHistory = [...feedbackHistory.slice(0, -1), {...feedbackHistory[feedbackHistory.length - 1], feedback}]
-			await client.threads.updateState(thread.thread_id, {
-				values: {feedback_history: updatedHistory},
-			})
-		} catch (error) {
-			console.error('Error updating feedback:', error)
-		}
-	}
 	setInputBoxColor('#D4D5D2')
-	await processStream(jockeyInput) // initial
-	while (true) {
-		// break if we encounter reflect
-		const state = await client.threads.getState(thread.thread_id)
-		if ((state.values as {next_worker: string}).next_worker === 'video-search') break
-
-		await handleFeedback()
-		await processStream(null)
-	}
-	    dispatch({
-        type: ActionType.CLEAR_STATUS_MESSAGES,
-        payload: [],
-      });
+	// TODO: do we need to pass a trycatch here to handle errors/interrupts?
+	await processStream(initJockeyInput) // initial
+	dispatch({
+		type: ActionType.CLEAR_STATUS_MESSAGES,
+		payload: [],
+	})
 }
 
 //   dispatch({

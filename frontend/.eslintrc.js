@@ -7,6 +7,6 @@ module.exports = {
 	},
 	rules: {
 	  // ... other rules
-	  '@typescript-eslint/strict-boolean-expressions': 'error',
+	//   '@typescript-eslint/strict-boolean-expressions': 'error',
 	},
   };

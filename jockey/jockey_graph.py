@@ -5,10 +5,9 @@ from typing import Annotated, Union, Sequence, Dict, List, Literal, Any
 from typing_extensions import TypedDict
 from langchain_openai.chat_models.base import ChatOpenAI
 from langchain_openai.chat_models.azure import AzureChatOpenAI
-from langchain.output_parsers.openai_functions import JsonOutputFunctionsParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, FunctionMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.runnables import Runnable
+from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import AgentExecutor
 from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.memory import MemorySaver
@@ -23,7 +22,7 @@ from openai import OpenAI
 from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
 from jockey.stirrups.video_search import MarengoSearchInput
-from jockey.stirrups.video_editing import CombineClipsInput, SimplifiedCombineClipsInput, Clip
+from jockey.stirrups.video_editing import SimplifiedCombineClipsInput, Clip
 import copy
 
 
@@ -126,12 +125,6 @@ class PlannerResponse(BaseModel):
     )
 
 
-class FeedbackEntry(TypedDict):
-    node_content: str
-    node: str
-    feedback: str
-
-
 class JockeyState(TypedDict):
     """Used to track the state between nodes in the graph."""
 
@@ -140,9 +133,8 @@ class JockeyState(TypedDict):
     made_plan: bool = False
     active_plan: Union[str, HumanMessage, None]
     tool_call: Union[str, None]
-    feedback_history: List[FeedbackEntry]  # earlist [] latest
     clips_from_search: Annotated[Dict[str, List[Clip]], add_clips]
-    index_id: Annotated[str, lambda left, right: right if right else left]  # for now let's assume per chat we only have 1 index_id
+    index_id: Union[Annotated[str, lambda left, right: right or left], None]  # for now let's assume per chat we only have 1 index_id
     relevant_clip_keys: List[str]
 
 
@@ -273,6 +265,7 @@ class Jockey(StateGraph):
                 {"role": "user", "content": dedent(f"<chat_history>{state['chat_history']}</chat_history>")},
             ],
             response_format=SupervisorResponse,
+            temperature=0,
         )
         supervisor_response: SupervisorResponse = completion.choices[0].message.parsed
         return {"next_worker": supervisor_response.route_to_node}
@@ -310,7 +303,7 @@ class Jockey(StateGraph):
                 {"role": "user", "content": dedent(f"<latest_user_message>{latest_user_message}</latest_user_message>")},
                 {"role": "user", "content": dedent(f"<clips_from_search>{clips_from_search_copy}</clips_from_search>")},
             ],
-            temperature=0,
+            temperature=0.7,
             response_format=PlannerResponse,
         )
         planner_response: PlannerResponse = completion.choices[0].message.parsed
@@ -334,7 +327,7 @@ class Jockey(StateGraph):
 
         return {
             "chat_history": [lc_planner_response],
-            "active_plan": lc_planner_response,
+            "active_plan": planner_response.plan,
             "index_id": planner_response.index_id if not state["index_id"] else state["index_id"],
             "next_worker": planner_response.route_to_node,
             "tool_call": planner_response.tool_call if planner_response.tool_call != "none" else None,
@@ -366,13 +359,11 @@ class Jockey(StateGraph):
                 model=OPENAI_MODELS["worker"],
                 messages=[
                     {"role": "system", "content": dedent(self.instructor_prompt)},
-                    {
-                        "role": "user",
-                        "content": dedent(f"<active_plan>{state['active_plan'].content}\nnode{state['active_plan'].name}</active_plan>"),
-                    },
+                    {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
                     {"role": "user", "content": dedent(f"<tool_call>{state['tool_call']}</tool_call>")},
                 ],
                 response_format=worker_schemas[state["next_worker"]],
+                temperature=0.7,
             )
 
             worker_inputs: Union[MarengoSearchInput, SimplifiedCombineClipsInput] = completion.choices[0].message.parsed
@@ -382,7 +373,9 @@ class Jockey(StateGraph):
 
         # let's make a call to the stirrup to execute the tool call
         ai_message = None
-        tool_call_id = f"call_{os.urandom(12).hex()}"
+
+        # get the id of the chat_history
+        tool_call_id = state["chat_history"][-1].id
 
         # craft the args for the tool call
         args = {}
@@ -405,24 +398,33 @@ class Jockey(StateGraph):
                     }
                 ],
             )
-
         try:
             worker_response = await worker_to_stirrup[state["next_worker"]]._call_tools(ai_message)
         except Exception as error:
             print(f"[DEBUG] Error in worker_node: {error}")
             raise error
 
+        def fix_escaped_unicode(data) -> str:
+            if isinstance(data, str):
+                return data.encode("utf-8").decode("unicode_escape")
+            elif isinstance(data, list):
+                return [fix_escaped_unicode(item) for item in data]
+            elif isinstance(data, dict):
+                return {key: fix_escaped_unicode(value) for key, value in data.items()}
+            return str(data)
+
+        worker_response_str = fix_escaped_unicode(worker_response)
+
         # add clips to state['clips_from_search']
         clips_from_search = state.get("clips_from_search", {})
         if state["next_worker"] == "video-search":
             clips_from_search[tool_call_id] = [Clip(**clip) for clip in json.loads(worker_response[0]["output"])]
 
-        # state["clips_from_search"] = state["clips_from_search"] if state["next_worker"] == "video-search" else None
-        worker_response_json = json.dumps(worker_response, indent=2, default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o))
-        worker_response_msg = FunctionMessage(name=f"{state['next_worker']}", content=worker_response_json)
+        # convert worker_response_str to a BaseMessage
+        worker_response_str = ToolMessage(content=worker_response_str, tool_call_id=tool_call_id, name=state["next_worker"], additional_kwargs={})
 
         return {
-            "chat_history": [worker_response_msg],
+            "chat_history": [worker_response_str],
             "active_plan": state["active_plan"],
             "next_worker": "reflect",
             "clips_from_search": clips_from_search,
@@ -441,11 +443,13 @@ class Jockey(StateGraph):
             ("system", self.reflect_prompt),
         ])
         reflect_chain = reflect_prompt | self.reflect_llm
-        reflect_response = await reflect_chain.ainvoke({
-            "active_plan": state["active_plan"] if state["active_plan"] else state["chat_history"][-1].content,
-            "tool_call": state["tool_call"],
-            "chat_history": state["chat_history"],
-        })
+        reflect_response = await reflect_chain.ainvoke(
+            {
+                "active_plan": state["active_plan"] if state["active_plan"] else state["chat_history"][-1].content,
+                "tool_call": state["tool_call"],
+                "chat_history": state["chat_history"],
+            },
+        )
         return {
             "chat_history": [reflect_response],
             "active_plan": None,
