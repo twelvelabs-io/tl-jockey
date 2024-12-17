@@ -44,7 +44,7 @@ elif os.environ["LLM_PROVIDER"] == "OPENAI":
     planner_llm = ChatOpenAI(model=OPENAI_MODELS["planner"], streaming=True, temperature=0, tags=["planner"])
     supervisor_llm = ChatOpenAI(model=OPENAI_MODELS["supervisor"], streaming=True, temperature=0, tags=["supervisor"])
     worker_llm = ChatOpenAI(model=OPENAI_MODELS["worker"], streaming=True, temperature=0, tags=["worker"])
-    reflect_llm = ChatOpenAI(model=OPENAI_MODELS["reflect"], streaming=True, temperature=0, tags=["reflect"])
+    reflect_llm = ChatOpenAI(model=OPENAI_MODELS["reflect"], streaming=True, temperature=0.7, tags=["reflect"])
 else:
     print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
@@ -66,7 +66,7 @@ instructor_prompt = prompts["instructor_prompt"]
 reflect_prompt = prompts["reflect_prompt"]
 
 # Build and compile the Jockey graph
-jockey: CompiledStateGraph = build_jockey_graph(
+jockey = build_jockey_graph(
     planner_prompt=planner_prompt,
     planner_llm=planner_llm,
     supervisor_prompt=supervisor_prompt,
