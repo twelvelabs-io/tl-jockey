@@ -32,8 +32,18 @@ def get_video_metadata(index_id: str, video_id: str) -> dict:
 
 
 def download_video(video_id: str, index_id: str, start: float, end: float) -> str:
-    """Download a video for a given video in a given index and get the filepath.
-    Should only be used when the user explicitly requests video editing functionalities."""
+    """
+    Download a video for a given video in a given index and its start and end times.
+
+    Args:
+        video_id: The ID of the video to download.
+        index_id: The ID of the index to download the video from.
+        start: The start time of the video to download.
+        end: The end time of the video to download.
+
+    Returns:
+        The filepath of the downloaded video.
+    """
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
 
     video_url = f"https://api.twelvelabs.io/v1.2/indexes/{index_id}/videos/{video_id}"
@@ -49,7 +59,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     if os.path.isdir(video_dir) is False:
         os.mkdir(video_dir)
 
-    video_filename = f"{video_id}_{start}_{end}.mp4"
+    video_filename = f"{video_id}_{start:.3f}-{end:.3f}.mp4"
     video_path = os.path.join(video_dir, video_filename)
 
     if os.path.isfile(video_path) is False:

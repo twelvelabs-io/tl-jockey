@@ -1,15 +1,18 @@
-import requests
 import json
-import urllib
 import os
-from pydantic import BaseModel, Field
-from langchain.tools import tool
-from typing import Dict, List, Union, Literal
+import urllib
 from enum import Enum
-from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction, create_jockey_error_event
-from jockey.video_utils import get_video_metadata
+from typing import Dict, List, Literal, Union
+
+import requests
+from langchain.tools import tool
+from pydantic import BaseModel, Field
+
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
+from jockey.spaces.spaces import Spaces
+from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction
 from jockey.stirrups.stirrup import Stirrup
+from jockey.video_utils import get_video_metadata, download_video
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
@@ -118,13 +121,32 @@ async def _base_video_search(
     return top_n_results
 
 
-def extract_modalities(search_results):
-    modalities = set()
-    for result in search_results:
-        modules = result.get("modules", [])
-        for module in modules:
-            modalities.add(module.get("type"))
-    return list(modalities)
+# def extract_modalities(search_results):
+#     modalities = set()
+#     for result in search_results:
+#         modules = result.get("modules", [])
+#         for module in modules:
+#             modalities.add(module.get("type"))
+#     return list(modalities)
+
+
+def get_filename(result: Dict) -> str:
+    """
+    Creates a standardized filename from a video title and optional timestamp range.
+
+    Args:
+        result: The result from the video search.
+
+    Returns:
+        The filename of the video clip.
+        format: <video_id>_<start_time>_<end_time>.mp4
+    """
+
+    video_id = result["video_id"]
+    start_time = result["start"]
+    end_time = result["end"]
+
+    return f"{video_id}_{start_time:.3f}-{end_time:.3f}.mp4"
 
 
 @tool("simple-video-search", args_schema=MarengoSearchInput, return_direct=True)
@@ -137,36 +159,44 @@ async def simple_video_search(
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     try:
-        search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+        search_results_str = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+        search_results = json.loads(search_results_str)
 
-        if isinstance(search_results, list):
-            try:
-                available_modalities = extract_modalities(search_results)
-                if not available_modalities:
-                    print("[WARNING] No modalities were found in search results")
-                    return {"success": False, "results": search_results, "available_modalities": available_modalities, "error": "No modalities found"}
-                return {"success": True, "results": search_results, "available_modalities": available_modalities}
-            except Exception as error:
-                print(f"[ERROR] Failed to extract modalities: {str(error)}")
-                jockey_error = JockeyError.create(
-                    node=NodeType.WORKER,
-                    error_type=ErrorType.SEARCH,
-                    function_name=WorkerFunction.VIDEO_SEARCH,
-                    details=f"Error: {str(error)}",
-                )
-                raise jockey_error
-        else:
-            return search_results
+        # Process video clips
+        spaces = Spaces()
+        print("[DEBUG] Processing video-search into clips")
+        video_urls = []  # temp for debugging
+        for result in search_results:
+            # this filename is the same as what download_video returns
+            clip_filename = get_filename(result)
+
+            # then check database for existing clip
+            clip_exists = await spaces.check_clip_exists_in_spaces(
+                os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id
+            )  # TODO: unstub the os.environ and dynamically grab user id
+
+            if clip_exists:
+                print(f"[DEBUG] Clip {clip_filename} already exists in space.")
+                video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
+                video_urls.append(video_url)
+                continue
+
+            # download and then upload
+            if "start" in result and "end" in result:
+                video_path = download_video(result["video_id"], index_id, result["start"], result["end"])
+                print(f"[DEBUG] Downloaded video clip: {video_path}")
+                print(f"[DEBUG] clip_filename: {clip_filename}")
+                print(f"[DEBUG] os.path.basename(video_path): {os.path.basename(video_path)}")
+                assert clip_filename == os.path.basename(video_path)
+                await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, video_path)
+
+        print(f"[DEBUG] video_urls: {video_urls}")
+
+        return {"success": True, "results": search_results}
 
     except Exception as error:
         print(f"[ERROR] Search operation failed: {str(error)}")
-        jockey_error = JockeyError.create(
-            node=NodeType.WORKER,
-            error_type=ErrorType.SEARCH,
-            function_name=WorkerFunction.VIDEO_SEARCH,
-            details=f"Error: {str(error)}",
-        )
-        raise jockey_error
+        raise error
 
 
 # Construct a valid worker for a Jockey instance.

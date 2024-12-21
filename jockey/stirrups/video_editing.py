@@ -76,8 +76,7 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
     # """Combine or edit multiple clips together based on their start and end times and video IDs.
     # The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
 
-    # Add a random UUID to the output filename to avoid overwriting existing files
-    output_filename += f"_{uuid.uuid4().hex}.mp4"
+    # Add a random UUID before the .mp4 extension to the output filename to avoid overwriting existing files
 
     try:
         # Input validation first
@@ -117,6 +116,7 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
             output_filepath, vcodec="libx264", acodec="libmp3lame", video_bitrate="1M", audio_bitrate="192k"
         ).overwrite_output().run()
 
+        output_filepath = f"{uuid.uuid4().hex}_{output_filepath}"
         return output_filepath
 
     except JockeyError:

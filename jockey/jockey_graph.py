@@ -418,7 +418,7 @@ class Jockey(StateGraph):
         # add clips to state['clips_from_search']
         clips_from_search = state.get("clips_from_search", {})
         if state["next_worker"] == "video-search":
-            clips_from_search[tool_call_id] = [Clip(**clip) for clip in json.loads(worker_response[0]["output"])]
+            clips_from_search[tool_call_id] = [Clip(**clip) for clip in worker_response[0]["output"]["results"]]
 
         # convert worker_response_str to a BaseMessage
         worker_response_str = ToolMessage(content=worker_response_str, tool_call_id=tool_call_id, name=state["next_worker"], additional_kwargs={})
