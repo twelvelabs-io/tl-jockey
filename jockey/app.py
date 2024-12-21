@@ -44,7 +44,7 @@ elif os.environ["LLM_PROVIDER"] == "OPENAI":
     planner_llm = ChatOpenAI(model=OPENAI_MODELS["planner"], streaming=True, temperature=0, tags=["planner"])
     supervisor_llm = ChatOpenAI(model=OPENAI_MODELS["supervisor"], streaming=True, temperature=0, tags=["supervisor"])
     worker_llm = ChatOpenAI(model=OPENAI_MODELS["worker"], streaming=True, temperature=0, tags=["worker"])
-    reflect_llm = ChatOpenAI(model=OPENAI_MODELS["reflect"], streaming=True, temperature=0.7, tags=["reflect"], max_tokens=50)
+    reflect_llm = ChatOpenAI(model=OPENAI_MODELS["reflect"], streaming=True, temperature=0.35, tags=["reflect"], max_tokens=50)
 else:
     print(f"LLM_PROVIDER environment variable is incorrect. Must be one of: [AZURE, OPENAI] but got {os.environ['LLM_PROVIDER']}")
     sys.exit("Incorrect LLM_PROVIDER environment variable.")
