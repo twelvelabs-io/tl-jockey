@@ -5,7 +5,7 @@ interface ThumbnailProps {
   thumbnailUrl: string | undefined;
   onClick: () => void;
   duration: string;
-  oneThumbnail?: boolean; // Marking it as optional
+  oneThumbnail?: boolean; 
   text: string
 }
 

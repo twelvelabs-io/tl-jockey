@@ -7,7 +7,7 @@ interface StreamingTextEffectProps {
 
 export const StreamingTextEffect:React.FC<StreamingTextEffectProps> = ({ text }) => {
   const [displayText, setDisplayText] = useState('');
-  const delay = 50; // milliseconds between each character
+  const delay = 50; 
 
   useEffect(() => {
     let currentText = '';

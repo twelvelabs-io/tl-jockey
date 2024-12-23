@@ -60,33 +60,6 @@ export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({urlsFrom
     const actualIndex = showAllVideos ? index : Math.min(index, 2);
     handleVideoClick(actualIndex);
   };
-  
-
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: "easeOut"
-      }
-    }
-  };
-
 
   return (
     <div className="flex flex-col gap-[12px]">

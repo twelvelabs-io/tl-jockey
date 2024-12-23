@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React from 'react';
 import { ReactComponent as UserIcon } from '../../icons/user.svg';
-import Loading from '../Loading/Loading';
 import ThinkingComponent from '../ThinkingComponent/ThinkingComponent';
 import { QuestionMessage } from '../../types/messageTypes';
 

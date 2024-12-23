@@ -12,9 +12,7 @@ export const AnimatedMessage: React.FC<AnimatedMessageProps> = ({ text, classNam
         <span
           key={index}
           style={{
-            // animation: `fadeIn 0.01s ease-in-out forwards`,
             animationDelay: `${index * 0.01}s`,
-            // opacity: 0,
           }}
         >
           {char}
