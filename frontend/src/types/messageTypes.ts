@@ -26,6 +26,9 @@ export interface VideoInfo {
         video_title: string;
     }[];
     handleShow: (index: number | undefined, question: string) => void;
+    messageId?: number;
+    tokenSequence?: number;
+    isStreaming?: boolean;
 }
 
 export interface PanelVideos {

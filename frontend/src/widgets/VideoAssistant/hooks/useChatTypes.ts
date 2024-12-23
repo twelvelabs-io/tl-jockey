@@ -21,7 +21,10 @@ export enum ActionType {
     SET_PANEL_ARRAY_MESSAGES = 'SET_PANEL_ARRAY_MESSAGES',
     SET_MODAL_TYPE = 'SET_MODAL_TYPE',
     CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE = 'CLEAR_ALL_BUT_FIRST_ARRAY_MESSAGE',
-    UPDATE_LAST_USER_MESSAGE = 'UPDATE_LAST_USER_MESSAGE' 
+    UPDATE_LAST_USER_MESSAGE = 'UPDATE_LAST_USER_MESSAGE',
+    STREAM_TOKEN = 'STREAM_TOKEN',
+    SET_LAST_AI_MESSAGE_STREAMING ='SET_LAST_AI_MESSAGE_STREAMING',
+    SET_ERROR_MESSAGE = 'SET_ERROR_MESSAGE'
   }
   
   export interface State {
@@ -41,7 +44,8 @@ export enum ActionType {
       autofillApi: false,
       showAutofillQuestions: false,
     },
-    panelVideosList : PanelVideos []
+    panelVideosList : PanelVideos [],
+    errorMessage: string
   }
   
   export type Action =

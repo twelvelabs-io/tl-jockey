@@ -11,7 +11,6 @@ interface useVideoElementEffectProps {
 export const useVideoElementEffect = ({ videoRef, startTime, endTime, videoUrl, showModal }: useVideoElementEffectProps) => {
     useEffect(() => {
       const videoElement = videoRef.current;
-  
       const onLoadedMetadata = () => {
         if (startTime && videoElement) {
           videoElement.currentTime = startTime;
@@ -33,7 +32,7 @@ export const useVideoElementEffect = ({ videoRef, startTime, endTime, videoUrl, 
           videoElement.removeEventListener('timeupdate', onTimeUpdate);
         };
       }
-    }, [videoUrl, showModal]);
+    }, [videoUrl, showModal, startTime, endTime]);
   };
 
   export default useVideoElementEffect

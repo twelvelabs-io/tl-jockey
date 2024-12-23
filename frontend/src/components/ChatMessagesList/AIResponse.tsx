@@ -36,7 +36,7 @@ const AIResponse: React.FC<AIResponseProps> = ({ message, handleShow }) => {
 
   return (
     <>
-        <div className={'relative w-[680px]'}>
+        <div className={'relative w-[680px] mb-[20px]'}>
           { hasTextMessage && 
             <AIResponseHeader message={message}/>
           }

@@ -3,6 +3,20 @@ import React, { ReactNode, createContext, useContext, useReducer } from 'react';
 import { ActionType, State, Action } from './useChatTypes'
 import { ModalType } from '../../../types/messageTypes';
 
+interface QuestionMessage {
+  twelveText: string;
+  asrTest: string;
+  lameText: string;
+  question: string;
+  toolsData: any[];
+  sender: string;
+  text: string;
+  handleShow: (index: number, question: string) => void;
+  messageId?: number;
+  tokenSequence?: number;
+  isStreaming?: boolean;
+}
+
 const initialState: State = {
   selectedFile: null,
   selectedFileData: null,
@@ -30,7 +44,8 @@ const initialState: State = {
     autofillApi: false,
     showAutofillQuestions: false,
   },
-  panelVideosList: []
+  panelVideosList: [],
+  errorMessage: ''
 }
 
 function reducer (state: State, action: Action): State {
@@ -55,6 +70,19 @@ function reducer (state: State, action: Action): State {
         return { ...state, statusMessages: [] }
     case ActionType.SET_STATUS_MESSAGES:
       return { ...state, statusMessages: [...state.statusMessages, ...action.payload] }
+    case ActionType.SET_LAST_AI_MESSAGE_STREAMING: {
+        const messages = [...state.arrayMessages];
+        const lastMessageIndex = messages.length - 1;
+      
+        if (lastMessageIndex >= 0 && messages[lastMessageIndex].sender === 'ai') {
+          messages[lastMessageIndex] = {
+            ...messages[lastMessageIndex],
+            isStreaming: action.payload
+          };
+          return { ...state, arrayMessages: messages };
+        }
+        return state;
+      }
     case ActionType.CHANGE_ARRAY_MESSAGE:
       const { index, message } = action.payload; // Destructure index and message from payload
       const updatedArrayMessages = [...state.arrayMessages];
@@ -62,6 +90,49 @@ function reducer (state: State, action: Action): State {
         updatedArrayMessages[index] = message; // Update the specific element
       }
       return { ...state, arrayMessages: updatedArrayMessages };
+
+      case ActionType.STREAM_TOKEN: {
+        const { token, question } = action.payload;
+        const messages = [...state.arrayMessages];
+        const lastMessageIndex = messages.length - 1;
+
+        if (lastMessageIndex < 0 || messages[lastMessageIndex].sender !== 'ai') {
+          return {
+            ...state,
+            arrayMessages: [
+              ...messages,
+              {
+                sender: 'ai',
+                text: token,
+                question: question,
+                toolsData: [],
+                twelveText: '',
+                asrTest: '', 
+                lameText: '',
+                handleShow: () => {},
+                messageId: Date.now(),
+                tokenSequence: 0,
+              },
+            ],
+          };
+        } else {
+          const currentMessage = messages[lastMessageIndex];
+          const nextSequence = (currentMessage.tokenSequence || 0) + 1;
+          
+          const potentialNewText = currentMessage.text + token;
+          if (potentialNewText === currentMessage.text) {
+            return state;
+          }
+
+          messages[lastMessageIndex] = {
+            ...currentMessage,
+            text: potentialNewText,
+            tokenSequence: nextSequence,
+          };
+          
+          return { ...state, arrayMessages: messages };
+        }
+      }
     case ActionType.UPDATE_LAST_USER_MESSAGE:
         const messages = [...state.arrayMessages];
         // Find the last message where sender is 'user'
@@ -111,7 +182,10 @@ function reducer (state: State, action: Action): State {
       case ActionType.SET_AUTOFILL_API:
         return { ...state, autofill: { ...state.autofill, autofillApi: action.payload } };
       case ActionType.SET_SHOW_AUTOFILL_QUESTIONS:
-        return { ...state, autofill: { ...state.autofill, showAutofillQuestions: action.payload } }
+        return { ...state, autofill: { ...state.autofill, showAutofillQuestions: action.payload } };
+      case ActionType.SET_ERROR_MESSAGE:
+        return { ...state, errorMessage: action.payload };
+        
     default:
       return state
   }

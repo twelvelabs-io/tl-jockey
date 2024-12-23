@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import Input from '../../components/Input/Input'
 import SubmitButton from '../../components/SubmitButton/SubmitButton'
 import useMatch from './hooks/useMatch'
@@ -32,6 +32,34 @@ const ChatForm: React.FC<ChatFormProps> = ({
     staticAnswerTwelve,
     matchingAnswer
   } = useMatch(answers, selectedFile, inputBox)
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    inputRef.current?.focus();
+  
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      if (
+        window.getSelection()?.toString() || 
+        target.matches('button, a, [role="button"], select, textarea, input') || 
+        target.closest('.aiBubble, .chatMessage, .modal') 
+      ) {
+        return;
+      }
+  
+      // Only refocus when clicking empty areas
+      if (target.matches('body, #root, .chat-container')) {
+        inputRef.current?.focus();
+      }
+    };
+  
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, [!loading]);
 
   const handleChat = async (): Promise<void> => {
     if (selectedFile !== null && selectedFile !== undefined) {
@@ -70,10 +98,8 @@ const ChatForm: React.FC<ChatFormProps> = ({
               }
             ]
           })
-          // dispatch({ type: ActionType.SET_LOADING, payload: false })
         }, randomDelay)
       } catch (error) {
-        // dispatch({ type: ActionType.SET_LOADING, payload: false })
         console.error('Error sending chat request:', error)
       }
     }
@@ -87,6 +113,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
   return (
     <div className={'flex flex-row w-[240px] sm:w-[440px] md:w-[680px] lg:w-[680px] absolute bottom-[48px]'}>
       <Input
+        ref={inputRef}
         disabled={loading}
         onChange={handleInputChange}
         placeholder={placeholderText}
@@ -94,6 +121,8 @@ const ChatForm: React.FC<ChatFormProps> = ({
         value={inputBox}
         className={`w-full shadow-sm rounded h-[44px] border-1 border-solid pl-3 pr-3 pt-2 pb-2 text-[16px] font-aeonik focus:border-[#9AED59] focus:outline-none border-[${inputBoxStyle}]`}
       />
+      {/* hh-88px */}
+      {/* <div className="flex flex-row items-end justify-end pb-4"> */}
       <SubmitButton
         value={inputBox}
         submitButtonRef={submitButtonRef}
@@ -104,6 +133,7 @@ const ChatForm: React.FC<ChatFormProps> = ({
         handleChat={handleChat}
         handleChatApi={handleChatApi}
       />
+      {/* </div> */}
     </div>
   )
 }

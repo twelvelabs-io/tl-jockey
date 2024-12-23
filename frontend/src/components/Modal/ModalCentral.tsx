@@ -17,7 +17,6 @@ import helpersFunctions from '../../helpers/helpers'
 import useVideoElementEffect from './hooks/useVideoElementEffect'
 import { linksForYoutube } from './helpers/links'
 import ModalLinks from './ModalLinks'
-
 const ModalCentral: React.FC<ModalCentralProps> = ({
   handleClose,
 }) => {
@@ -27,12 +26,15 @@ const ModalCentral: React.FC<ModalCentralProps> = ({
   const [chosenIndex, setChosenIndex] = useState<number | string | undefined>(choosedElement[1])
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setChosenIndex(choosedElement[1]);
+  }, [choosedElement]);
+  
   const findElementById = (array: any[], id: string | number | undefined) => {
     return array?.find(item => item._id === id);
   };
   
   let arrayOfChoosedElements = arrayMessages?.[choosedElement[0]]?.toolsData
-
   let fallbackImage = modalType === ModalType.MESSAGES ? 
 arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
   findElementById(panelVideosList, chosenIndex)?.hls.thumbnails_urls[0]
@@ -44,10 +46,6 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
     findElementById(panelVideosList, chosenIndex)?.hls.video_url
 
   let textForModal = modalType === ModalType.MESSAGES ?arrayOfChoosedElements?.[chosenIndex as number]?.video_title : findElementById(panelVideosList, chosenIndex)?.metadata.filename
-
-  useEffect(() => {
-    setChosenIndex(choosedElement[1]);
-  }, [choosedElement]);
 
   if (modalType === ModalType.CLEAR_CHAT) {
     return (
@@ -110,7 +108,7 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
             />
           </div>
         </div>
-        <div className="flex justify-between items-center flex-row mt-4">
+        {/* <div className="flex justify-between items-center flex-row mt-4">
           <ModalLinks className=" flex flex-row gap-2 justify-center items-center cursor-pointer" youtubeLinkForClip={youtubeLinkForClip} />
           {totalIndexes > 1 && 
             <Pagination 
@@ -119,7 +117,7 @@ arrayOfChoosedElements?.[chosenIndex as number]?.thumbnail_url as string :
               handlePageChange={handlePageChange}
             />
           }
-        </div>
+        </div> */}
     </Modal.Body>
   </Modal>
   )

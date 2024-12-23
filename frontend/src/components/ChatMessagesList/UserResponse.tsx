@@ -35,10 +35,11 @@ const UserResponse: React.FC<UserResponseProps> = ({ message, isUserMessage, sta
                 {statusMessage}
               </p>
             ))}
-           {lastElement && loading && (
+           {  (
               <ThinkingComponent 
                 searchTerm={message?.asrTest} 
                 isLoading={loading}
+                lastElement={lastElement}
               />
           )}
          </div>
