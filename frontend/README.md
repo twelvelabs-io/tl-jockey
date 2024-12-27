@@ -92,6 +92,21 @@ Additionally, the components within this repository are divided into two distinc
   yarn start
   ```
 
+4. (Alternative) To start debugging and testing 
+
+  ```shell
+  # Run Jockey server script
+  cd ../
+  ./launch_langgraph.sh
+
+  # Run frontend server
+  cd frontend
+  node server.js
+
+  # Run frontend app
+  yarn start
+  ```
+
 ## Navigation
 ### Servers
 The structure of the project is divided into several key components: the frontend with LangGraph SDK, the proxy server, and the LangGraph server. The goal is to provide a seamless interaction between the user interface and the LangGraph server, facilitated by the proxy server for better manageability
@@ -101,7 +116,7 @@ The frontend is responsible for the user interface and user interactions. It com
 
 ### SDK
 The main purpose of this SDK is for interacting with the LangGraph REST API. You will need a running LangGraph API server. If you're running a server locally using langgraph-cli, the SDK will automatically point to http://localhost:8123. Otherwise, you will need to specify the server URL when creating a client like this:  
-`const client = new Client({ apiUrl: "ApiUrlString" })` in the streamEventsAPis component inside the apis folder
+`const client = new Client({ apiUrl: "ApiUrlString" })` in the initConfig component inside the apis folder
 
 ### Proxy Server
 The proxy server acts as an intermediary between the frontend and twelve labs API. It ensures secure and efficient communication, handles requests from the frontend, and forwards them to the twelve labs API. The proxy server is initially set up in the server file. If you need to create a new proxy server or modernize the existing one, you can refer to the 'server' component in the source. 
@@ -114,7 +129,9 @@ All API calls related to these components are defined in the api folder, where t
 - api/: Contains API-related files. 
 - hooks.js: Defines hooks for making API calls (for the TwelveLabs api's) 
 - apiConfig.js: Defines or creates URL paths and keys for React Query. 
+- initConfig.js: Defines the initial state of the Jockey input and the LangGraph SDK client
 - streamEventsApis.js: Contains LangGrap SDK to interect with LangGraph backend
+- helpersStream.js: Contains the relevant functions to parse the raw data from the LangGraph backend
 
 ## Build and deploy
 
@@ -122,8 +139,16 @@ This project uses Vercel to ship application on the internet.
 For production environment  we use Vercel's default configuration to deploy preview and production app.
 Ask the team for an invitation to be added as a member of Twelve Labs Team.
 
+### Launch LangGraph Server
+The main purpose is use it for dubugging and testing since it spins up faster than the dockerized version.
+For the LangGraph server, you can also launch it using the following command:
+```
+./launch_langgraph.sh
+```
+
 ## Links
 - [Web site](https://www.twelvelabs.io)
 - [Documentation](https://github.com/twelvelabs-io/tl-jockey/blob/main/README.md)
 - [Source code](https://github.com/twelvelabs-io/tl-jockey/tree/main)
+
 
