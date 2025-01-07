@@ -79,7 +79,7 @@ yarn start
 ```shell
 # Run Jockey server script
 cd ../
-./launch_langgraph.sh
+./run_local_server.sh
 
 # Run frontend server
 cd frontend
@@ -134,7 +134,7 @@ Ask the team for an invitation to be added as a member of Twelve Labs Team.
 The main purpose of this is for debugging and testing, as it spins up faster than the dockerized version. For the LangGraph server, you can also launch it using the following command:
 
 ```
-./launch_langgraph.sh
+./run_local_server.sh
 
 ```
 
