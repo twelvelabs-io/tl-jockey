@@ -16,6 +16,23 @@ export interface Clip {
 	video_title: string
 }
 
+export interface PlannerResponse {
+	route_to_node: 'planner' | 'video-search' | 'video-text-generation' | 'video-editing' | 'reflect'
+	tool_call: 'simple-video-search' | 'combine-clips' | 'none'
+	plan: string
+	index_id: string
+	clip_keys: string[]
+}
+
+export interface VideoSearchInput {
+	query: string
+	index_id: string
+	top_n: number
+	group_by: string
+	search_options: Array<'visual' | 'conversation' | 'text_in_video' | 'logo'>
+	video_filter: string | null
+}
+
 export interface JockeyState {
 	[key: string]: any
 	next_worker: string | null

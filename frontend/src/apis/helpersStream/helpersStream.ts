@@ -1,11 +1,11 @@
 import {StreamEvent} from '@langchain/core/dist/tracers/event_stream'
 import {ActionType} from '../../widgets/VideoAssistant/hooks/useChatTypes'
 import {ToolMessage} from '@langchain/core/messages'
-import {Clip} from '../streamEventsApis'
+import {Clip, VideoSearchInput} from '../streamEventsApis'
 
 export const parseSearchResults = (rawData: StreamEvent, dispatch: any, inputBox: string) => {
 	const output = rawData.data.output
-	const parsedOutput = JSON.parse(output) as Clip[]
+	const parsedOutput: Clip[] = JSON.parse(output) as Clip[]
 	dispatch({
 		type: ActionType.SET_ARRAY_MESSAGES,
 		payload: [
@@ -29,7 +29,7 @@ export const parseSearchResults = (rawData: StreamEvent, dispatch: any, inputBox
 }
 
 export const parseSearchParams = (rawData: StreamEvent, dispatch: any) => {
-	const input = rawData.data.input
+	const input = rawData.data.input as VideoSearchInput
 
 	try {
 		dispatch({
