@@ -102,7 +102,7 @@ The frontend is responsible for the user interface and user interactions. It com
 ### SDK
 
 The main purpose of this SDK is for interacting with the LangGraph REST API. You will need a running LangGraph API server. If you're running a server locally using langgraph-cli, the SDK will automatically point to http://localhost:8123. Otherwise, you will need to specify the server URL when creating a client like this:  
-`const client = new Client({ apiUrl: "ApiUrlString" })` in the initConfig component inside the apis folder
+`const client = new Client({ apiUrl: process.env.REACT_APP_CLIENT_URL })` in the initConfig component inside the apis folder
 
 ### Proxy Server
 
