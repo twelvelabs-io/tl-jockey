@@ -129,14 +129,16 @@ This project uses Vercel to ship application on the internet.
 For production environment we use Vercel's default configuration to deploy preview and production app.
 Ask the team for an invitation to be added as a member of Twelve Labs Team.
 
-### Launch LangGraph Server
+### Debugging Locally by Launching a LangGraph Server
 
-The main purpose is use it for dubugging and testing since it spins up faster than the dockerized version.
-For the LangGraph server, you can also launch it using the following command:
+The main purpose of this is for debugging and testing, as it spins up faster than the dockerized version. For the LangGraph server, you can also launch it using the following command:
 
 ```
 ./launch_langgraph.sh
+
 ```
+
+# Ensure you are using langgraph-api==0.0.7
 
 ## Links
 
