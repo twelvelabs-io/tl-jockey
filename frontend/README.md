@@ -34,29 +34,6 @@ We are using Vercel web services to deploy this project
 
 TypeScript, JavaScript, React, Tailwind CSS, Python, Pandas, Heroku, Ngrok
 
-### Python dependencies requirements
-
-```
-pandas==2.0.3
-ffmpeg-python==0.2.0
-pytube==15.0.0
-grequests==0.7.0
-m3u8-To-MP4==0.1.11
-langchain==0.3.7
-langchain-experimental==0.0.49
-tabulate==0.9.0
-certifi==2024.8.30
-python-dotenv==1.0.1
-openai==1.55.3
-langchain-openai==0.2.9
-rich==13.9.4
-fastapi==0.110.0
-uvicorn==0.32.1
-langserve==0.0.51
-sse-starlette==2.1.3
-httpx-sse==0.4.0
-```
-
 ## What's inside?
 
 This project includes the following applications and packages
