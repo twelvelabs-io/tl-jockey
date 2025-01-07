@@ -25,7 +25,7 @@ export interface JockeyState {
 	clips_from_search: Record<string, Clip[]>
 	relevant_clip_keys: string[]
 	tool_call: string | null
-	index_id: string
+	index_id: string | null
 }
 
 export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any, setInputBoxColor: any) => {
