@@ -8,14 +8,8 @@ from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
 from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
 import uuid
+from jockey.video_utils import get_filename
 
-CODEC_FAMILIES = {"mpeg": {"h264", "hevc", "mpeg4"}, "vp": {"vp8", "vp9"}, "av1": {"av1"}}
-
-CODEC_FAMILIES = {
-    'mpeg': {'h264', 'hevc', 'mpeg4'},
-    'vp': {'vp8', 'vp9'},
-    'av1': {'av1'}
-}
 
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
@@ -56,20 +50,6 @@ class RemoveSegmentInput(BaseModel):
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
-def are_codecs_compatible(codecs):
-    for family in CODEC_FAMILIES.values():
-        if codecs.issubset(family):
-            return True
-    return False
-
-def check_video_codecs(video_filepaths):
-    codecs = set()
-    for filepath in video_filepaths:
-        probe = ffmpeg.probe(filepath)
-        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
-        if video_stream:
-            codecs.add(video_stream['codec_name'])
-    return codecs
 
 @tool("combine-clips", args_schema=CombineClipsInput)
 async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
@@ -91,9 +71,9 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
             video_id = clip.video_id
             start = clip.start
             end = clip.end
-            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
-            video_filepaths.append(video_filepath)
-            if os.path.isfile(video_filepath) is False:
+            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, get_filename({"video_id": video_id, "start": start, "end": end}))
+
+            if not os.path.isfile(video_filepath):
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
                 except AssertionError as error:

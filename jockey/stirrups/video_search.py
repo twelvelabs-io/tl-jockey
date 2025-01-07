@@ -12,7 +12,7 @@ from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.spaces.spaces import Spaces
 from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction
 from jockey.stirrups.stirrup import Stirrup
-from jockey.video_utils import get_video_metadata, download_video
+from jockey.video_utils import get_video_metadata, download_video, get_filename
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
@@ -58,7 +58,7 @@ async def _base_video_search(
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
-) -> Union[List[Dict], List]:
+) -> Union[List[Dict]]:
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
 
     payload = {
@@ -88,10 +88,7 @@ async def _base_video_search(
         }
         return error_response
 
-    if group_by == "video":
-        top_n_results = [{"video_id": video["id"]} for video in video_metadata.json()["data"][:top_n]]
-    else:
-        top_n_results = video_metadata.json()["data"][:top_n]
+    top_n_results = video_metadata.json()["data"][:top_n]
 
     for result in top_n_results:
         video_id = result["video_id"]
@@ -116,8 +113,6 @@ async def _base_video_search(
         if group_by == "video":
             result["thumbnail_url"] = video_data["hls"]["thumbnail_urls"][0]
 
-    top_n_results = json.dumps(top_n_results)
-
     return top_n_results
 
 
@@ -130,25 +125,6 @@ async def _base_video_search(
 #     return list(modalities)
 
 
-def get_filename(result: Dict) -> str:
-    """
-    Creates a standardized filename from a video title and optional timestamp range.
-
-    Args:
-        result: The result from the video search.
-
-    Returns:
-        The filename of the video clip.
-        format: <video_id>_<start_time>_<end_time>.mp4
-    """
-
-    video_id = result["video_id"]
-    start_time = result["start"]
-    end_time = result["end"]
-
-    return f"{video_id}_{start_time:.3f}-{end_time:.3f}.mp4"
-
-
 @tool("simple-video-search", args_schema=MarengoSearchInput, return_direct=True)
 async def simple_video_search(
     query: str,
@@ -159,8 +135,7 @@ async def simple_video_search(
     video_filter: Union[List[str], None] = None,
 ) -> Union[List[Dict], List]:
     try:
-        search_results_str = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
-        search_results = json.loads(search_results_str)
+        search_results: List[Dict] = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
 
         # Process video clips
         spaces = Spaces()
@@ -171,10 +146,8 @@ async def simple_video_search(
             clip_filename = get_filename(result)
 
             # then check database for existing clip
-            clip_exists = await spaces.check_clip_exists_in_spaces(
-                os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id
-            )  # TODO: unstub the os.environ and dynamically grab user id
-
+            # TODO: unstub the os.environ and dynamically grab user id
+            clip_exists = await spaces.check_clip_exists_in_spaces(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id)
             if clip_exists:
                 print(f"[DEBUG] Clip {clip_filename} already exists in space.")
                 video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
