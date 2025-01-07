@@ -110,7 +110,7 @@ The proxy server acts as an intermediary between the frontend and twelve labs AP
 
 ### LangGraph Server
 
-The LangGraph server is the backend component that processes the logic and data required for the application. It receives requests from the Langgraph SDK, processes them, and returns the necessary responses. All of the components related to this functionality located into the Jockey folder with a solid README regarding how to launch, test and modernise the functianality
+LangGraph Server offers an API for creating and managing agent-based applications. It is built on the concept of assistants, which are agents configured for specific tasks, and includes built-in persistence and a task queue. This versatile API supports a wide range of agentic application use cases, from background processing to real-time interactions. It receives requests from the Langgraph SDK, processes them, and returns the necessary responses.All of the components related to this functionality located into the Jockey folder with a detailed README regarding how to launch, test and modernise the functianality
 
 ### Main_components
 
