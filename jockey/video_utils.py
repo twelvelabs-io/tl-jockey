@@ -6,14 +6,14 @@ import tqdm
 import json
 import subprocess
 from jockey.thread import session_id
-from typing import Dict
+from typing import Dict, Tuple
 import hashlib
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
 
 
-def get_filename(result: Dict) -> str:
+def get_filename(result: Dict) -> Tuple[str, str]:
     """
     Creates a standardized filename from a video title and a hashed timestamp range.
 
@@ -21,18 +21,18 @@ def get_filename(result: Dict) -> str:
         result: The result from the video search.
 
     Returns:
-        The filename of the video clip.
+        The filename of the video clip and the clip_id
         format: clip-<video_id>_<start_end_hash>.mp4
     """
-    video_id = result["video_id"]
-    start_time = result["start"]
-    end_time = result["end"]
+    video_id: str = result["video_id"]
+    start_time: float = result["start"]
+    end_time: float = result["end"]
 
     # Generate the MD5 hash of the start and end times
-    start_end_md5 = hashlib.md5(f"{start_time}_{end_time}".encode()).hexdigest()[-8:]
+    start_end_md5: str = hashlib.md5(f"{start_time}_{end_time}".encode()).hexdigest()[-8:]
 
     # Create the filename using the video ID and the hash
-    return f"clip-{video_id}_{start_end_md5}.mp4"
+    return f"clip-{video_id}_{start_end_md5}.mp4", f"{video_id}_{start_end_md5}"
 
 
 def get_video_metadata(index_id: str, video_id: str) -> dict:
@@ -83,7 +83,7 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
     if not os.path.exists(video_dir):
         os.makedirs(video_dir, exist_ok=True)
 
-    video_filename = get_filename({"video_id": video_id, "start": start, "end": end})
+    video_filename, _ = get_filename({"video_id": video_id, "start": start, "end": end})
     video_path = os.path.join(video_dir, video_filename)
 
     if os.path.isfile(video_path) is False:
