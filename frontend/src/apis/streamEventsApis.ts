@@ -1,8 +1,10 @@
 import {StreamEvent} from '@langchain/core/dist/tracers/event_stream'
 import {parseSearchResults, parseSearchParams, handleReflectEvents, handleStreamError} from './helpersStream/helpersStream'
-import {client, initialize, initJockeyInput} from './initConfig'
+import {client, initialize} from './initConfig'
 import {BaseMessage} from '@langchain/core/messages'
 import {MessageFieldWithRole} from '@langchain/core/messages'
+
+const indexId = process.env.REACT_APP_INDEX
 
 export interface Clip {
 	score: number
@@ -49,7 +51,24 @@ export interface JockeyState {
 export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any, setInputBoxColor: any) => {
 	dispatch({type: ActionType.SET_LOADING, payload: true})
 
-	const {assistant, thread} = await initialize(inputBox)
+	const {assistant, thread} = await initialize()
+
+	const initJockeyInput: JockeyState = {
+		chat_history: [
+			{
+				role: 'human',
+				name: 'user',
+				content: `${inputBox} in the index ${indexId}`,
+			},
+		],
+		made_plan: false,
+		next_worker: null,
+		active_plan: null,
+		clips_from_search: {} as Record<string, Clip[]>,
+		relevant_clip_keys: [] as string[],
+		tool_call: null,
+		index_id: null,
+	}
 
 	const processStream = async (input: JockeyState) => {
 		try {
