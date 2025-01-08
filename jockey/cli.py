@@ -1,5 +1,7 @@
 import os
 import subprocess
+import shutil
+import platform
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
 from jockey.stirrups.errors import create_interrupt_event
@@ -62,6 +64,7 @@ async def run_jockey_terminal():
 
 def run_jockey_server():
     """Quickstart function to create run Jockey in a LangGraph API container for easy dev work.
+
     We use the default version of Jockey for this.
     https://langchain-ai.github.io/langgraph/cloud/reference/cli/
     """
