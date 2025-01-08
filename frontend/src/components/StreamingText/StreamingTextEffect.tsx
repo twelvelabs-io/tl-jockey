@@ -1,29 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react'
 
 interface StreamingTextEffectProps {
-    text: string
+	text: string
 }
 
+export const StreamingTextEffect: React.FC<StreamingTextEffectProps> = ({text}) => {
+	const [displayText, setDisplayText] = useState('')
+	const delay = 50
 
-export const StreamingTextEffect:React.FC<StreamingTextEffectProps> = ({ text }) => {
-  const [displayText, setDisplayText] = useState('');
-  const delay = 50; 
+	useEffect(() => {
+		let currentText = ''
+		const intervalId = setInterval(() => {
+			if (currentText.length < text.length) {
+				currentText += text[currentText.length]
+				setDisplayText(currentText)
+			} else {
+				clearInterval(intervalId)
+			}
+		}, delay)
 
-  useEffect(() => {
-    let currentText = '';
-    const intervalId = setInterval(() => {
-      if (currentText.length < text.length) {
-        currentText += text[currentText.length];
-        setDisplayText(currentText);
-      } else {
-        clearInterval(intervalId);
-      }
-    }, delay);
+		return () => clearInterval(intervalId)
+	}, [text])
 
-    return () => clearInterval(intervalId);
-  }, [text]);
+	return <span>{displayText}</span>
+}
 
-  return <span>{ displayText }</span>;
-};
-
-export default StreamingTextEffect;
+export default StreamingTextEffect
