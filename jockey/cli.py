@@ -1,13 +1,8 @@
-import os
-import subprocess
-import shutil
-import platform
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
-from jockey.stirrups.errors import create_interrupt_event, create_langgraph_error_event, create_jockey_error_event, get_langgraph_errors
+from jockey.stirrups.errors import create_interrupt_event
 from langchain_core.messages import HumanMessage
 from jockey.app import jockey
-from jockey.stirrups.errors import JockeyError
 import asyncio
 import sys
 from typing import List
@@ -74,6 +69,7 @@ def run_jockey_server():
     jockey_package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
     langgraph_json_file_path = os.path.join(jockey_package_dir, "langgraph.json")
     compose_file_path = os.path.join(jockey_package_dir, "compose.yaml")
+    langgraph_data_dir = os.path.join(jockey_package_dir, ".langgraph-data")
 
     # Add debugging options
     langgraph_cli_command = [
