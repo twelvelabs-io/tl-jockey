@@ -2,6 +2,7 @@ import {StreamEvent} from '@langchain/core/dist/tracers/event_stream'
 import {parseSearchResults, parseSearchParams, handleReflectEvents, handleStreamError} from './helpersStream/helpersStream'
 import {client, initialize, initJockeyInput} from './initConfig'
 import {BaseMessage} from '@langchain/core/messages'
+import {MessageFieldWithRole} from '@langchain/core/messages'
 
 export interface Clip {
 	score: number
@@ -36,7 +37,7 @@ export interface VideoSearchInput {
 export interface JockeyState {
 	[key: string]: any
 	next_worker: string | null
-	chat_history: any
+	chat_history: BaseMessage[] | BaseMessage | MessageFieldWithRole[] | MessageFieldWithRole
 	made_plan: boolean
 	active_plan: string | BaseMessage | null
 	clips_from_search: Record<string, Clip[]>

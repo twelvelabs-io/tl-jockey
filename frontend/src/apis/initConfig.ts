@@ -11,6 +11,7 @@ export const initJockeyInput: JockeyState = {
 		{
 			role: 'human',
 			name: 'user',
+			content: '',
 		},
 	],
 	made_plan: false,
