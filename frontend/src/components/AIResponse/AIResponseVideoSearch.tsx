@@ -1,56 +1,102 @@
-import React, { Dispatch, SetStateAction, Suspense } from 'react'
-import FallBackVideoSingle from '../Fallback/FallBackVideoSingle';
-import VideoThumbnail from '../ChatMessagesList/VideoThumbnail';
-import StreamingTextEffect from '../StreamingText/StreamingTextEffect';
-import SeeMoreResultsButton from '../ChatMessagesList/SeeMoreResultsButton';
-import { Message } from '../ChatMessagesList/AIResponse';
+import React, {Dispatch, SetStateAction, Suspense, useState, useEffect} from 'react'
+import SeeMoreResultsButton from '../ChatMessagesList/SeeMoreResultsButton'
+import {QuestionMessage} from '../../types/messageTypes'
+import {AnimatedMessage} from '../AnimatedMessage/AnimatedMessage'
+import ThumbnailsList from '../Thumbnail/ThumbnailsList'
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 interface AIResponseVideoSearch {
-    message: Message
-    showAllVideos: boolean;
-    setShowAllVideos: Dispatch<SetStateAction<boolean>>
-    videosLengthMoreThan3: boolean | undefined
-    formattedDurations: string[],
-    handleVideoClick: (index: number | undefined) => void
+	urlsFromMessageText: QuestionMessage['toolsData']
+	showAllVideos: boolean
+	setShowAllVideos: Dispatch<SetStateAction<boolean>>
+	videosLengthMoreThan3: boolean | undefined
+	message: QuestionMessage
+	handleVideoClick: (index: number | undefined) => void
 }
 
-export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({ message, showAllVideos, setShowAllVideos, videosLengthMoreThan3, formattedDurations, handleVideoClick }) => {
-    return (
-        <div className=''>
-        <ul className={'flex flex-wrap pb-3 gap-[12px]'}>
-        {message.toolsData && message.toolsData.slice(0, showAllVideos ? undefined : 3).map((video, index) => {
-          return (
-            <li key={index} className=" ">
-              <div className="flex flex-row justify-between items-start gap-[12px]">
-                { video  ?  
-                <Suspense fallback={<FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}>
-                  <VideoThumbnail
-                    thumbnailUrl={video.thumbnail_url}
-                    index={index}
-                    onClick={() => handleVideoClick(index)}
-                    duration={formattedDurations[index]}
-                    oneThumbnail={message?.toolsData && message.toolsData.length <= 1}
-                  />  
-                </Suspense>
-                : <FallBackVideoSingle oneThumbnail={message?.toolsData && message.toolsData.length <= 1} index={index} duration={formattedDurations[index]}/>}
-                <div className="flex-grow w-[400px]">
-                  {/* Apply the streaming effect to the text */}
-                  { video && <StreamingTextEffect text={video.video_title} />}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    {videosLengthMoreThan3 && (
-      <SeeMoreResultsButton
-        showAllVideos={showAllVideos}
-        setShowAllVideos={setShowAllVideos}
-        message={message}
-      />
-    )}
-  </div>
-    )
+export const AIResponseVideoSearch: React.FC<AIResponseVideoSearch> = ({
+	urlsFromMessageText,
+	showAllVideos,
+	setShowAllVideos,
+	message,
+	handleVideoClick,
+	videosLengthMoreThan3,
+}) => {
+	const [showControls, setShowControls] = useState<boolean[]>(new Array(message?.toolsData?.length).fill(false))
+	const [loadedThumbnails, setLoadedThumbnails] = useState<boolean[]>(new Array(message?.toolsData?.length).fill(false))
+
+	const [playerRefs, setPlayerRefs] = useState<Array<any>>([])
+
+	useEffect(() => {
+		if (message?.toolsData?.length) {
+			const newRefs = message.toolsData.map(() => React.createRef())
+			setPlayerRefs(newRefs)
+		}
+	}, [message?.toolsData])
+
+	const handleThumbnailLoad = (index: number, thumbnailUrl: string) => {
+		const img = new Image()
+		img.onload = () => {
+			const newLoadedThumbnails = [...loadedThumbnails]
+			newLoadedThumbnails[index] = true
+			setLoadedThumbnails(newLoadedThumbnails)
+		}
+		img.onerror = () => {
+			console.error(`Failed to load thumbnail at index ${index}`)
+
+			const newLoadedThumbnails = [...loadedThumbnails]
+			newLoadedThumbnails[index] = true
+			setLoadedThumbnails(newLoadedThumbnails)
+		}
+		img.src = thumbnailUrl
+	}
+
+	useEffect(() => {
+		setLoadedThumbnails(new Array(message?.toolsData?.length).fill(false))
+
+		message?.toolsData?.forEach((video, index) => {
+			if (video.thumbnail_url) {
+				handleThumbnailLoad(index, video.thumbnail_url)
+			}
+		})
+	}, [message?.toolsData])
+
+	const handleThumbnailClick = (index: number) => {
+		const newShowControls = [...showControls]
+		newShowControls[index] = true
+		setShowControls(newShowControls)
+		const actualIndex = showAllVideos ? index : Math.min(index, 2)
+		handleVideoClick(actualIndex)
+	}
+
+	return (
+		<div className="flex flex-col gap-[12px]">
+			<div className="flex flex-col gap-[12px] w-full">
+				{message?.text && urlsFromMessageText.length > 0 && (
+					<p className="text-[#333431] font-aeonik text-base">
+						<AnimatedMessage text={message.text} />
+					</p>
+				)}
+				{message && !message.isStreaming ? (
+					<Suspense>
+						{message?.text && message?.toolsData.length >= 1 && (
+							<ThumbnailsList
+								videos={message.toolsData}
+								showAllVideos={showAllVideos}
+								loadedThumbnails={loadedThumbnails}
+								playerRefs={playerRefs}
+								handleThumbnailClick={handleThumbnailClick}
+							/>
+						)}
+					</Suspense>
+				) : (
+					''
+				)}
+			</div>
+			{videosLengthMoreThan3 && message?.text && (
+				<SeeMoreResultsButton showAllVideos={showAllVideos} setShowAllVideos={setShowAllVideos} message={message} videosUrls={urlsFromMessageText} />
+			)}
+		</div>
+	)
 }
 
 export default AIResponseVideoSearch

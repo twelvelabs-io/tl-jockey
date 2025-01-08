@@ -11,6 +11,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in;
+}
+
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
@@ -170,6 +185,35 @@ code {
   box-shadow: 10014px 0 0 -5px;
   animation: dot-pulse-after 1.5s infinite linear;
   animation-delay: 0.5s;
+}
+
+.single-dot-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.single-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.5);
+    opacity: 0.2;
+  }
 }
 
 @keyframes dot-pulse-before {

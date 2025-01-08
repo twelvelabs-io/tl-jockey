@@ -1,53 +1,79 @@
 import os
 import sys
 import json
+from typing import Dict, List
 import requests
-import urllib
-import ffmpeg
 from dotenv import find_dotenv, load_dotenv
 from rich.padding import Padding
 from rich.console import Console
 from rich.json import JSON
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    InternalServerError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+    APIError,
+    UnprocessableEntityError,
+    OpenAI,
+)
+from openai import AzureOpenAI
+import time
+from jockey.model_config import AZURE_DEPLOYMENTS, OPENAI_MODELS
+from langchain_core.messages.ai import AIMessageChunk
 
-TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
-INDEX_URL = urllib.parse.urljoin(TL_BASE_URL, "indexes/")
-REQUIRED_ENVIRONMENT_VARIABLES = set([
-    "TWELVE_LABS_API_KEY",
-    "HOST_PUBLIC_DIR",
-    "LLM_PROVIDER"
-])
-AZURE_ENVIRONMENT_VARIABLES = set([
-    "AZURE_OPENAI_ENDPOINT",
-    "AZURE_OPENAI_API_KEY",
-    "OPENAI_API_VERSION"
-])
-OPENAI_ENVIRONMENT_VARIABLES = set([
-    "OPENAI_API_KEY"
-])
+
+REQUIRED_ENVIRONMENT_VARIABLES = set(["TWELVE_LABS_API_KEY", "HOST_PUBLIC_DIR", "LLM_PROVIDER"])
+AZURE_ENVIRONMENT_VARIABLES = set(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION"])
+OPENAI_ENVIRONMENT_VARIABLES = set(["OPENAI_API_KEY"])
 ALL_JOCKEY_ENVIRONMENT_VARIABLES = REQUIRED_ENVIRONMENT_VARIABLES | AZURE_ENVIRONMENT_VARIABLES | OPENAI_ENVIRONMENT_VARIABLES
+LOCAL_LANGGRAPH_URL = "http://localhost:8000"
+console = Console()
 
 
-def parse_langchain_events_terminal(event: dict):
+async def parse_langchain_events_terminal(event: dict):
     """Used to parse events emitted from Jockey when called as an API."""
-    console = Console()
+
+    with open("event_log.txt", "a") as f:
+        f.write(f"{event}\n")
 
     if event["event"] == "on_chat_model_stream":
         if isinstance(event["data"]["chunk"], dict):
             content = event["data"]["chunk"]["content"]
         else:
             content = event["data"]["chunk"].content
-        
+
         if content and "instructor" in event["tags"]:
             console.print(f"[red]{content}", end="")
         elif content and "planner" in event["tags"]:
             console.print(f"[yellow]{content}", end="")
         elif content and "supervisor" in event["tags"]:
             console.print(f"[white]{content}", end="")
+        elif content and "reflect" in event["tags"]:
+            console.print(f"[cyan]{content}", end="")
+
     elif event["event"] == "on_tool_start":
         tool = event["name"]
         console.print(Padding(f"[cyan]🏇 Using: {tool}", (1, 0, 0, 2)))
         console.print(Padding(f"[cyan]🏇 Inputs:", (0, 2)))
-        console.print(Padding(JSON(json.dumps(event["data"]["input"]), indent=2), (1, 6)))
+        try:
+            # Convert input data to a serializable format
+            input_data = event["data"]["input"]
+            if isinstance(input_data, dict):
+                # If it's a dictionary, try to convert any non-serializable objects to strings
+                serializable_input = {k: str(v) if hasattr(v, "__dict__") else v for k, v in input_data.items()}
+            else:
+                # If it's not a dictionary, convert the whole thing to string
+                serializable_input = str(input_data)
+            console.print(Padding(JSON(json.dumps(serializable_input), indent=2), (1, 6)))
+        except Exception as e:
+            # Fallback to string representation if JSON serialization fails
+            console.print(Padding(str(input_data), (1, 6)))
+
     elif event["event"] == "on_tool_end":
         tool = event["name"]
         console.print(Padding(f"[cyan]🏇 Finished Using: {tool}", (0, 2)))
@@ -56,6 +82,7 @@ def parse_langchain_events_terminal(event: dict):
             console.print(Padding(JSON(event["data"]["output"], indent=2), (1, 6)))
         except (json.decoder.JSONDecodeError, TypeError):
             console.print(Padding(str(event["data"]["output"]), (0, 6)))
+
     elif event["event"] == "on_chat_model_start":
         if "instructor" in event["tags"]:
             console.print(Padding(f"[red]🏇 Instructor: ", (1, 0)), end="")
@@ -65,81 +92,20 @@ def parse_langchain_events_terminal(event: dict):
             console.print()
             console.print(f"[cyan]🏇 Jockey: ", end="")
 
+    elif event["event"] == "on_chain_end":
+        # Only process events from the planner node
+        metadata = event.get("metadata", {})
+        langgraph_node = metadata.get("langgraph_node")
 
-def get_video_metadata(index_id: str, video_id: str) -> dict:
-    video_url = f"{INDEX_URL}{index_id}/videos/{video_id}"
+        if langgraph_node != "planner":
+            return
 
-    headers = {
-        "accept": "application/json",
-        "Content-Type": "application/json",
-        "x-api-key": os.environ["TWELVE_LABS_API_KEY"]
-    }
+        # Check for the specific data structure we want to process
+        output = event["data"].get("output")
+        if not isinstance(output, str):  # The second event has a string output
+            return
 
-    response = requests.get(video_url, headers=headers)
-
-    try:
-        assert response.status_code == 200
-    except AssertionError:
-        error_response = {
-                "message": f"There was an error getting the metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                "Double check that the Video ID and Index ID are valid and correct.",
-                "error": response.text
-            }
-        return error_response
-
-    return response
-
-
-def download_video(video_id: str, index_id: str, start: float, end: float) -> str:
-    """Download a video for a given video in a given index and get the filepath. 
-    Should only be used when the user explicitly requests video editing functionalities."""
-    headers = {
-        "x-api-key": os.environ["TWELVE_LABS_API_KEY"],
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
-
-    video_url = f"https://api.twelvelabs.io/v1.2/indexes/{index_id}/videos/{video_id}"
-
-    response = requests.get(video_url, headers=headers)
-        
-    assert response.status_code == 200
-
-    hls_uri = response.json()["hls"]["video_url"]
-
-    video_dir = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id)
-
-    if os.path.isdir(video_dir) is False:
-        os.mkdir(video_dir)
-
-    video_filename = f"{video_id}_{start}_{end}.mp4"
-    video_path = os.path.join(video_dir, video_filename)
-
-    if os.path.isfile(video_path) is False:
-        try:
-            duration = end - start
-            buffer = 1  # Add a 1-second buffer on each side
-            ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=max(0, start-buffer), t=duration+2*buffer) \
-                .output(video_path, vcodec="libx264", acodec="aac", avoid_negative_ts="make_zero", fflags="+genpts") \
-                .run()
-
-            # Then trim the video more precisely
-            output_trimmed = f"{os.path.splitext(video_path)[0]}_trimmed.mp4"
-            ffmpeg.input(video_path, ss=buffer, t=duration) \
-                .output(output_trimmed, vcodec="copy", acodec="copy") \
-                .run()
-
-            # Replace the original file with the trimmed version
-            os.replace(output_trimmed, video_path)
-        except Exception as error:
-            error_response = {
-                "message": f"There was an error downloading the video with Video ID: {video_id} in Index ID: {index_id}. "
-                "Double check that the Video ID and Index ID are valid and correct.",
-                "error": str(error)
-            }
-            return error_response
-
-    return video_path
+        console.print(Padding(f"[yellow]🏇 Planner: {output}", (1, 0)), end="")
 
 
 def check_environment_variables():
@@ -154,8 +120,10 @@ def check_environment_variables():
         print(f"Missing:\n\t{str.join(', ', missing_environment_variables)}")
         sys.exit("Missing required environment variables.")
 
-    if AZURE_ENVIRONMENT_VARIABLES & os.environ.keys() != AZURE_ENVIRONMENT_VARIABLES and \
-        OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys() != OPENAI_ENVIRONMENT_VARIABLES:
+    if (
+        AZURE_ENVIRONMENT_VARIABLES & os.environ.keys() != AZURE_ENVIRONMENT_VARIABLES
+        and OPENAI_ENVIRONMENT_VARIABLES & os.environ.keys() != OPENAI_ENVIRONMENT_VARIABLES
+    ):
         missing_azure_environment_variables = AZURE_ENVIRONMENT_VARIABLES - os.environ.keys()
         missing_openai_environment_variables = OPENAI_ENVIRONMENT_VARIABLES - os.environ.keys()
         print(f"If using Azure, Expected the following environment variables:\n\t{str.join(', ', AZURE_ENVIRONMENT_VARIABLES)}")
@@ -165,3 +133,72 @@ def check_environment_variables():
         print(f"Missing:\n\t{str.join(', ', missing_openai_environment_variables)}")
         sys.exit("Missing Azure or Open AI environment variables.")
 
+
+def preflight_checks():
+    print("Performing preflight checks...")
+    load_dotenv()
+
+    llm_provider = os.getenv("LLM_PROVIDER")
+    if llm_provider == "OPENAI":
+        api_key = os.getenv("OPENAI_API_KEY")
+        client = OpenAI(api_key=api_key)
+        models = list(OPENAI_MODELS.values())
+    elif llm_provider == "AZURE":
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        client = AzureOpenAI(api_key=api_key, azure_endpoint=endpoint)
+        models = [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()]
+
+        # assert that the models are correct
+        # print(models, [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()])
+        assert all(model in models for model in [config["deployment_name"] for config in AZURE_DEPLOYMENTS.values()])
+    else:
+        print("Invalid LLM_PROVIDER. Must be one of: [AZURE, OPENAI]")
+        sys.exit("Invalid LLM_PROVIDER environment variable.")
+
+    for model in models:
+        print(f"[DEBUG] Testing model: {model}")
+        for stream in [False, True]:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "system", "content": "Test message"}],
+                    temperature=0,
+                    max_tokens=2048,
+                    stream=stream,
+                    timeout=10,  # Add 10 second timeout
+                )
+                if stream:
+                    # Process stream with timeout using a simple counter
+                    start_time = time.time()
+                    timeout_seconds = 10
+                    has_content = False
+
+                    for chunk in response:
+                        if time.time() - start_time > timeout_seconds:
+                            return f"Timeout occurred while processing stream. Model: {model}"
+                        if chunk.choices and chunk.choices[0].delta.content is not None:
+                            has_content = True
+                            break
+
+                    if not has_content:
+                        return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
+                elif not response.choices[0].message.content:
+                    return f"API request failed. Streaming: {stream}. Model: {model}. Check your API key or usage limits."
+            except (
+                APIConnectionError,
+                APITimeoutError,
+                AuthenticationError,
+                BadRequestError,
+                ConflictError,
+                InternalServerError,
+                NotFoundError,
+                PermissionDeniedError,
+                RateLimitError,
+                APIError,
+                UnprocessableEntityError,
+                requests.exceptions.Timeout,  # Add requests timeout
+            ) as e:
+                return f"{type(e).__name__} occurred. Model: {model}. Error: {str(e)}"
+
+    return "Preflight checks passed. All models functioning correctly."

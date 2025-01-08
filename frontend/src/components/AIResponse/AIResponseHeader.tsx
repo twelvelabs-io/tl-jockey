@@ -1,9 +1,9 @@
 import React from 'react'
 import { ReactComponent as AIIcon } from '../../icons/ai.svg';
-import { Message } from '../ChatMessagesList/AIResponse';
+import { QuestionMessage } from '../../types/messageTypes';
 
 interface AIResponseHeaderProps {
-    message: Message
+    message: QuestionMessage
 }
 
 export const AIResponseHeader:React.FC<AIResponseHeaderProps> = ({message}) => {

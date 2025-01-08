@@ -30,15 +30,16 @@ const ErrorFallback:React.FC<ErrorFallbackProps> = ({ error }) => (
 const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofillApi, submitButtonRef, setChoosedElement, setCurrentVideoFile, setShowAutofillQuestions, showAutofillQuestions, videoRef }) => {
   const [state, dispatch] = useChat()
   const {selectedFile, inputBox, responseText, arrayMessages, loading, selectedFileData } = state
+  const [inputBoxColor, setInputBoxColor] = useState('')
   const [streamData, setStreamData] = useState(['']);
-  
   const handleChatApi = async () => {
     if (selectedFile !== null && selectedFile !== undefined) {
-      dispatch({ type: ActionType.SET_LOADING, payload: true })
+      // dispatch({ type: ActionType.SET_LOADING, payload: true })
       dispatch({
         type: ActionType.REMOVE_INITIAL_MESSAGE,
         payload: undefined
       })
+
       dispatch({ type: ActionType.SET_RESPONSE_TEXT, payload: inputBox })
       dispatch({
         type: ActionType.SET_ARRAY_MESSAGES,
@@ -52,14 +53,14 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
             asrTest: '',
             lameText: '',
             question: inputBox
-          }
-        ]
-      })
+            }
+          ]
+        })
       try {
-        streamEvents(ActionType, dispatch, inputBox, setStreamData, arrayMessages)
-        dispatch({ type: ActionType.SET_LOADING, payload: false })
+        streamEvents(ActionType, dispatch, inputBox, setStreamData, arrayMessages, setInputBoxColor)
+        // dispatch({ type: ActionType.SET_LOADING, payload: false })
       } catch (error) {
-        dispatch({ type: ActionType.SET_LOADING, payload: false })
+        // dispatch({ type: ActionType.SET_LOADING, payload: false })
       }
     }
     dispatch({ type: ActionType.SET_INPUT_BOX, payload: '' })
@@ -149,6 +150,7 @@ const ChatSelector: React.FC<ChatSelectProps> = ({ chatContainerRef, setAutofill
                   // eslint-disable-next-line @typescript-eslint/no-misused-promises
                   handleChatApi={handleChatApi}
                   showAutofillQuestions={showAutofillQuestions}
+                  inputBoxStyle={inputBoxColor} 
                 />
               </div>
             </div>

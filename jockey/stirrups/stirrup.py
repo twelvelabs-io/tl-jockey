@@ -3,9 +3,13 @@ from langchain_core.runnables import Runnable
 from langchain.tools import BaseTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai.chat_models.azure import AzureChatOpenAI
-from langchain_openai.chat_models.base import BaseChatOpenAI
+from langchain_openai.chat_models.base import ChatOpenAI
 from typing import List, Union, Dict
-from langchain.pydantic_v1 import BaseModel
+from pydantic import BaseModel
+
+from jockey.stirrups.errors import JockeyError, ErrorType, NodeType, get_langgraph_errors
+from jockey.stirrups.errors import create_langgraph_error_event, create_jockey_error_event
+from jockey.util import parse_langchain_events_terminal
 
 
 class Stirrup(BaseModel):
@@ -25,7 +29,7 @@ class Stirrup(BaseModel):
     Returns:
         Runnable: A Runnable which consists of a worker LLM bound with tools and a tool routing coroutine.
     """
-    
+
     tools: List[BaseTool]
     worker_prompt_file_path: str
     worker_name: str
@@ -46,16 +50,20 @@ class Stirrup(BaseModel):
 
         for tool_call in tool_calls:
             base_tool: BaseTool = tool_map[tool_call["name"]]
-            tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
+            try:
+                tool_call["output"] = await base_tool.ainvoke(tool_call["args"])
+            except Exception as e:
+                print(f"[DEBUG] Error in tool call: {e}")
+                raise
 
         return tool_calls
-   
-    def build_worker(self, worker_llm: Union[BaseChatOpenAI, AzureChatOpenAI]) -> Runnable:
+
+    def build_worker(self, worker_llm: Union[ChatOpenAI, AzureChatOpenAI]) -> Runnable:
         """Build a useable worker for a Jockey instance.
 
         Args:
-            worker_llm (Union[BaseChatOpenAI  |  AzureChatOpenAI]): 
-                The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better. 
+            worker_llm (Union[ChatOpenAI  |  AzureChatOpenAI]):
+                The LLM used for the worker node. It is recommended this be a GPT-4 class LLM or better.
 
         Raises:
             TypeError: If the worker_llm instance type isn't currently supported.
@@ -63,26 +71,37 @@ class Stirrup(BaseModel):
         Returns:
             Runnable: A Runnable that is used as a worker node in the graph of a Jockey instance.
         """
-        if any(map(lambda x: isinstance(worker_llm, x), [BaseChatOpenAI, AzureChatOpenAI])) is False:
-            raise TypeError(f"LLM type must be one of: [BaseChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
-        
+        if any(map(lambda x: isinstance(worker_llm, x), [ChatOpenAI, AzureChatOpenAI])) is False:
+            raise TypeError(f"LLM type must be one of: [ChatOpenAI, AzureChatOpenAI]. Got type: {type(worker_llm).__name__}.")
+
         with open(self.worker_prompt_file_path, "r") as worker_prompt_file:
             worker_prompt = worker_prompt_file.read()
-        
+
         # NOTE: We expect the incoming request from the instructor to be complete and singular in nature as you'll notice the
         # absence of any chat history here. This is intended to keep the workers as lightweight as possible so tasks can be
         # executed quickly.
         worker_prompt = ChatPromptTemplate.from_messages([
             ("system", worker_prompt),
             MessagesPlaceholder("worker_task"),
+            MessagesPlaceholder("clip_info"),
         ])
 
         worker_llm_with_tools = worker_llm.bind_tools(self.tools)
-        # The chain here processes the incoming request from the instructor before that response AIMessage is
-        # passed onto the _call_tools coroutine which ten determines which tool to call.
-        # We choose this approach so we can directly return a call from any tool a workers uses without any additional parsing.
-        worker = worker_prompt | worker_llm_with_tools | self._call_tools
-        # WE want to make sure we can parse worker events if needed so we add a custom tag.
-        worker = worker.with_config({"tags": [self.worker_name]})
-        worker.name = self.worker_name
-        return worker
+
+        try:
+            # The chain here processes the incoming request from the instructor before that response AIMessage is
+            # passed onto the _call_tools coroutine which then determines which tool to call.
+            # We choose this approach so we can directly return a call from any tool a workers uses without any additional parsing.
+            worker = worker_prompt | worker_llm_with_tools | self._call_tools
+            # WE want to make sure we can parse worker events if needed so we add a custom tag.
+            worker = worker.with_config({"tags": [self.worker_name]})
+            worker.name = self.worker_name
+            return worker
+        except get_langgraph_errors():
+            langgraph_error_event = create_langgraph_error_event()
+            parse_langchain_events_terminal(langgraph_error_event)
+            raise
+        except JockeyError as error:
+            jockey_error_event = create_jockey_error_event(error=error)
+            parse_langchain_events_terminal(jockey_error_event)
+            raise
