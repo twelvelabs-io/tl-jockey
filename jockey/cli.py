@@ -1,3 +1,5 @@
+import os
+import subprocess
 from rich.console import Console
 from jockey.util import parse_langchain_events_terminal
 from jockey.stirrups.errors import create_interrupt_event
@@ -8,9 +10,6 @@ import sys
 from typing import List
 from langchain_core.runnables.schema import StreamEvent
 from jockey.thread import session_id, thread
-
-# from jockey.video_utils import download_m3u8_videos
-from jockey.stirrups.video_editing import Clip
 
 
 async def run_jockey_terminal():
