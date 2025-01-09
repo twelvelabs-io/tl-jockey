@@ -2,10 +2,6 @@ import os
 import requests
 import ffmpeg
 import urllib.parse
-import tqdm
-import json
-import subprocess
-from jockey.thread import session_id
 from typing import Dict, Tuple
 import hashlib
 
@@ -92,11 +88,11 @@ def download_video(video_id: str, index_id: str, start: float, end: float) -> st
             buffer = 1  # Add a 1-second buffer on each side
             ffmpeg.input(filename=hls_uri, strict="experimental", loglevel="quiet", ss=max(0, start - buffer), t=duration + 2 * buffer).output(
                 video_path, vcodec="libx264", acodec="aac", avoid_negative_ts="make_zero", fflags="+genpts"
-            ).run()
+            ).run(quiet=True)
 
             # Then trim the video more precisely
             output_trimmed = f"{os.path.splitext(video_path)[0]}_trimmed.mp4"
-            ffmpeg.input(video_path, ss=buffer, t=duration).output(output_trimmed, vcodec="copy", acodec="copy").run()
+            ffmpeg.input(video_path, ss=buffer, t=duration).output(output_trimmed, vcodec="copy", acodec="copy").run(quiet=True)
 
             # Replace the original file with the trimmed version
             os.replace(output_trimmed, video_path)
