@@ -91,7 +91,7 @@
 		"semi": false,
 		"trailingComma": "es5",
 		"printWidth": 150,
-		"bracketSpacing": true,
+		"bracketSpacing": false,
 		"singleQuote": true
 	}
 }
