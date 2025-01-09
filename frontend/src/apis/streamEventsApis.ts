@@ -4,6 +4,7 @@ import {client, initialize} from './initConfig'
 import {BaseMessage} from '@langchain/core/messages'
 import {MessageFieldWithRole} from '@langchain/core/messages'
 
+// todo: get index id from the user or load default ones from the server
 const indexId = process.env.REACT_APP_INDEX
 
 export interface Clip {
@@ -17,6 +18,8 @@ export interface Clip {
 	modules?: Array<{type: string; confidence: string}>
 	video_url: string
 	video_title: string
+	clip_url: string // this is the signed url to the trimmed clip stored in the s3 bucket
+	clip_id: string
 }
 
 export interface PlannerResponse {
@@ -50,7 +53,6 @@ export interface JockeyState {
 
 export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any, setStreamData: any, arrayMessages: any, setInputBoxColor: any) => {
 	dispatch({type: ActionType.SET_LOADING, payload: true})
-
 	const {assistant, thread} = await initialize()
 
 	const initJockeyInput: JockeyState = {
@@ -58,7 +60,7 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 			{
 				role: 'human',
 				name: 'user',
-				content: `${inputBox} in the index ${indexId}`,
+				content: inputBox,
 			},
 		],
 		made_plan: false,
@@ -67,7 +69,7 @@ export const streamEvents = async (ActionType: any, dispatch: any, inputBox: any
 		clips_from_search: {} as Record<string, Clip[]>,
 		relevant_clip_keys: [] as string[],
 		tool_call: null,
-		index_id: null,
+		index_id: indexId,
 	}
 
 	const processStream = async (input: JockeyState) => {
