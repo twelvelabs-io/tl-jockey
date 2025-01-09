@@ -59,11 +59,6 @@ class Spaces:
         if not file_data:
             return
 
-        logging.info(f"Uploading file {file_path} to spaces")
-        logging.info(f"hashed_id: {hashed_id}")
-        logging.info(f"index_id: {index_id}")
-        logging.info(f"file_name: {file_name}")
-
         try:
             response = self.s3.upload_fileobj(
                 BytesIO(file_data),
