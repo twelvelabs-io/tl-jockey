@@ -141,26 +141,27 @@ async def simple_video_search(
         print("[DEBUG] Processing video-search into clips")
         video_urls = []
         for result in search_results:
+            video_url = ""
             # this filename is the same as what download_video returns
             clip_filename, clip_id = get_filename(result)
 
             # then check database for existing clip
             # TODO: unstub the os.environ and dynamically grab user id
-            clip_exists = await spaces.check_clip_exists_in_spaces(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id)
+            clip_exists = await spaces.check_clip_exists_in_spaces(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, "clips")
             if clip_exists:
                 print(f"[DEBUG] Clip {clip_filename} already exists in space.")
-                video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
+                video_url, _ = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename, "clips")
                 video_urls.append(video_url)
             else:
-                # download and then upload
+                # use ffmpeg to download the trimmed clip from the video_url and then upload to s3
                 if "start" in result and "end" in result:
                     video_path = download_video(result["video_id"], index_id, result["start"], result["end"])
                 # print(f"[DEBUG] Downloaded video clip: {video_path}")
                 # print(f"[DEBUG] clip_filename: {clip_filename}")
                 # print(f"[DEBUG] os.path.basename(video_path): {os.path.basename(video_path)}")
                 assert clip_filename == os.path.basename(video_path)
-                await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, video_path)
-                video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
+                await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, video_path, "clips")
+                video_url, _ = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename, "clips")
 
             # add the clip url to the corresponding search result
             result["clip_url"] = video_url

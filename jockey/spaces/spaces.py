@@ -1,10 +1,13 @@
 import os
+from typing import Dict, Optional, Tuple, Union
 from dotenv import load_dotenv
 import boto3
 from botocore.config import Config
 from io import BytesIO
 import hashlib
 import logging
+import ffmpeg
+import json
 
 # Add logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -33,13 +36,13 @@ class Spaces:
             config=Config(signature_version="s3v4"),
         )
 
-    async def upload_file(self, tl_key: str, file_name: str, index_id: str, file_path: str) -> None:
+    async def upload_file(self, tl_key: str, file_name: str, index_id: str, file_path: str, upload_type: str) -> None:
         """
         Upload a file to the spaces
 
         :param file_name: the name of the file
         :param index_id: the index id of the user
-        :param file_path: the full file path of the file
+        :param file_path: the full local file path of the file
         """
         logging.info(f"Uploading file {file_path} to spaces")
 
@@ -63,7 +66,7 @@ class Spaces:
             response = self.s3.upload_fileobj(
                 BytesIO(file_data),
                 Bucket=self._BUCKET,
-                Key=f"{hashed_id}/{index_id}/{file_name}",
+                Key=f"{upload_type}/{hashed_id}/{index_id}/{file_name}",
                 ExtraArgs={
                     "ContentType": "video/mp4",
                     "ContentDisposition": "inline",
@@ -77,53 +80,60 @@ class Spaces:
         except Exception as e:
             print(f"Unexpected error during upload: {e}")
 
-    async def get_file_url(self, tl_key: str, index_id: str, file_name: str) -> str:
+    async def get_file_url(self, tl_key: str, index_id: str, file_name: str, upload_type: str) -> Tuple[Optional[str], Dict]:
         """
-        Get the url of the file, it must already exist in the spaces
+        Get a signed url of the file, it must already exist in the spaces
 
         :param tl_key: the hashed id of the user
         :param index_id: the index id of the user
         :param file_name: the name of the file
-        :return: the url of the file
+        :return: the url of the file and the metadata
         """
 
         hashed_id = self.generate_unique_id(tl_key)
 
-        # Check if file exists - handle 404 exception
+        # Step 2: Generate a signed URL
         try:
-            self.s3.head_object(Bucket=self._BUCKET, Key=f"{hashed_id}/{index_id}/{file_name}")
-        except self.s3.exceptions.ClientError as e:
-            if e.response["Error"]["Code"] == "404":
-                logging.info(f"File {file_name} not found in space")
-                return None
-            else:
-                logging.error(f"Error checking file existence: {e}")
-                return None
-
-        try:
-            url = self.s3.generate_presigned_url(
+            signed_url = self.s3.generate_presigned_url(
                 "get_object",
                 Params={
                     "Bucket": self._BUCKET,
-                    "Key": f"{hashed_id}/{index_id}/{file_name}",
+                    "Key": f"{upload_type}/{hashed_id}/{index_id}/{file_name}",
                 },
                 ExpiresIn=3600,
             )
         except Exception as e:
-            print(f"Error getting url: {e}")
-            return None
+            logging.error(f"Error generating signed URL: {e}")
+            return None, {"error": f"Error generating signed URL: {str(e)}"}
 
-        return url
+        # Step 3: Extract metadata (clips_used) using ffmpeg-python
+        # only combined clips have metadata we need to extract
+        if upload_type == "combined_clips":
+            try:
+                probe = ffmpeg.probe(signed_url)
+                format_metadata = probe.get("format", {}).get("tags", {})
+                description = format_metadata.get("description", None)
+
+                if description:
+                    clips_used = json.loads(description)
+                    return signed_url, clips_used
+                else:
+                    return signed_url, {"error": "No description metadata found."}
+            except Exception as e:
+                logging.error(f"Error extracting metadata: {e}")
+                return signed_url, {"error": f"Error extracting metadata: {str(e)}"}
+
+        return signed_url, {}
 
     def generate_unique_id(self, tl_key: str) -> str:
         """
-        Generate a unique id for the user
+        Generate a unique id for the user given their tl_key
 
         :return: the unique id
         """
         return hashlib.sha256(tl_key.encode()).hexdigest()[:16]
 
-    async def check_clip_exists_in_spaces(self, tl_key: str, clip_filename: str, index_id: str) -> bool:
+    async def check_clip_exists_in_spaces(self, tl_key: str, clip_filename: str, index_id: str, upload_type: str) -> bool:
         """
         Check if a clip exists in the spaces
 
@@ -132,14 +142,18 @@ class Spaces:
         :return: True if the clip exists, False otherwise
         """
         hashed_id = self.generate_unique_id(tl_key)
-        key = f"{hashed_id}/{index_id}/{clip_filename}"
+        key = f"{upload_type}/{hashed_id}/{index_id}/{clip_filename}"
 
         try:
             # Attempt to retrieve the file metadata to confirm existence
             self.s3.head_object(Bucket=self._BUCKET, Key=key)
             logging.info(f"Clip {clip_filename} exists in space.")
             return True
-        except:
-            # Any error (including 404 or other exceptions) will return False
+        except self.s3.exceptions.ClientError:
+            # Handle 404 and other client errors
             logging.info(f"Clip {clip_filename} does not exist in space.")
+            return False
+        except Exception as e:
+            # Handle any other unexpected errors
+            logging.error(f"Error checking clip existence: {e}")
             return False

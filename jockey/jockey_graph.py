@@ -21,7 +21,7 @@ from openai import OpenAI
 from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
 from jockey.stirrups.video_search import MarengoSearchInput
-from jockey.stirrups.video_editing import Clip, CombineClipsInput
+from jockey.stirrups.video_editing import Clip
 import copy
 
 
@@ -411,7 +411,7 @@ class Jockey(StateGraph):
             new_clips = {clip["clip_id"]: Clip(**clip) for clip in worker_response[0]["output"]["results"]}
             clips_from_search.update(new_clips)
 
-        # convert worker_response_str to a BaseMessage
+        # convert worker_response_str to a BaseMessage, this is data that is sent and parsed in the frontend client
         worker_response_str = ToolMessage(
             content=fix_escaped_unicode(worker_response), tool_call_id=state["chat_history"][-1].id, name=state["next_worker"], additional_kwargs={}
         )
