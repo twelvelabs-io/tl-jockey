@@ -38,7 +38,8 @@ async def run_jockey_terminal():
                 "tool_call": None,
                 "clips_from_search": {},
                 "relevant_clip_keys": [],
-                "index_id": None,
+                # "index_id": None,
+                "index_id": "670514a1e5620307b898b0c5",
             }
 
             # Process until we need human input
