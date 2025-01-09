@@ -1,5 +1,4 @@
 import functools
-import json
 import os
 from typing import Annotated, Union, Sequence, Dict, List, Literal, Any
 from typing_extensions import TypedDict
@@ -22,7 +21,7 @@ from openai import OpenAI
 from .model_config import OPENAI_MODELS
 from pydantic import BaseModel, Field
 from jockey.stirrups.video_search import MarengoSearchInput
-from jockey.stirrups.video_editing import SimplifiedCombineClipsInput, Clip
+from jockey.stirrups.video_editing import Clip, CombineClipsInput
 import copy
 
 
@@ -116,11 +115,11 @@ class PlannerResponse(BaseModel):
         parse the index_id from the <latest_user_message>
         """
     )
-    clip_keys: List[str] = Field(
+    clip_ids: List[str] = Field(
         description="""
-        clips are currently stored in <clips_from_search> 
+        clips are currently stored in <clips_from_search>
         You are to return only the key(s) relevant to clips necessary for the video-editing step outlined in <latest_user_message>
-        if ambiguous, only return the latest clip_keys
+        if ambiguous, only return the latest clip_ids
         """
     )
 
@@ -133,9 +132,9 @@ class JockeyState(TypedDict):
     made_plan: bool = False
     active_plan: Union[str, HumanMessage, None]
     tool_call: Union[str, None]
-    clips_from_search: Annotated[Dict[str, List[Clip]], add_clips]
+    clips_from_search: Annotated[Dict[str, List[Clip]], add_clips]  # clip_id : [Clip]
     index_id: Union[Annotated[str, lambda left, right: right or left], None]  # for now let's assume per chat we only have 1 index_id
-    relevant_clip_keys: List[str]
+    relevant_clip_ids: List[str]
 
 
 class Jockey(StateGraph):
@@ -271,28 +270,20 @@ class Jockey(StateGraph):
         return {"next_worker": supervisor_response.route_to_node}
 
     async def _planner_node(self, state: JockeyState) -> Dict:
-        """The planner_node in the StateGraph instance. The planner is responsible to generating a plan for a given user request.
-
-        Args:
-            state (JockeyState): Current state of the graph.
-
-        Raises:
-            TypeError: If the planner_llm instance type isn't currently supported.
-
-        Returns:
-            Dict: Updated state of the graph.
+        """
+        The planner node generates readable plans for the user. Based on that they will decide which node to route to.
         """
         latest_user_message = state["chat_history"][-1].content
 
-        # Remove `thumbnail_url` and `video_url` from each Clip
-        clips_from_search_copy = copy.deepcopy(state["clips_from_search"]) if state["clips_from_search"] else {}
+        # cleanup `thumbnail_url` and `video_url` from each Clip before sending to the planner to not confuse LLM
+        clips_from_search_copy: Dict[str, List[Clip]] = copy.deepcopy(state["clips_from_search"]) if state["clips_from_search"] else {}
         if clips_from_search_copy:
             [setattr(clip, "thumbnail_url", None) or setattr(clip, "video_url", None) for clips in clips_from_search_copy.values() for clip in clips]
 
-        # retrieve available tool_call_ids
+        # retrieve available tool_call_ids and set the type annotation for clip_ids as Literal[clip_id1, clip_id2, ...] to prevent LLM from hallucinating
         available_tool_call_ids: List[str] = list(clips_from_search_copy.keys())
         if available_tool_call_ids:
-            PlannerResponse.model_fields["clip_keys"].annotation = List[Literal.__getitem__(tuple(available_tool_call_ids))]
+            PlannerResponse.model_fields["clip_ids"].annotation = List[Literal.__getitem__(tuple(available_tool_call_ids))]
 
         completion = self.openai_client.beta.chat.completions.parse(
             model=OPENAI_MODELS["planner"],
@@ -308,14 +299,22 @@ class Jockey(StateGraph):
         )
         planner_response: PlannerResponse = completion.choices[0].message.parsed
 
-        # let's replace the planner_response.plan with the actual clips to prevent the LLM from hallucinating
-        # this is a temporary solution until openai allows us to make some fields optional, however everything is required for now
+        # replace the planner_response.index_id with the actual index_id from the user if it is provided
+        planner_response.index_id = state["index_id"] or planner_response.index_id
+
+        # replace clip_ids with [] if we haven't searched yet
+        planner_response.clip_ids = [] if not state["clips_from_search"] else planner_response.clip_ids
+
+        # let's replace the planner_response.plan with the actual clips from the query intent to prevent the LLM from hallucinating
         # https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
         if planner_response.route_to_node == "video-editing":
-            call_tool_ids: List[str] = [key for key in state["clips_from_search"].keys() if key.startswith("call_")]
-            clips_from_search = [clip for tool_id in planner_response.clip_keys for clip in state["clips_from_search"][tool_id]]
+            clips_from_search: List[Clip] = [clip for clip_id in planner_response.clip_ids for clip in state["clips_from_search"][clip_id]]
+
             # remove unneeded fields like thumbnail_url and video_url in chat_history
-            [setattr(clip, "thumbnail_url", None) or setattr(clip, "video_url", None) for clip in clips_from_search]
+            for clip in clips_from_search:
+                clip.thumbnail_url = None
+                clip.video_url = None
+
             planner_response.plan = str(clips_from_search)
 
         # We return the response from the planner as a special human with the name of "planner".
@@ -328,81 +327,18 @@ class Jockey(StateGraph):
         return {
             "chat_history": [lc_planner_response],
             "active_plan": planner_response.plan,
-            "index_id": planner_response.index_id if not state["index_id"] else state["index_id"],
+            "index_id": planner_response.index_id,
             "next_worker": planner_response.route_to_node,
             "tool_call": planner_response.tool_call if planner_response.tool_call != "none" else None,
             "made_plan": True,
-            "relevant_clip_keys": planner_response.clip_keys,
+            "relevant_clip_ids": planner_response.clip_ids,
         }
 
     async def _worker_node(self, state: JockeyState, worker: Runnable) -> Dict:
-        """A worker_node in the StateGraph instance. Workers are responsible for directly calling tools in their domains.
-        This node isn't used directly but is wrapped with a functools.partial call.
+        """The _worker_node is responsible for first generating the inputs for the tool call and then calling the tool.
 
-        Args:
-            state (JockeyState): Current state of the graph.
-            worker (Runnable): The actual worker Runnable.
-
-        Returns:
-            Dict: Updated state of the graph.
+        relevant clips are inferred by the planner LLM and are stored in state["relevant_clip_ids"], which is used to add the clips to the tool call args
         """
-        worker_schemas = {"video-search": MarengoSearchInput, "video-editing": SimplifiedCombineClipsInput}
-
-        worker_to_stirrup = {
-            "video-search": VideoSearchWorker,
-            "video-text-generation": VideoTextGenerationWorker,
-            "video-editing": VideoEditingWorker,
-        }
-
-        try:
-            completion = self.openai_client.beta.chat.completions.parse(
-                model=OPENAI_MODELS["worker"],
-                messages=[
-                    {"role": "system", "content": dedent(self.instructor_prompt)},
-                    {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
-                    {"role": "user", "content": dedent(f"<tool_call>{state['tool_call']}</tool_call>")},
-                ],
-                response_format=worker_schemas[state["next_worker"]],
-                temperature=0.7,
-            )
-
-            worker_inputs: Union[MarengoSearchInput, SimplifiedCombineClipsInput] = completion.choices[0].message.parsed
-            # print(f"[DEBUG] Worker inputs: {worker_inputs}")
-        except Exception as error:
-            raise error
-
-        # let's make a call to the stirrup to execute the tool call
-        ai_message = None
-
-        # get the id of the chat_history
-        tool_call_id = state["chat_history"][-1].id
-
-        # craft the args for the tool call
-        args = {}
-        if state["next_worker"] == "video-search":
-            args = worker_inputs.model_dump()
-        elif state["next_worker"] == "video-editing" and state["tool_call"] == "combine-clips":
-            args = worker_inputs.model_dump()
-            args["clips"] = [clip for key in state["relevant_clip_keys"] for clip in state["clips_from_search"][key]]
-            args["index_id"] = state["index_id"]
-
-        if state["tool_call"]:
-            ai_message = AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "name": state["tool_call"],
-                        "args": args,
-                        "id": tool_call_id,
-                        "type": "tool_call",
-                    }
-                ],
-            )
-        try:
-            worker_response = await worker_to_stirrup[state["next_worker"]]._call_tools(ai_message)
-        except Exception as error:
-            print(f"[DEBUG] Error in worker_node: {error}")
-            raise error
 
         def fix_escaped_unicode(data) -> str:
             if isinstance(data, str):
@@ -413,15 +349,72 @@ class Jockey(StateGraph):
                 return {key: fix_escaped_unicode(value) for key, value in data.items()}
             return str(data)
 
-        worker_response_str = fix_escaped_unicode(worker_response)
+        # helpful schemas for the worker
+        worker_schemas = {"video-search": MarengoSearchInput}
+        worker_to_stirrup = {
+            "video-search": VideoSearchWorker,
+            "video-text-generation": VideoTextGenerationWorker,
+            "video-editing": VideoEditingWorker,
+        }
 
-        # add clips to state['clips_from_search']
-        clips_from_search = state.get("clips_from_search", {})
+        # generate the inputs for the tool call
+        worker_inputs: Union[MarengoSearchInput] = None
         if state["next_worker"] == "video-search":
-            clips_from_search[tool_call_id] = [Clip(**clip) for clip in worker_response[0]["output"]["results"]]
+            try:
+                completion = self.openai_client.beta.chat.completions.parse(
+                    model=OPENAI_MODELS["worker"],
+                    messages=[
+                        {"role": "system", "content": dedent(self.instructor_prompt)},
+                        {"role": "user", "content": dedent(f"<active_plan>{state['active_plan']}</active_plan>")},
+                        {"role": "user", "content": dedent(f"<tool_call>{state['tool_call']}</tool_call>")},
+                    ],
+                    response_format=worker_schemas[state["next_worker"]],
+                    temperature=0.7,
+                )
+
+                worker_inputs = completion.choices[0].message.parsed
+            except Exception as error:
+                raise error
+
+        # let's craft the args for the tool call
+        ai_message = None
+        args = worker_inputs.model_dump() if worker_inputs else {}
+        args["index_id"] = state["index_id"]  # replace with deterministic index_id
+        if state["next_worker"] == "video-editing" and state["tool_call"] == "combine-clips":
+            # combine-clips requires clips: List[Clip], see stirrups/video_editing.py
+            if state["relevant_clip_ids"]:
+                args["clips"] = [clip for key in state["relevant_clip_ids"] for clip in state["clips_from_search"][key]]
+
+        if state["tool_call"]:
+            ai_message = AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": state["tool_call"],
+                        "args": args,
+                        "id": state["chat_history"][-1].id,
+                        "type": "tool_call",
+                    }
+                ],
+            )
+
+        # make the tool call
+        try:
+            worker_response = await worker_to_stirrup[state["next_worker"]]._call_tools(ai_message)
+        except Exception as error:
+            print(f"[DEBUG] Error in worker_node: {error}")
+            raise error
+
+        # if we have a video-search output, then we need to append the searched clips to the state['clips_from_search']
+        clips_from_search: Dict[str, List[Clip]] = state.get("clips_from_search", {})
+        if state["next_worker"] == "video-search":
+            new_clips = {clip["clip_id"]: Clip(**clip) for clip in worker_response[0]["output"]["results"]}
+            clips_from_search.update(new_clips)
 
         # convert worker_response_str to a BaseMessage
-        worker_response_str = ToolMessage(content=worker_response_str, tool_call_id=tool_call_id, name=state["next_worker"], additional_kwargs={})
+        worker_response_str = ToolMessage(
+            content=fix_escaped_unicode(worker_response), tool_call_id=state["chat_history"][-1].id, name=state["next_worker"], additional_kwargs={}
+        )
 
         return {
             "chat_history": [worker_response_str],
@@ -445,7 +438,7 @@ class Jockey(StateGraph):
         reflect_chain = reflect_prompt | self.reflect_llm
         reflect_response = await reflect_chain.ainvoke(
             {
-                "active_plan": state["active_plan"] if state["active_plan"] else state["chat_history"][-1].content,
+                "active_plan": state["active_plan"] or state["chat_history"][-1].content,
                 "tool_call": state["tool_call"],
                 "chat_history": state["chat_history"],
             },

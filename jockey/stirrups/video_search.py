@@ -1,4 +1,3 @@
-import json
 import os
 import urllib
 from enum import Enum
@@ -10,9 +9,9 @@ from pydantic import BaseModel, Field
 
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
 from jockey.spaces.spaces import Spaces
-from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction
 from jockey.stirrups.stirrup import Stirrup
 from jockey.video_utils import get_video_metadata, download_video, get_filename
+from jockey.stirrups.video_editing import Clip
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
@@ -133,17 +132,17 @@ async def simple_video_search(
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
-) -> Union[List[Dict], List]:
+) -> Union[List[Dict]]:
     try:
-        search_results: List[Dict] = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+        search_results: List[Clip] = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
 
         # Process video clips
         spaces = Spaces()
         print("[DEBUG] Processing video-search into clips")
-        video_urls = []  # temp for debugging
+        video_urls = []
         for result in search_results:
             # this filename is the same as what download_video returns
-            clip_filename = get_filename(result)
+            clip_filename, clip_id = get_filename(result)
 
             # then check database for existing clip
             # TODO: unstub the os.environ and dynamically grab user id
@@ -152,19 +151,22 @@ async def simple_video_search(
                 print(f"[DEBUG] Clip {clip_filename} already exists in space.")
                 video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
                 video_urls.append(video_url)
-                continue
-
-            # download and then upload
-            if "start" in result and "end" in result:
-                video_path = download_video(result["video_id"], index_id, result["start"], result["end"])
-                print(f"[DEBUG] Downloaded video clip: {video_path}")
-                print(f"[DEBUG] clip_filename: {clip_filename}")
-                print(f"[DEBUG] os.path.basename(video_path): {os.path.basename(video_path)}")
+            else:
+                # download and then upload
+                if "start" in result and "end" in result:
+                    video_path = download_video(result["video_id"], index_id, result["start"], result["end"])
+                # print(f"[DEBUG] Downloaded video clip: {video_path}")
+                # print(f"[DEBUG] clip_filename: {clip_filename}")
+                # print(f"[DEBUG] os.path.basename(video_path): {os.path.basename(video_path)}")
                 assert clip_filename == os.path.basename(video_path)
                 await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, video_path)
+                video_url = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename)
 
-        print(f"[DEBUG] video_urls: {video_urls}")
+            # add the clip url to the corresponding search result
+            result["clip_url"] = video_url
+            result["clip_id"] = clip_id
 
+        print(f"[DEBUG] video_urls: {[result['clip_url'] for result in search_results if result['clip_url']]}")
         return {"success": True, "results": search_results}
 
     except Exception as error:
