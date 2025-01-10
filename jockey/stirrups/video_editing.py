@@ -134,7 +134,7 @@ async def combine_clips(clips: List[Clip], index_id: str) -> CombinedClip:
 
     except Exception as error:
         print(f"[DEBUG] Error combining clips: {error}")
-        raise error˝
+        raise error
 
 
 # @tool("remove-segment", args_schema=RemoveSegmentInput)

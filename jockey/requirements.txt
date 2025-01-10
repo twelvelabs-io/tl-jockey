@@ -14,7 +14,7 @@ botocore==1.35.93
 certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.4.0
-click==8.1.7
+click==8.1.8
 cryptography==43.0.3
 debugpy==1.8.11
 decorator==5.1.1
@@ -55,7 +55,7 @@ langchain-text-splitters==0.3.2
 langgraph==0.2.59
 langgraph-api==0.0.7
 langgraph-checkpoint==2.0.9
-langgraph-cli==0.1.61
+langgraph-cli==0.1.65
 langgraph-sdk==0.1.44
 langsmith==0.1.147
 markdown-it-py==3.0.0
