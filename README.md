@@ -239,7 +239,11 @@ Note that the tags for the individual components are set in [app.py](jockey/app.
 
 To integrate Jockey into your application, use an HTTP client library or the [LangGraph Python SDK](https://pypi.org/project/langgraph-sdk/).
 
-For a basic example of how to interact with Jockey programmatically, refer to the [client.ipynb](client.ipynb) Jupyter notebook in the project repository. For more detailed information, see the [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) page.
+Examples:
+- [Quickstart guide](client.ipynb) 
+- [Front-end guide](/docs/front-end.md)
+- [LangGraph Examples](https://github.com/langchain-ai/langgraph-example) 
+
 
 ## Additional Documentation
 
