@@ -1,3 +1,5 @@
+import hashlib
+import json
 import os
 import ffmpeg
 from langchain.tools import tool
@@ -6,16 +8,9 @@ from typing import List, Dict, Union
 from jockey.video_utils import download_video
 from jockey.prompts import DEFAULT_VIDEO_EDITING_FILE_PATH
 from jockey.stirrups.stirrup import Stirrup
-from jockey.stirrups.errors import JockeyError, NodeType, WorkerFunction, ErrorType
-import uuid
+from jockey.video_utils import get_filename
+from jockey.spaces.spaces import Spaces
 
-CODEC_FAMILIES = {"mpeg": {"h264", "hevc", "mpeg4"}, "vp": {"vp8", "vp9"}, "av1": {"av1"}}
-
-CODEC_FAMILIES = {
-    'mpeg': {'h264', 'hevc', 'mpeg4'},
-    'vp': {'vp8', 'vp9'},
-    'av1': {'av1'}
-}
 
 class Clip(BaseModel):
     """Define what constitutes a clip in the context of the video-editing worker."""
@@ -29,15 +24,22 @@ class Clip(BaseModel):
     thumbnail_url: str
     video_url: str
     video_title: str
+    clip_url: str
+    clip_id: str  # if the clip filename is clip-67051e284ecef42224b923fe_18b214dd.mp4, the clip_id is 67051e284ecef42224b923fe_18b214dd
 
     def __json__(self):
         """Make Clip JSON serializable."""
         return self.model_dump()
 
 
-# sent to openai tool call
-class SimplifiedCombineClipsInput(BaseModel):
-    output_filename: str = Field(description="The output filename of the combined clips. Must be in the form: [filename].mp4")
+class CombinedClip(BaseModel):
+    video_id: str  # if filename is combined-17282916.mp4, the video_id is 17282916
+    video_url: str
+    clips_used: Dict[str, Clip]  # clip_id : Clip
+
+    def __json__(self):
+        """Make CombinedClip JSON serializable."""
+        return self.model_dump()
 
 
 # used by the worker
@@ -45,7 +47,6 @@ class CombineClipsInput(BaseModel):
     """Ensure the video-editing worker has required inputs for the `@combine_clips` tool."""
 
     clips: List[Clip] = Field(description="List of clips to be edited together. Each clip must have start and end times and a Video ID.")
-    output_filename: str = Field(description="The output filename of the combined clips. Must be in the form: [filename].mp4")
     index_id: str = Field(description="Index ID the clips belong to.")
 
 
@@ -56,29 +57,30 @@ class RemoveSegmentInput(BaseModel):
     start: float = Field(description="""Start time of segment to be removed. Must be in the format of: seconds.milliseconds""")
     end: float = Field(description="""End time of segment to be removed. Must be in the format of: seconds.milliseconds""")
 
-def are_codecs_compatible(codecs):
-    for family in CODEC_FAMILIES.values():
-        if codecs.issubset(family):
-            return True
-    return False
-
-def check_video_codecs(video_filepaths):
-    codecs = set()
-    for filepath in video_filepaths:
-        probe = ffmpeg.probe(filepath)
-        video_stream = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
-        if video_stream:
-            codecs.add(video_stream['codec_name'])
-    return codecs
 
 @tool("combine-clips", args_schema=CombineClipsInput)
-async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) -> Union[str, Dict]:
-    # """Combine or edit multiple clips together based on their start and end times and video IDs.
-    # The full filepath for the combined clips is returned. Return a Union str if successful, or a Dict if an error occurs."""
+async def combine_clips(clips: List[Clip], index_id: str) -> CombinedClip:
+    """return a dict with the video_url and the metadata"""
 
-    # Add a random UUID to the output filename to avoid overwriting existing files
-    output_filename += f"_{uuid.uuid4().hex}.mp4"
+    spaces = Spaces()
 
+    # check if the combined clip already exists in the spaces
+    combined_clip_ids: str = "".join([clip.clip_id for clip in clips])
+    unique_hash = hashlib.sha256(combined_clip_ids.encode()).hexdigest()[-8:]
+    combined_clip_filename = f"combined_{unique_hash}.mp4"
+    combined_clip_exists = await spaces.check_clip_exists_in_spaces(
+        os.environ.get("TWELVE_LABS_API_KEY"), combined_clip_filename, index_id, "combined_clips"
+    )
+    if combined_clip_exists:
+        print(f"[DEBUG] Clip {combined_clip_filename} already exists in space.")
+        video_url, clips_used = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, combined_clip_filename, "combined_clips")
+        return {"video_id": unique_hash, "video_url": video_url, "clips_used": clips_used}
+
+    # let's craft the clips_used metadata
+    clips_used: Dict[str, Clip] = {clip.clip_id: clip for clip in clips}
+    metadata: CombinedClip = CombinedClip(video_id=unique_hash, video_url="", clips_used=clips_used)
+
+    # otherwise, we need to combine the clips
     try:
         # Input validation first
         for clip in clips:
@@ -86,25 +88,22 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
                 raise ValueError(f"Invalid start time: {clip.start}. Start time cannot be negative.")
 
         input_streams = []
-        video_filepaths = []
-
         for clip in clips:
             video_id = clip.video_id
             start = clip.start
             end = clip.end
-            video_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, f"{video_id}_{start}_{end}.mp4")
-            video_filepaths.append(video_filepath)
-            if os.path.isfile(video_filepath) is False:
+            video_filepath = os.path.join(
+                os.environ["HOST_PUBLIC_DIR"], index_id, get_filename({"video_id": video_id, "start": start, "end": end})[0]
+            )
+
+            if not os.path.isfile(video_filepath):
                 try:
                     download_video(video_id=video_id, index_id=index_id, start=start, end=end)
-                except AssertionError as error:
-                    error_response = {
-                        "message": f"There was an error retrieving the video metadata for Video ID: {video_id} in Index ID: {index_id}. "
-                        "Double check that the Video ID and Index ID are valid and correct.",
-                        "error": str(error),
-                    }
+                except Exception as error:
+                    print(f"[DEBUG] Error downloading video: {error}")
                     continue
 
+            # attach metadata
             clip_video_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").video
             clip_audio_input_stream = ffmpeg.input(filename=video_filepath, loglevel="error").audio
             clip_video_input_stream = clip_video_input_stream.filter("setpts", "PTS-STARTPTS")
@@ -112,26 +111,30 @@ async def combine_clips(clips: List[Clip], output_filename: str, index_id: str) 
 
             input_streams.extend([clip_video_input_stream, clip_audio_input_stream])
 
-        output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, output_filename)
+        # Create output filepath directly using HOST_PUBLIC_DIR and index_id
+        output_filepath = os.path.join(os.environ["HOST_PUBLIC_DIR"], index_id, combined_clip_filename)
+
+        # local store
         ffmpeg.concat(*input_streams, v=1, a=1).output(
-            output_filepath, vcodec="libx264", acodec="libmp3lame", video_bitrate="1M", audio_bitrate="192k"
+            output_filepath,
+            vcodec="libx264",
+            acodec="libmp3lame",
+            video_bitrate="1M",
+            audio_bitrate="192k",
+            metadata=f"description={json.dumps(metadata.__json__())}",
         ).overwrite_output().run()
 
-        return output_filepath
+        # then upload the combined clip to the spaces
+        await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), combined_clip_filename, index_id, output_filepath, "combined_clips")
 
-    except JockeyError:
-        # propagate JockeyError as is
-        raise
+        # then grab the signed url from the spaces
+        video_url, _ = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, combined_clip_filename, "combined_clips")
+
+        return {"video_id": unique_hash, "video_url": video_url, "clips_used": clips_used}
 
     except Exception as error:
-        # other errors
-        jockey_error = JockeyError.create(
-            node=NodeType.WORKER,
-            error_type=ErrorType.VIDEO,
-            function_name=WorkerFunction.COMBINE_CLIPS,
-            details=f"Error: {str(error)}",
-        )
-        raise jockey_error
+        print(f"[DEBUG] Error combining clips: {error}")
+        raise error˝
 
 
 # @tool("remove-segment", args_schema=RemoveSegmentInput)

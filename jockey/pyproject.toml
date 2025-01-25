@@ -35,6 +35,5 @@ jockey = ["prompts/*.md", "config/*", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 addopts = "-v"
-testpaths = ["jockey/tests"]
 pythonpath = ["."]
 asyncio_default_fixture_loop_scope = "function" # maybe module will try this first 

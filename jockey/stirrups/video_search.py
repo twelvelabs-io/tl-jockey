@@ -1,15 +1,17 @@
-import requests
-import json
-import urllib
 import os
-from pydantic import BaseModel, Field
-from langchain.tools import tool
-from typing import Dict, List, Union, Literal
+import urllib
 from enum import Enum
-from jockey.stirrups.errors import ErrorType, JockeyError, NodeType, WorkerFunction, create_jockey_error_event
-from jockey.video_utils import get_video_metadata
+from typing import Dict, List, Literal, Union
+
+import requests
+from langchain.tools import tool
+from pydantic import BaseModel, Field
+
 from jockey.prompts import DEFAULT_VIDEO_SEARCH_FILE_PATH
+from jockey.spaces.spaces import Spaces
 from jockey.stirrups.stirrup import Stirrup
+from jockey.video_utils import get_video_metadata, download_video, get_filename
+from jockey.stirrups.video_editing import Clip
 
 TL_BASE_URL = "https://api.twelvelabs.io/v1.2/"
 SEARCH_URL = urllib.parse.urljoin(TL_BASE_URL, "search")
@@ -55,7 +57,7 @@ async def _base_video_search(
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
-) -> Union[List[Dict], List]:
+) -> Union[List[Dict]]:
     headers = {"x-api-key": os.environ["TWELVE_LABS_API_KEY"], "accept": "application/json", "Content-Type": "application/json"}
 
     payload = {
@@ -85,10 +87,7 @@ async def _base_video_search(
         }
         return error_response
 
-    if group_by == "video":
-        top_n_results = [{"video_id": video["id"]} for video in video_metadata.json()["data"][:top_n]]
-    else:
-        top_n_results = video_metadata.json()["data"][:top_n]
+    top_n_results = video_metadata.json()["data"][:top_n]
 
     for result in top_n_results:
         video_id = result["video_id"]
@@ -113,18 +112,16 @@ async def _base_video_search(
         if group_by == "video":
             result["thumbnail_url"] = video_data["hls"]["thumbnail_urls"][0]
 
-    top_n_results = json.dumps(top_n_results)
-
     return top_n_results
 
 
-def extract_modalities(search_results):
-    modalities = set()
-    for result in search_results:
-        modules = result.get("modules", [])
-        for module in modules:
-            modalities.add(module.get("type"))
-    return list(modalities)
+# def extract_modalities(search_results):
+#     modalities = set()
+#     for result in search_results:
+#         modules = result.get("modules", [])
+#         for module in modules:
+#             modalities.add(module.get("type"))
+#     return list(modalities)
 
 
 @tool("simple-video-search", args_schema=MarengoSearchInput, return_direct=True)
@@ -135,38 +132,47 @@ async def simple_video_search(
     group_by: GroupByEnum = GroupByEnum.CLIP,
     search_options: List[SearchOptionsEnum] = [SearchOptionsEnum.VISUAL, SearchOptionsEnum.CONVERSATION],
     video_filter: Union[List[str], None] = None,
-) -> Union[List[Dict], List]:
+) -> Union[List[Dict]]:
     try:
-        search_results = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
+        search_results: List[Clip] = await _base_video_search(query, index_id, top_n, group_by, search_options, video_filter)
 
-        if isinstance(search_results, list):
-            try:
-                available_modalities = extract_modalities(search_results)
-                if not available_modalities:
-                    print("[WARNING] No modalities were found in search results")
-                    return {"success": False, "results": search_results, "available_modalities": available_modalities, "error": "No modalities found"}
-                return {"success": True, "results": search_results, "available_modalities": available_modalities}
-            except Exception as error:
-                print(f"[ERROR] Failed to extract modalities: {str(error)}")
-                jockey_error = JockeyError.create(
-                    node=NodeType.WORKER,
-                    error_type=ErrorType.SEARCH,
-                    function_name=WorkerFunction.VIDEO_SEARCH,
-                    details=f"Error: {str(error)}",
-                )
-                raise jockey_error
-        else:
-            return search_results
+        # Process video clips
+        spaces = Spaces()
+        print("[DEBUG] Processing video-search into clips")
+        video_urls = []
+        for result in search_results:
+            video_url = ""
+            # this filename is the same as what download_video returns
+            clip_filename, clip_id = get_filename(result)
+
+            # then check database for existing clip
+            # TODO: unstub the os.environ and dynamically grab user id
+            clip_exists = await spaces.check_clip_exists_in_spaces(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, "clips")
+            if clip_exists:
+                print(f"[DEBUG] Clip {clip_filename} already exists in space.")
+                video_url, _ = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename, "clips")
+                video_urls.append(video_url)
+            else:
+                # use ffmpeg to download the trimmed clip from the video_url and then upload to s3
+                if "start" in result and "end" in result:
+                    video_path = download_video(result["video_id"], index_id, result["start"], result["end"])
+                # print(f"[DEBUG] Downloaded video clip: {video_path}")
+                # print(f"[DEBUG] clip_filename: {clip_filename}")
+                # print(f"[DEBUG] os.path.basename(video_path): {os.path.basename(video_path)}")
+                assert clip_filename == os.path.basename(video_path)
+                await spaces.upload_file(os.environ.get("TWELVE_LABS_API_KEY"), clip_filename, index_id, video_path, "clips")
+                video_url, _ = await spaces.get_file_url(os.environ.get("TWELVE_LABS_API_KEY"), index_id, clip_filename, "clips")
+
+            # add the clip url to the corresponding search result
+            result["clip_url"] = video_url
+            result["clip_id"] = clip_id
+
+        print(f"[DEBUG] video_urls: {[result['clip_url'] for result in search_results if result['clip_url']]}")
+        return {"success": True, "results": search_results}
 
     except Exception as error:
         print(f"[ERROR] Search operation failed: {str(error)}")
-        jockey_error = JockeyError.create(
-            node=NodeType.WORKER,
-            error_type=ErrorType.SEARCH,
-            function_name=WorkerFunction.VIDEO_SEARCH,
-            details=f"Error: {str(error)}",
-        )
-        raise jockey_error
+        raise error
 
 
 # Construct a valid worker for a Jockey instance.
